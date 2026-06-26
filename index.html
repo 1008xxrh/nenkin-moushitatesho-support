@@ -2056,34 +2056,32 @@ function stepStart(){
   document.getElementById('screen').innerHTML = `
     <div class="card center">
       <h1>申立書サポート（試作）</h1>
-      <p class="lead">この試作版は、今の生活状況・通院の記録・これまでの出来事を、質問に答えながら整理するためのものです。</p>
+      <p class="lead">この試作版は、障害年金の病歴・就労状況等申立書の下書きを作るために、質問に答えながら情報を整理していくものです。</p>
 
       <div style="text-align:left;margin-top:14px;">
         <p class="edit-section-label">この試作版でできること</p>
         <ul style="margin:4px 0 0;padding-left:18px;font-size:14px;line-height:1.7;">
-          <li>就労状況・生活状況の整理</li>
-          <li>これまでの出来事の年表づくり</li>
-          <li>通院記録と、通院していない期間の整理</li>
-          <li>ここまでの内容を申立書の様式（Excel）の一部に書き出す</li>
+          <li>今の生活状況・就労状況の整理</li>
+          <li>これまでの通院歴と、通院していない期間の整理</li>
+          <li>生活に影響した出来事の年表づくり</li>
+          <li>障害認定日ごろの状態の整理（任意）</li>
+          <li>障害者手帳の情報の整理（任意）</li>
+          <li>ここまでの内容を申立書様式の一部にExcel出力</li>
         </ul>
       </div>
 
       <div style="text-align:left;margin-top:14px;">
-        <p class="edit-section-label">まだ対応していないこと</p>
+        <p class="edit-section-label">この試作版でまだ出力しないもの</p>
         <ul style="margin:4px 0 0;padding-left:18px;font-size:14px;line-height:1.7;">
-          <li>傷病名・発病した時期・初診日など、診断書等との整合が必要な項目</li>
-          <li>様式の全項目（現在は1枚目の一部のみです）</li>
-          <li>PDFでの出力</li>
+          <li>傷病名</li>
+          <li>発病時期</li>
+          <li>初診日</li>
+          <li>診断書等との整合確認が必要な項目</li>
         </ul>
-        <p class="small" style="margin-top:8px;">この試作版は、まず現在の生活状況・通院状況・出来事の整理に絞っています。</p>
       </div>
 
-      <div style="text-align:left;margin-top:14px;">
-        <p class="edit-section-label">保存について</p>
-        <p class="small" style="margin:4px 0 0;">入力した内容はお使いの端末の中だけに保存され、外部のサーバーには送信されません。</p>
-      </div>
-
-      <p class="small" style="margin-top:14px;">すべて正確に覚えていなくても大丈夫です。あとから直せます。</p>
+      <p class="small" style="margin-top:14px;">入力内容はこの端末のブラウザに保存されます。サーバーには送信しません。</p>
+      <p class="small" style="margin-top:8px;">すべて正確に覚えていなくても大丈夫です。あとから直せます。</p>
     </div>`;
   setFooter({primaryLabel:'はじめる', primaryEnabled:true, primaryFn:()=>goTo('profile_birth')});
 }
