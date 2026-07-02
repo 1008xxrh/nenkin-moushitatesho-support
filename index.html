@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -87,6 +88,99 @@ button:focus-visible, .option:focus-visible, .chip:focus-visible, [role="button"
 .repeat-add{background:none;border:1px solid var(--accent-strong);color:var(--accent-strong);border-radius:999px;font-size:13px;padding:4px 12px;cursor:pointer;}
 .repeat-row{display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding:8px 10px;background:var(--surface-raised);border-radius:8px;font-size:14px;}
 .repeat-remove{background:none;border:none;color:var(--danger);font-size:13px;cursor:pointer;text-decoration:underline;padding:0;}
+
+/* ---- アコーディオン（ch5_done仕様書3.6） ---- */
+.accordion-group{border-top:1px solid var(--border);}
+.accordion-item{border-bottom:1px solid var(--border);}
+.accordion-trigger{width:100%;text-align:left;background:none;border:none;padding:12px 4px;font-size:14px;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:space-between;}
+.accordion-trigger::after{content:'▼';font-size:10px;color:var(--ink-soft);transition:transform 0.15s;}
+.accordion-trigger-open::after{transform:rotate(180deg);}
+.accordion-panel{padding:0 4px 14px;}
+
+/* ---- ch5_preview：紙を模した1枚の申立書（ch5_preview仕様書3章） ---- */
+.preview-status{background:var(--surface-raised);border-radius:10px;padding:12px 14px;margin-bottom:14px;}
+.preview-status-title{font-size:13px;font-weight:600;margin:0 0 8px;}
+.preview-status-counts{display:flex;gap:14px;font-size:12px;margin-bottom:10px;}
+.preview-status-counts span{display:flex;align-items:center;gap:4px;}
+.preview-status-list{display:flex;flex-wrap:wrap;gap:8px;font-size:12px;border-top:1px solid var(--border);padding-top:10px;margin-bottom:8px;}
+.preview-status-list button{background:none;border:none;padding:0;font-size:12px;cursor:pointer;color:var(--ink);}
+.preview-status-excluded{font-size:11px;color:var(--ink-soft);border-top:1px solid var(--border);padding-top:8px;}
+
+/* ---- ch5_preview v4：紙そのもの（02.xlsx様式の升目構造再現、仕様書2章） ---- */
+.preview-paper{background:#fff;color:#1a1a1a;border:1px solid #888;font-size:12px;line-height:1.5;}
+.preview-paper-title{text-align:center;padding:14px 10px 10px;border-bottom:3px double #1a1a1a;font-size:16px;font-weight:700;letter-spacing:0.05em;}
+/* 章タイトル行（実物02.xlsx裏面A4「１．障害認定日」／A32「２．現在…」に対応）。
+   一度は罫線を完全に削除したが、紙面の区切りが読み取りにくくなった（2026-06-30レビューで
+   「前の方がよかった」との指摘）ため、罫線ありの状態に戻す。実物の罫線は厳密にはタイトル
+   行自身ではなくその前後の行にあるが、画面上は視覚的な区切りを優先しタイトル行に
+   border-top/border-bottomを持たせる。直前要素のborder-bottomと隣接すると二重線に見える
+   ため、margin-topで1pxずらして1本の太線に見せる。
+   注意：「１．障害認定日」「２．現在…」の各章タイトルは、preview-sec-recognition／
+   preview-sec-currentという別々のラッパーdivの中に1個ずつ置かれている。そのため
+   :first-of-typeを使うと、両方とも「自分の親の中では最初」と判定されて両方に
+   マッチしてしまい、本来「現在」章に出るべき上罫線まで消えてしまう不具合が過去にあった
+   （2026-07-02発覚）。以後、罫線を消したいのはページ全体で最初の章タイトルだけなので、
+   :first-of-typeではなく明示的なクラス(.pp-chapter-title-first)で個別に指定すること。 */
+.pp-chapter-title{padding:10px 10px 6px;font-size:13px;font-weight:700;background:#fff;border-top:2px solid #1a1a1a;border-bottom:1px solid #888;margin-top:-1px;}
+.pp-chapter-title.pp-chapter-title-first{border-top:none;margin-top:0;}
+.pp-block{display:flex;border-bottom:1px solid #888;}
+.pp-label{width:30px;flex-shrink:0;background:#f4f4f2;border-right:1px solid #888;writing-mode:vertical-rl;text-align:center;font-size:12px;font-weight:600;padding:10px 0;font-family:'Noto Sans CJK JP','Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif;}
+.pp-body{flex:1;min-width:0;}
+.pp-row{display:flex;border-bottom:1px solid #ccc;}
+.pp-row:last-child{border-bottom:none;}
+.pp-row-label{width:74px;flex-shrink:0;padding:7px 6px;font-size:11px;color:#444;border-right:1px solid #ccc;background:#fafafa;}
+.pp-row-value{flex:1;min-width:0;padding:7px 8px;font-size:12px;}
+.pp-blank{color:#aaa;}
+.pp-unavailable{color:#aaa;font-style:normal;}
+
+/* 傷病名・発病日・初診日（升目だが恒久的に未入力） */
+.pp-static-row{display:flex;border-bottom:1px solid #888;}
+.pp-static-label{width:74px;flex-shrink:0;padding:9px 6px;font-size:11px;font-weight:600;background:#f4f4f2;border-right:1px solid #888;}
+.pp-static-value{flex:1;padding:9px 8px;font-size:12px;}
+
+/* 元号セレクタ風表示（実物のプレースホルダー文言を再現） */
+.pp-era{display:inline-flex;gap:2px;}
+.pp-era-opt{border:1px solid #999;border-radius:2px;padding:1px 5px;font-size:10px;color:#999;}
+.pp-era-opt.pp-selected{border-color:#1a1a1a;color:#1a1a1a;font-weight:700;background:#eee;}
+.pp-date-placeholder{color:#999;font-size:11px;}
+
+/* チェックボックス（□にレ点） */
+.pp-checkbox{display:inline-flex;align-items:center;gap:3px;margin-right:14px;font-size:12px;}
+.pp-checkbox-box{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border:1px solid #1a1a1a;font-size:11px;font-weight:700;flex-shrink:0;}
+.pp-checkbox.pp-checked .pp-checkbox-box{background:#1a1a1a;color:#fff;}
+.pp-checkbox:not(.pp-checked) .pp-checkbox-box{color:transparent;}
+
+/* ADL選択枠（丸数字） */
+.pp-adl-row{display:flex;flex-wrap:wrap;gap:6px 16px;}
+.pp-adl-item{display:flex;align-items:center;gap:4px;font-size:11px;white-space:nowrap;}
+.pp-adl-item-label{min-width:32px;}
+.pp-adl-nums{display:inline-flex;gap:3px;}
+.pp-adl-num{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;font-size:10px;color:#999;border:1px solid transparent;}
+.pp-adl-num.pp-selected{border:1.5px solid #1a1a1a;color:#1a1a1a;font-weight:700;}
+
+/* 不就労理由（ア〜オの記号付き選択肢） */
+.pp-reason-list{display:flex;flex-direction:column;gap:3px;}
+.pp-reason-item{display:flex;gap:5px;font-size:11px;}
+.pp-reason-item.pp-selected{font-weight:700;}
+.pp-reason-letter{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border:1px solid #999;border-radius:50%;font-size:9px;flex-shrink:0;}
+.pp-reason-item.pp-selected .pp-reason-letter{border-color:#1a1a1a;background:#1a1a1a;color:#fff;}
+.pp-reason-item:not(.pp-selected){color:#999;}
+
+/* 年表（マス目、1〜5+の番号付き行） */
+.pp-period-row{display:flex;border-bottom:1px solid #888;}
+.pp-period-num{width:26px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;border-right:1px solid #888;background:#f4f4f2;}
+.pp-period-body{flex:1;min-width:0;display:flex;}
+.pp-period-dates{width:140px;flex-shrink:0;padding:6px;font-size:10px;line-height:1.6;border-right:1px solid #ccc;}
+.pp-period-note{flex:1;min-width:0;padding:6px 8px;font-size:11px;line-height:1.5;}
+.pp-period-hospital{font-weight:600;font-size:11px;margin-bottom:2px;}
+
+/* 手帳：種類チップ（身・精・療・他の略字表現） */
+.pp-notebook-types{display:inline-flex;gap:3px;font-size:10px;}
+.pp-notebook-type-opt{border:1px solid #999;border-radius:2px;padding:1px 4px;color:#999;}
+.pp-notebook-type-opt.pp-selected{border-color:#1a1a1a;color:#1a1a1a;font-weight:700;background:#eee;}
+
+.preview-output-note{font-size:11px;color:var(--ink-soft);text-align:center;margin-top:8px;}
+.preview-jump{background:none;border:none;padding:0;font-size:12px;cursor:pointer;color:var(--ink);}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 </head>
@@ -344,6 +438,7 @@ async function exportToOfficialForm(){
     back.getCell(`AO${row}`).value = 'レ';
     if(letter==='オ' && reason!=='その他') otherNoteParts.push(reason);
   });
+  if(state.notWorkReasons.includes('その他') && state.notWorkReasonOther) otherNoteParts.push(state.notWorkReasonOther);
   if(otherNoteParts.length) back.getCell('BC44').value = otherNoteParts.join('・');
 
   // ADL（10項目、現在セクション）
@@ -607,8 +702,9 @@ const PAST_HOSPITAL_CONFIDENCE = [['certain','資料で確認した'],['approxim
 // 現行のstate構造バージョン。過去編state追加（pastFragments等）に対応したのが version 2。
 // 02裏面「障害認定日頃の状況」「障害者手帳」オプション入力（recognitionSnapshot/disabilityNotebook）
 // に対応したのが version 3。
+// 不就労理由「オ：その他」専用の自由記述欄（notWorkReasonOther）追加に対応したのが version 4。
 // version自体を持たない保存データ（過去編実装より前のもの）は version 1 とみなす。
-const CURRENT_STATE_VERSION = 3;
+const CURRENT_STATE_VERSION = 4;
 
 let state, historyStack, current;
 
@@ -617,6 +713,7 @@ function resetState(){
     profile:{birthYear:'', bandSize:null},
     work:{status:null, jobType:'', commute:[], commuteTime:null, workDays:'', condition:[]},
     notWorkReasons:[],
+    notWorkReasonOther:'', // 「仕事をしていない理由」でオ（その他）を選んだ場合の自由記述。02裏面row44「その他(理由　)」に対応
     adl:{},
     otherChips:[], otherNote:'',
     selectedEvents:[],
@@ -653,6 +750,7 @@ function resetState(){
       // 認定日時点の就労状況。現在状況セクション（state.work相当）と同じ形を認定日時点用に複製。
       work:{status:null, jobType:'', commute:[], commuteTime:null, workDays:'', condition:[]},
       notWorkReasons:[],
+      notWorkReasonOther:'', // 「仕事をしていなかった理由」でオ（その他）を選んだ場合の自由記述。02裏面row17「その他（理由　）」に対応
       // 認定日時点のADL（日常生活の制限）。現在状況のstate.adlと同じ形。
       adl:{},
       otherChips:[], otherNote:''
@@ -713,6 +811,15 @@ function migrateAppState(raw){
         acquiredKind:'none', acquiredYear:'', acquiredMonth:'', acquiredDay:'',
         disabilityName:'', note:''
       };
+    }
+  }
+
+  if(currentVersion < 4){
+    // 不就労理由「オ：その他」の自由記述欄が無い場合のみ初期値で補う（既存データの上書きはしない）
+    if(typeof s.notWorkReasonOther !== 'string') s.notWorkReasonOther = '';
+    if(s.recognitionSnapshot && typeof s.recognitionSnapshot === 'object'
+       && typeof s.recognitionSnapshot.notWorkReasonOther !== 'string'){
+      s.recognitionSnapshot.notWorkReasonOther = '';
     }
   }
 
@@ -1281,7 +1388,6 @@ function convertPastGroupsToFormRows(groups){
   });
 }
 // TODO(Step6以降): makeBeforeOutputHints() がbuildPastPeriodGroups()の出力を読んでヒント文を作る。まだ未実装。
-// TODO(Step6以降): writeRowsToMainSheet() / writeRowsToContinuationSheet() でExcelへ接続する。まだ未実装。
 
 // =====================================================================
 // Step5：現状編との接続・圧縮・割り振り（Phase4仕様書5.5章、9.1章）
@@ -1585,7 +1691,11 @@ function shiftRowMap(map, offset){
 const RECOGNITION_ADL_CELL_MAP = shiftAdlCellMap(ADL_CELL_MAP, RECOGNITION_ROW_OFFSET);
 const RECOGNITION_NOTWORK_REASON_ROW = shiftRowMap(NOTWORK_REASON_ROW, RECOGNITION_ROW_OFFSET);
 // 現在側のBC44（不就労理由「オ」のその他自由記述）に対応する認定日側セル＝BC17（44-27）
-const RECOGNITION_OTHER_REASON_NOTE_CELL = 'BC' + (44 - RECOGNITION_ROW_OFFSET);
+// 02.xlsx裏面row17の結合セル範囲はBB17:BX17（row44側のBC44:BZ44とは開始列が1つずれ、
+// row17はBBが正しいマスターセル）。なおExcelJSは結合セルの非マスターセルへの書き込みも
+// マスターセルへ自動転送するため、BC17指定でも実害は無かった（要検証・実セルで確認済み）。
+// BBへの変更はコードの正確性のための修正であり、表示結果への影響は無い。
+const RECOGNITION_OTHER_REASON_NOTE_CELL = 'BB' + (44 - RECOGNITION_ROW_OFFSET);
 // 現在側AP55（その他不便、自由記述）に対応する認定日側セル＝AP28（55-27）
 const RECOGNITION_OTHER_NOTE_CELL = 'AP' + (55 - RECOGNITION_ROW_OFFSET);
 
@@ -1627,6 +1737,7 @@ function writeRecognitionSnapshotToBack(back, snap){
       back.getCell(`AO${row}`).value = 'レ';
       if(letter==='オ' && reason!=='その他') otherNoteParts.push(reason);
     });
+    if(snap.notWorkReasons.includes('その他') && snap.notWorkReasonOther) otherNoteParts.push(snap.notWorkReasonOther);
     if(otherNoteParts.length) back.getCell(RECOGNITION_OTHER_REASON_NOTE_CELL).value = otherNoteParts.join('・');
   }
 
@@ -1840,7 +1951,7 @@ function renderCheckList(containerId, items, selectedEvents){
 // 単純な複数選択（文字列配列）はこちらを使う。役割を混ぜない。
 // helpTexts: {label: helpText} の形のオブジェクトを渡すと、各行の下に薄い補助文を表示する（任意・省略可）。
 // 既存呼び出し元（helpTextsを渡さないもの）の挙動は変えない。
-function renderStringCheckList(containerId, items, selectedArr, helpTexts){
+function renderStringCheckList(containerId, items, selectedArr, helpTexts, onChange){
   const container = document.getElementById(containerId);
   container.innerHTML = '';
   const isSelected = key => selectedArr.includes(key);
@@ -1862,6 +1973,7 @@ function renderStringCheckList(containerId, items, selectedArr, helpTexts){
       else { selectedArr.push(key); }
       box.className = 'check-box' + (isSelected(key) ? ' on' : '');
       box.innerHTML = isSelected(key) ? '<span>&#10003;</span>' : '';
+      if(onChange) onChange(key, isSelected(key));
     };
     row.onclick = handler;
     makeFocusable(row, handler);
@@ -2160,6 +2272,7 @@ function stepCh1WorkStatus(){
         state.work.workDays = '';
         state.work.condition = [];
         state.notWorkReasons = [];
+        state.notWorkReasonOther = '';
         state.workStatusJustChanged = true;
       }
       state.workStatusAtCh2Entry = state.work.status;
@@ -2730,139 +2843,137 @@ function stepCh5Done(){
     ? `<p class="small" style="margin-top:14px;">時期がわからない出来事：${unknownKeys.map(k=>esc(findEventLabel(k))).join('・')}</p>`
     : '';
 
-  // 出力内容についての注意書き（常時表示）。件数超過の有無に関わらず、出力対象の範囲を明示する。
-  // Step6（02/04接続）後の修正：旧文言は「現状編単体・02の5件まで、6件目以降は出力されない」という
-  // 過去編実装前の前提のままだった。現仕様では02(5件)+04(11件)=16件まで、過去編との合算で判定し、
-  // 16件を超える分はcompressPastRowsIfNeeded()がまず圧縮を試みるため、「出力されない」という表現は
-  // 実態と異なる（圧縮しても収まらない場合のみ、エラーで出力自体が止まる）。
-  const exportNoticeHtml = `
-    <div class="hint" style="background:var(--accent-soft);color:var(--ink);margin-top:14px;">
-      <p style="margin:0 0 6px;font-weight:600;">出力される内容について</p>
-      <ul style="margin:0;padding-left:18px;line-height:1.7;">
-        <li>通院期間・通院していない期間は、最大16件まで出力されます。件数が多い場合は、一部をまとめて出力します。それでも16件を超えるときは、出力時にエラーになり、この画面で調整する場所を案内します。</li>
-        <li>傷病名・発病時期・初診日など、診断書等との整合が必要な項目は、この試作版では出力対象に含まれていません。</li>
-        <li>出力されるのは様式（02.xlsx）の一部です。すべての項目が埋まるわけではありません。続紙（04.xlsx）が必要な場合は、02.xlsxに続けて自動でダウンロードされます。</li>
-        <li>昔の通院歴や、初診より前のことも記録したい場合は、先に「昔のことを記録する」（下の案内）を試してから出力すると、より多くの内容を反映できます。</li>
-      </ul>
+  // ---- アコーディオン4項目（ch5_done仕様書3.6）。出力に関する説明・注意書きは
+  // ここに集約し、出力ボタン自体はch5_previewに移したため、このページでは「説明のみ」。
+  const accordionItemsHtml = `
+    <div class="accordion-item">
+      <button type="button" class="accordion-trigger" data-accordion="acc-next-steps">この後の流れ</button>
+      <div class="accordion-panel" id="acc-next-steps" hidden>
+        <p class="small" style="margin:0;line-height:1.8;">
+          このあと「申立書の下書きを確認する」を押すと、これまでの内容が申立書の様式に近い形で表示されます。
+          内容を確認しながら、必要な部分だけ直したり、認定日ごろの状況や手帳情報を追加したりできます。
+          最後にExcelファイルとしてダウンロードできます。
+        </p>
+      </div>
+    </div>
+    <div class="accordion-item">
+      <button type="button" class="accordion-trigger" data-accordion="acc-about">この試作版について</button>
+      <div class="accordion-panel" id="acc-about" hidden>
+        <p class="small" style="margin:0;line-height:1.8;">
+          傷病名・発病時期・初診日など、診断書等との整合が必要な項目は、この試作版では入力・出力の対象に含まれていません。
+          様式（申立書）の全項目ではなく、一部のみを扱っています（最初の画面の案内もご参照ください）。
+        </p>
+      </div>
+    </div>
+    <div class="accordion-item">
+      <button type="button" class="accordion-trigger" data-accordion="acc-export">Excel・PDFについて</button>
+      <div class="accordion-panel" id="acc-export" hidden>
+        <p class="small" style="margin:0;line-height:1.8;">
+          通院期間・通院していない期間は、最大16件まで出力されます。件数が多い場合は一部をまとめて出力し、
+          それでも16件を超えるときは出力時にエラーになり、調整する場所を案内します。
+          出力されるのは様式（02.xlsx）の一部で、続紙（04.xlsx）が必要な場合は自動で続けてダウンロードされます。
+          出力は次の「申立書の下書きを確認する」の画面から行います。
+        </p>
+      </div>
+    </div>
+    <div class="accordion-item">
+      <button type="button" class="accordion-trigger" data-accordion="acc-help">困ったときは</button>
+      <div class="accordion-panel" id="acc-help" hidden>
+        <p class="small" style="margin:0;line-height:1.8;">
+          入力した内容は、この端末のブラウザに自動的に保存されています。画面を閉じても、次に開いたときに続きから始められます。
+          内容を間違えてしまっても、あとからいつでも直せます。不安なときは、まず「修正する」から該当の項目を見直してみてください。
+        </p>
+      </div>
     </div>`;
 
-  // 16件超過時の警告：現状編＋過去編（圧縮後）の合計が16件を超える場合のみ、具体的な件数とエラーになる旨を明示する。
-  // Step6後の修正：旧ロジックは state.hospitals.length + gaps.length（現状編のみ）> 5 を閾値にしていたが、
-  // 現仕様では過去編との合算・圧縮・04への振り分けがあるため、現状編単体の件数では正しく判定できない。
-  // ここではexportToOfficialForm()と同じ計算（16-currentRows.length を過去編の使える枠として渡し、
-  // compressPastRowsIfNeeded()の結果がエラーかどうか）で判定する。
-  const currentRowsForNotice = buildCurrentPeriodRows();
-  const availableSlotsForPastNotice = Math.max(0, 16 - currentRowsForNotice.length);
-  const pastCompressResultForNotice = compressPastRowsIfNeeded(state.pastFragments, state.pastHospitals, availableSlotsForPastNotice);
-  const pastCountForNotice = (pastCompressResultForNotice && pastCompressResultForNotice.error)
-    ? pastCompressResultForNotice.rows.length
-    : pastCompressResultForNotice.length;
-  const totalPeriodCount = currentRowsForNotice.length + pastCountForNotice;
-  const willOverflow = !!(pastCompressResultForNotice && pastCompressResultForNotice.error);
-  const overflowWarningHtml = willOverflow
-    ? `<p class="hint" style="background:var(--warn-soft);color:var(--warn);margin-top:14px;">今回は通院期間・通院していない期間が合計${totalPeriodCount}件あり、16件にまとめてもまだ収まりません。出力時にエラーになります。「出来事の配置を直す」や「昔のことを記録する」で、記録の一部をまとめるか件数を減らしてから、もう一度お試しください。</p>`
-    : '';
-
-  // 過去編（続紙対応）への入口。フッターではなく本文内の新規セクションに置く（GPT方針）。
-  const pastFragmentCount = state.pastFragments.length;
-  const pastIntroHtml = `
-    <div class="edit-section" style="margin-top:18px;">
-      <p class="edit-section-label">昔のことを記録する（試作）</p>
-      <p class="small" style="margin:0 0 10px;">もっと昔の通院歴や、初診よりも前のことを、思い出せる範囲で記録できます。一度に全部でなくても大丈夫です。</p>
-      ${pastFragmentCount > 0 ? `<p class="small" style="margin:0 0 10px;color:var(--accent-strong);">これまでに${pastFragmentCount}件、記録があります。</p>` : ''}
-      <button type="button" id="goToPastEditorBtn" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--accent-strong);background:#fff;color:var(--accent-strong);font-size:15px;cursor:pointer;">昔のことを記録する →</button>
-    </div>`;
-
-  // 02裏面オプション入力（障害認定日頃の状況／障害者手帳）への入口。
-  // 出来事カード配置画面そのものには混ぜず、出力前の追加オプション入力セクションとして
-  // ch5の年表完成確認画面〜Excel出力の間に置く（今回の実装方針）。
-  // 入力の有無はrecognitionSnapshot.enabled/disabilityNotebook.enabledで管理し、
-  // 各セクションでは現在の状態（未入力／入力済み）を要約表示するのみで、実際の入力は別画面で行う。
+  // ---- 「修正する」「追加で入力する」一覧（ch5_done仕様書3.5・3.5.1）。
+  // 認定日欄・手帳欄は任意項目のため、未入力なら「追加で入力する」、入力済みなら
+  // 「修正する」にも重複して出す（どちらから入っても迷わず到達できるようにする）。
   const recognitionEnabled = state.recognitionSnapshot.enabled;
   const notebookEnabled = state.disabilityNotebook.enabled;
-  const optionalSectionsHtml = `
-    <div class="edit-section" style="margin-top:18px;">
-      <p class="edit-section-label">追加で入力できる項目（任意）</p>
-      <p class="small" style="margin:0 0 10px;">どちらも入力しなくても出力できます。あてはまる方だけ入力してください。</p>
+  const pastFragmentCount = state.pastFragments.length;
 
-      <div style="border:1px solid var(--border-color, #ddd);border-radius:8px;padding:12px;margin-bottom:10px;">
-        <p style="margin:0 0 4px;font-weight:600;">障害認定日ごろの状態（任意）</p>
-        <p class="small" style="margin:0 0 8px;">初診日から１年６か月ごろ（または認定日請求の対象時期）の生活・通院・仕事の状況を、申立書に反映するための入力です。入力しない場合は空欄のまま出力できます。</p>
-        <p class="small" style="margin:0 0 8px;color:${recognitionEnabled ? 'var(--accent-strong)' : 'inherit'};">${recognitionEnabled ? '入力済みです。内容を見直す・編集できます。' : '今回は入力しない設定です。'}</p>
-        <button type="button" id="goToRecognitionBtn" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--accent-strong);background:#fff;color:var(--accent-strong);font-size:14px;cursor:pointer;">${recognitionEnabled ? '内容を編集する →' : '入力する →'}</button>
-      </div>
+  const editListHtml = `
+    <button type="button" class="edit-chip" data-edit-chapter="ch1_work_status">就労状況を修正</button>
+    <button type="button" class="edit-chip" data-edit-chapter="ch2_intro">今の生活を修正</button>
+    <button type="button" class="edit-chip" data-edit-chapter="ch3_events">出来事を修正</button>
+    <button type="button" class="edit-chip" data-edit-chapter="${state.hospitals.length>0 ? 'ch4_summary' : 'ch4_intro'}">通院記録を修正</button>
+    <button type="button" class="edit-chip" id="editPlacementChip">出来事の配置を直す</button>
+    ${recognitionEnabled ? `<button type="button" class="edit-chip" id="editRecognitionChip">認定日ごろの状況を直す</button>` : ''}
+    ${notebookEnabled ? `<button type="button" class="edit-chip" id="editNotebookChip">障害者手帳の情報を直す</button>` : ''}`;
 
-      <div style="border:1px solid var(--border-color, #ddd);border-radius:8px;padding:12px;">
-        <p style="margin:0 0 4px;font-weight:600;">障害者手帳の情報（任意）</p>
-        <p class="small" style="margin:0 0 8px;">障害者手帳を持っている場合、その内容を申立書に反映できます。持っていない場合は入力不要です。</p>
-        <p class="small" style="margin:0 0 8px;color:${notebookEnabled ? 'var(--accent-strong)' : 'inherit'};">${notebookEnabled ? '入力済みです。内容を見直す・編集できます。' : '今回は入力しない設定です。'}</p>
-        <button type="button" id="goToNotebookBtn" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--accent-strong);background:#fff;color:var(--accent-strong);font-size:14px;cursor:pointer;">${notebookEnabled ? '内容を編集する →' : '入力する →'}</button>
-      </div>
-    </div>`;
-
-  // 「次にできること」見出し（GPTレビュー指示1-3）。画面構造は変えず、年表の下に
-  // 優先順がわかる短い案内を追加するのみ。実際の操作はこの下に並ぶ既存のボタン群で行う。
-  const nextStepsHtml = `
-    <div class="edit-section" style="margin-top:18px;">
-      <p class="edit-section-label">次にできること</p>
-      <p class="small" style="margin:0;line-height:1.8;">
-        このまま下書きを出力できます。必要があれば、認定日ごろの状況や手帳情報を追加してから出力することもできます。<br>
-        ①申立書の下書きを出力する　②（必要なら）認定日ごろの状況を追加する　③（必要なら）手帳情報を追加する　④（必要なら）出来事や通院を直す
-      </p>
-    </div>`;
+  const addListHtml = `
+    <button type="button" class="edit-chip" id="addPastChip">昔のことを記録する${pastFragmentCount > 0 ? `（${pastFragmentCount}件あり）` : ''}</button>
+    ${!recognitionEnabled ? `<button type="button" class="edit-chip" id="addRecognitionChip">認定日ごろの状況を入力する（任意）</button>` : ''}
+    ${!notebookEnabled ? `<button type="button" class="edit-chip" id="addNotebookChip">障害者手帳の情報を入力する（任意）</button>` : ''}`;
 
   document.getElementById('screen').innerHTML = `
     <div class="card">
       <h2>年表ができました</h2>
+      <p class="lead">ここまでで、申立書の土台ができました。</p>
       ${rowsHtml}
       ${gapHtml ? `<div style="margin-top:12px;">${gapHtml}</div>` : ''}
       ${unknownHtml}
       <button type="button" class="link-btn" id="editPlacementBtn" style="margin-top:14px;">出来事の配置を直す →</button>
 
-      ${nextStepsHtml}
-
-      ${pastIntroHtml}
-
-      ${optionalSectionsHtml}
+      <p class="small" style="margin-top:18px;">ここまで入力した内容は、あとから何度でも修正できます。</p>
+      <button type="button" id="goToPreviewBtn" style="width:100%;padding:12px;border-radius:8px;border:none;background:var(--accent-strong);color:#fff;font-size:15px;cursor:pointer;margin-top:8px;">申立書の下書きを確認する →</button>
 
       <div class="edit-section" style="margin-top:18px;">
-        <p class="edit-section-label">申立書の下書きを作る</p>
-        <p class="small" style="margin:0 0 10px;">ここまでの内容を、申立書の様式（Excel）に書き込んでダウンロードします。ざっくりでよいので、後で自由に書き直してください。</p>
-        ${exportNoticeHtml}
-        ${overflowWarningHtml}
-        <button type="button" id="exportFormBtn" style="width:100%;padding:12px;border-radius:8px;border:none;background:var(--accent-strong);color:#fff;font-size:15px;cursor:pointer;">申立書（Excel）をダウンロード</button>
-        <p class="small" id="exportFormStatus" style="margin-top:8px;color:var(--accent-strong);"></p>
-      </div>
-
-      <div class="edit-section">
-        <p class="edit-section-label">前の内容を修正する</p>
+        <p class="edit-section-label">修正する</p>
         <div class="edit-section-grid">
-          <button type="button" class="edit-chip" data-edit-chapter="ch1_work_status">就労状況を修正</button>
-          <button type="button" class="edit-chip" data-edit-chapter="ch2_intro">今の生活を修正</button>
-          <button type="button" class="edit-chip" data-edit-chapter="ch3_events">出来事を修正</button>
-          <button type="button" class="edit-chip" data-edit-chapter="${state.hospitals.length>0 ? 'ch4_summary' : 'ch4_intro'}">通院記録を修正</button>
+          ${editListHtml}
         </div>
       </div>
 
       <div class="edit-section">
+        <p class="edit-section-label">追加で入力する（任意）</p>
+        <div class="edit-section-grid">
+          ${addListHtml}
+        </div>
+      </div>
+
+      <div class="accordion-group" style="margin-top:18px;">
+        ${accordionItemsHtml}
+      </div>
+
+      <div class="edit-section" style="margin-top:18px;">
         <p class="edit-section-label">保存データの削除</p>
         <p class="small" style="margin:0 0 10px;">この端末に保存されている入力内容を削除して、最初からやり直します。</p>
         <button type="button" id="restartFromScratchBtn" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--danger);background:var(--danger-soft);color:var(--danger);font-size:15px;cursor:pointer;">最初からやり直す</button>
       </div>
     </div>`;
+
   document.getElementById('editPlacementBtn').onclick = ()=>goTo('ch5_edit');
-  document.getElementById('goToPastEditorBtn').onclick = ()=>{
+  document.getElementById('goToPreviewBtn').onclick = ()=>goTo('ch5_preview');
+
+  // アコーディオン開閉（ch5_done仕様書3.6：デフォルト閉じた状態、タップで開閉）
+  document.querySelectorAll('.accordion-trigger').forEach(btn=>{
+    btn.onclick = ()=>{
+      const panel = document.getElementById(btn.getAttribute('data-accordion'));
+      const isOpen = !panel.hidden;
+      panel.hidden = isOpen;
+      btn.classList.toggle('accordion-trigger-open', !isOpen);
+    };
+  });
+
+  document.getElementById('addPastChip').onclick = ()=>{
     state.returnTo = 'ch5_done';
     goTo('ch6_past_intro');
   };
-  document.getElementById('goToRecognitionBtn').onclick = ()=>{
+  const recogBtn = document.getElementById('editRecognitionChip') || document.getElementById('addRecognitionChip');
+  if(recogBtn) recogBtn.onclick = ()=>{
     state.returnTo = 'ch5_done';
     goTo('ch5_recognition');
   };
-  document.getElementById('goToNotebookBtn').onclick = ()=>{
+  const notebookBtn = document.getElementById('editNotebookChip') || document.getElementById('addNotebookChip');
+  if(notebookBtn) notebookBtn.onclick = ()=>{
     state.returnTo = 'ch5_done';
     goTo('ch5_notebook');
   };
+  const placementChip = document.getElementById('editPlacementChip');
+  if(placementChip) placementChip.onclick = ()=>goTo('ch5_edit');
+
   document.getElementById('restartFromScratchBtn').onclick = ()=>{
     const ok = confirm('保存されている入力内容を削除して、最初からやり直します。よろしいですか？');
     if(!ok) return;
@@ -2871,9 +2982,301 @@ function stepCh5Done(){
     current = 'start';
     showScreen();
   };
-  document.getElementById('exportFormBtn').onclick = async ()=>{
-    const btn = document.getElementById('exportFormBtn');
-    const statusEl = document.getElementById('exportFormStatus');
+  document.querySelectorAll('[data-edit-chapter]').forEach(btn=>{
+    btn.onclick = ()=>{
+      state.returnTo = 'ch5_done';
+      goTo(btn.getAttribute('data-edit-chapter'));
+    };
+  });
+  setFooter({secondaryLabel:'戻る', secondaryFn:goBack});
+}
+
+// =====================================================================
+// ch5_preview：申立書の下書き確認（HTML申立書プレビュー画面仕様書v4）
+// 役割：「病歴・就労状況等申立書が実際に完成していく様子」を体験する画面。
+// 第1段階＝紙面再現を最優先（編集機能なし）。仕様書0章・2章を参照。
+// 表示内容はexportToOfficialForm()と同じデータソース（state / buildCurrentPeriodRows等）
+// から組み立てる。新規の集計ロジックは作らない（v3から継続する原則）。
+// =====================================================================
+
+// ---- 通院期間・通院していない期間の全件行（mainRows+continuationRows）を、
+//      exportToOfficialForm()と同じ手順（buildCurrentPeriodRows→圧縮→割り振り）で取得する。
+//      件数超過時（compressPastRowsIfNeeded()がエラーを返す場合）はエラー情報も返す。
+function buildPreviewPeriodRows(){
+  const currentRows = buildCurrentPeriodRows();
+  const availableSlotsForPast = Math.max(0, 16 - currentRows.length);
+  const compressed = compressPastRowsIfNeeded(state.pastFragments, state.pastHospitals, availableSlotsForPast);
+  if(compressed && compressed.error){
+    return { rows: compressed.rows, error: compressed.message };
+  }
+  const { mainRows, continuationRows } = allocateRowsToMainAndContinuation(currentRows, compressed);
+  return { rows: mainRows.concat(continuationRows), error: null };
+}
+
+// ---- 元号セレクタ風表示（仕様書2.2節4番）。和暦が決まらない場合は実物のプレースホルダーを出す。 ----
+function renderPreviewEraHtml(year){
+  const [g] = yearToWareki(parseInt(year, 10));
+  if(!g){
+    return `<span class="pp-date-placeholder">元号を選んでください</span>`;
+  }
+  const eras = ['昭和','平成','令和'];
+  return `<span class="pp-era">${eras.map(e=>`<span class="pp-era-opt${e===g ? ' pp-selected' : ''}">${e}</span>`).join('')}</span>`;
+}
+
+// ---- チェックボックス（□にレ点、仕様書2.2節3番）。labelは両方表示し、選ばれた方だけ強調する。 ----
+function renderPreviewCheckboxPairHtml(labelA, checkedA, labelB, checkedB){
+  return `<span class="pp-checkbox${checkedA?' pp-checked':''}"><span class="pp-checkbox-box">レ</span>${esc(labelA)}</span>` +
+         `<span class="pp-checkbox${checkedB?' pp-checked':''}"><span class="pp-checkbox-box">レ</span>${esc(labelB)}</span>`;
+}
+
+// ---- 通院期間セクションのHTML（紙面本体用、年表のマス目）。全件表示・要約しない。 ----
+function renderPreviewPeriodRowsHtml(rows){
+  if(!rows.length){
+    return `<div class="pp-period-row"><div class="pp-period-num">1</div><div class="pp-period-body"><div class="pp-period-dates pp-blank">未入力</div><div class="pp-period-note pp-blank">記録がありません</div></div></div>`;
+  }
+  return rows.map((r,i)=>{
+    const fromHtml = r.fromKind==='none' ? `<span class="pp-blank">${esc(r.fromLabel)}</span>` : `${renderPreviewEraHtml(r.fromYear)}　${r.fromYear?esc(yearToWareki(r.fromYear)[1]):''}年　${r.fromMonth||''}月から`;
+    const toHtml = r.toKind==='none' ? `<span class="pp-blank">${esc(r.toLabel)}</span>` : `${renderPreviewEraHtml(r.toYear)}　${r.toYear?esc(yearToWareki(r.toYear)[1]):''}年　${r.toMonth||''}月まで`;
+    const visitedHtml = r.fromKind==='none' ? '' : `<div style="margin-top:3px;">${renderPreviewCheckboxPairHtml('受診した', r.visited, '受診していない', !r.visited)}</div>`;
+    const hospitalHtml = r.hospitalName ? `<div class="pp-period-hospital">${esc(r.hospitalName)}</div>` : (r.fromKind==='none' ? '' : `<div class="pp-period-hospital pp-blank">医療機関名</div>`);
+    return `<div class="pp-period-row">
+      <div class="pp-period-num">${i+1}</div>
+      <div class="pp-period-body">
+        <div class="pp-period-dates">
+          <div>${fromHtml}</div>
+          <div>${toHtml}</div>
+          ${visitedHtml}
+          ${hospitalHtml}
+        </div>
+        <div class="pp-period-note">${r.note ? esc(r.note) : '<span class="pp-blank">左の期間の状況</span>'}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ---- ADL10項目の選択枠（丸数字、仕様書2.2節2番）。ADL_LEVELSの並び順＝実物の1〜4に対応。 ----
+function renderPreviewAdlGridHtml(adl){
+  const items = ADL_ITEMS.map(([key,label])=>{
+    const current = (adl||{})[key];
+    const numsHtml = ADL_LEVELS.map((level, idx)=>{
+      const selected = current === level;
+      return `<span class="pp-adl-num${selected?' pp-selected':''}">${idx+1}</span>`;
+    }).join('');
+    return `<div class="pp-adl-item"><span class="pp-adl-item-label">${esc(label)}</span><span class="pp-adl-nums">${numsHtml}</span></div>`;
+  }).join('');
+  return `<div class="pp-adl-row">${items}</div>`;
+}
+
+// ---- 不就労理由（ア〜オの記号付き選択肢、仕様書6章）。NOTWORK_REASON_MAPの文字を使い、
+//      実物の5択（ア・イ・ウ・エ・オ）にUI側8択を縮約して表示する（出力ロジックと同じ縮約）。 ----
+const NOTWORK_REASON_DISPLAY = [
+  ['ア','体力に自信がなかったから'],
+  ['イ','医師から働くことを止められていたから'],
+  ['ウ','働く意欲がなかったから'],
+  ['エ','働きたかったが適切な職場がなかったから'],
+  ['オ','その他']
+];
+function renderPreviewReasonListHtml(selectedReasons, reasonOther){
+  const selectedLetters = new Set((selectedReasons||[]).map(r=>NOTWORK_REASON_MAP[r]).filter(Boolean));
+  const items = NOTWORK_REASON_DISPLAY.map(([letter,label])=>{
+    const selected = selectedLetters.has(letter);
+    let extra = '';
+    if(letter==='オ' && selected){
+      extra = reasonOther
+        ? `（理由：${esc(reasonOther)}）`
+        : '（理由：<span class="pp-blank">具体的な理由を記入してください</span>）';
+    }
+    return `<div class="pp-reason-item${selected?' pp-selected':''}"><span class="pp-reason-letter">${letter}</span>${esc(label)}${extra}</div>`;
+  }).join('');
+  return `<div class="pp-reason-list">${items}</div>`;
+}
+
+// ---- 就労・生活状況セクション（認定日頃／現在、共通レイアウト）のHTML。
+//      仕様書6章：縦書きラベル列＋就労状況の記入枠＋不就労理由のチェック枠＋ADL選択枠＋自由記述枠。
+//      注意：work.statusの値形式は呼び出し元によって異なる（既存実装の実態）。
+//      ・現在欄（state.work）：'working'/'leave'/'not_working'（ch1_work_statusの3択、英語コード）
+//        実際の分岐はexportToOfficialForm()・stepCh2Intro()と同じ「'working'なら就労側、
+//        それ以外（'leave'も含む）は不就労側」の二択（3874行目 if(status==='working')...else...）。
+//      ・認定日欄（snap.work）：'仕事をしていた'/'仕事をしていなかった'（stepCh5Recognitionの2択、日本語文字列）
+//      この関数は両方から呼ばれるため、どちらの値形式でも正しく判定できるようにする。 ----
+function renderPreviewWorkSectionHtml(work, notWorkReasons, adl, otherChips, otherNote, notWorkReasonOther){
+  work = work || {};
+  const isWorking = work.status === '仕事をしていた' || work.status === 'working';
+  const isNotWorking = work.status === '仕事をしていなかった' || work.status === 'leave' || work.status === 'not_working';
+
+  const jobTypeHtml = isWorking
+    ? (work.jobType ? esc(work.jobType) : '<span class="pp-blank">職種（仕事の内容）を記入してください。</span>')
+    : '<span class="pp-blank">職種（仕事の内容）を記入してください。</span>';
+  const commuteMethodHtml = isWorking
+    ? (toLabelStrings(work.commute).length ? esc(toLabelStrings(work.commute).join('・')) : '<span class="pp-blank">通勤方法を記入してください。</span>')
+    : '<span class="pp-blank">通勤方法を記入してください。</span>';
+  const commuteTimeHtml = isWorking
+    ? (work.commuteTime ? `${esc(work.commuteTime)}（片道）` : '<span class="pp-blank">通勤時間（片道）</span>')
+    : '<span class="pp-blank">通勤時間（片道）</span>';
+  const workDaysHtml = isWorking
+    ? (work.workDays ? `${esc(work.workDays)}日` : '<span class="pp-blank">出勤日数を記入してください。</span>')
+    : '<span class="pp-blank">出勤日数を記入してください。</span>';
+  const conditionHtml = isWorking
+    ? (toLabelStrings(work.condition).length ? esc(toLabelStrings(work.condition).join('・')) : '<span class="pp-blank">仕事中や仕事が終わった時の身体の調子について記入してください。</span>')
+    : '<span class="pp-blank">仕事中や仕事が終わった時の身体の調子について記入してください。</span>';
+  const reasonListHtml = renderPreviewReasonListHtml(isNotWorking ? notWorkReasons : [], notWorkReasonOther);
+
+  let otherText = toLabelStrings(otherChips||[]).join('・');
+  if(otherNote){ otherText = otherText ? (otherText + '／' + otherNote) : otherNote; }
+  const otherHtml = otherText ? esc(otherText) : '<span class="pp-blank">その他日常生活で不便に感じたことがありましたら記入してください。</span>';
+
+  return `
+    <div class="pp-block">
+      <div class="pp-label">就労状況</div>
+      <div class="pp-body">
+        <div class="pp-row"><div class="pp-row-label">職種</div><div class="pp-row-value">${jobTypeHtml}</div></div>
+        <div class="pp-row"><div class="pp-row-label">通勤方法</div><div class="pp-row-value">${commuteMethodHtml}</div></div>
+        <div class="pp-row"><div class="pp-row-label">通勤時間</div><div class="pp-row-value">${commuteTimeHtml}</div></div>
+        <div class="pp-row"><div class="pp-row-label">出勤日数</div><div class="pp-row-value">${workDaysHtml}</div></div>
+        <div class="pp-row"><div class="pp-row-label">仕事中・終わった後の体の調子</div><div class="pp-row-value">${conditionHtml}</div></div>
+        <div class="pp-row"><div class="pp-row-label">仕事をしていなかった理由</div><div class="pp-row-value">${reasonListHtml}</div></div>
+      </div>
+    </div>
+    <div class="pp-block">
+      <div class="pp-label">日常生活状況</div>
+      <div class="pp-body">
+        <div class="pp-row"><div class="pp-row-value">${renderPreviewAdlGridHtml(adl)}</div></div>
+        <div class="pp-row"><div class="pp-row-label">その他</div><div class="pp-row-value">${otherHtml}</div></div>
+      </div>
+    </div>`;
+}
+
+// ---- 障害者手帳セクションのHTML（仕様書6章：種類チップは身・精・療・他の略字表現＋等級＋交付年月日＋障害名）。 ----
+function renderPreviewNotebookSectionHtml(){
+  const nb = state.disabilityNotebook;
+  if(!nb || !nb.enabled){
+    return `<div class="pp-row"><div class="pp-row-label">交付状況</div><div class="pp-row-value"><span class="pp-blank">未入力（任意）</span></div></div>`;
+  }
+  const typeShortMap = {'身体障害者手帳':'身','精神障害者保健福祉手帳':'精','療育手帳':'療','その他':'他'};
+  const typesHtml = ['身','精','療','他'].map(short=>{
+    const selected = typeShortMap[nb.type] === short;
+    return `<span class="pp-notebook-type-opt${selected?' pp-selected':''}">${short}</span>`;
+  }).join('');
+  const dateHtml = (nb.acquiredKind && nb.acquiredKind!=='none' && nb.acquiredYear)
+    ? `${renderPreviewEraHtml(nb.acquiredYear)}　${esc(yearToWareki(parseInt(nb.acquiredYear,10))[1])}年${nb.acquiredMonth?`　${nb.acquiredMonth}月`:''}${nb.acquiredDay?`　${nb.acquiredDay}日`:''}`
+    : `<span class="pp-date-placeholder">元号を選んでください</span>`;
+  const gradeHtml = nb.grade ? esc(nb.grade) : '<span class="pp-blank">（　級）</span>';
+  const nameHtml = nb.disabilityName ? esc(nb.disabilityName) : '<span class="pp-blank">障害名</span>';
+  return `
+    <div class="pp-row"><div class="pp-row-label">手帳の種類</div><div class="pp-row-value"><span class="pp-notebook-types">${typesHtml}</span>${nb.type==='その他'&&nb.otherTypeName?`（${esc(nb.otherTypeName)}）`:''}</div></div>
+    <div class="pp-row"><div class="pp-row-label">交付年月日</div><div class="pp-row-value">${dateHtml}（${gradeHtml}）</div></div>
+    <div class="pp-row"><div class="pp-row-label">障害名</div><div class="pp-row-value">${nameHtml}</div></div>`;
+}
+
+function stepCh5Preview(){
+  const periodResult = buildPreviewPeriodRows();
+
+  // ---- 入力状況表示（仕様書4.2節：第1段階は単純な集計表示＋スクロールのみ） ----
+  const recognitionEnabled = state.recognitionSnapshot.enabled;
+  const notebookEnabled = state.disabilityNotebook.enabled;
+  const otherEntered = !!(toLabelStrings(state.otherChips).length || state.otherNote);
+  const statusItems = [
+    {label:'年表（通院期間・通院していない期間）', done:true, anchor:'preview-sec-period'},
+    {label:'現在の就労・生活状況', done:true, anchor:'preview-sec-current'},
+    {label:'認定日ごろの状況（任意）', done:recognitionEnabled, anchor:'preview-sec-recognition'},
+    {label:'障害者手帳の情報（任意）', done:notebookEnabled, anchor:'preview-sec-notebook'},
+    {label:'その他現在情報', done:otherEntered, anchor:'preview-sec-current'}
+  ];
+  const doneCount = statusItems.filter(s=>s.done).length;
+  const statusListHtml = statusItems.map(s=>
+    `<button type="button" class="preview-jump" data-jump="${s.anchor}">${s.done ? '✓' : '○'} ${esc(s.label)}</button>`
+  ).join('');
+
+  const periodErrorHtml = periodResult.error
+    ? `<p class="hint" style="background:var(--warn-soft);color:var(--warn);margin:0 0 14px;">${esc(periodResult.error)}「修正する」から記録の一部を調整してから、もう一度お試しください。</p>`
+    : '';
+
+  // ---- 認定日ごろの状況（任意）。仕様書3.2節：認定日→現在の順で、同一レイアウトを上下に並べる。
+  // 実物02.xlsx裏面A4「１．障害認定日」／A32「２．現在…」はそれぞれ独立した章タイトル行であり、
+  // 「就労状況」「日常生活状況」はその配下の縦書きラベル（2階層構造）。HTML組み立て側で
+  // 章タイトル＋ブロックの2階層を直接構成する（v4仕様書6章追補・実装解釈ズレの修正）。 ----
+  const snap = state.recognitionSnapshot;
+
+  document.getElementById('screen').innerHTML = `
+    <div class="card">
+      <h2>申立書の下書き確認</h2>
+
+      <div class="preview-status">
+        <p class="preview-status-title">申立書の入力状況</p>
+        <div class="preview-status-counts">
+          <span>✓ 入力済み　${doneCount}</span>
+          <span>○ 任意未入力　${statusItems.filter(s=>!s.done).length}</span>
+          <span>△ 試作版対象外　2</span>
+        </div>
+        <div class="preview-status-list">${statusListHtml}</div>
+        <div class="preview-status-excluded">対象外（この試作版では入力しません）：傷病名・発病日・初診日</div>
+      </div>
+
+      ${periodErrorHtml}
+
+      <div class="preview-paper">
+        <div class="preview-paper-title">病歴・就労状況等申立書</div>
+
+        <div class="pp-static-row">
+          <div class="pp-static-label">傷病名</div>
+          <div class="pp-static-value pp-unavailable">未入力（この試作版では対応していません）</div>
+        </div>
+        <div class="pp-static-row">
+          <div class="pp-static-label">発病日・初診日</div>
+          <div class="pp-static-value pp-unavailable">未入力（この試作版では対応していません）</div>
+        </div>
+
+        <div id="preview-sec-period">${renderPreviewPeriodRowsHtml(periodResult.rows)}</div>
+
+        <div id="preview-sec-recognition">
+          <div class="pp-chapter-title pp-chapter-title-first">１．障害認定日</div>
+          ${recognitionEnabled
+            ? renderPreviewWorkSectionHtml(snap.work, snap.notWorkReasons, snap.adl, snap.otherChips, snap.otherNote, snap.notWorkReasonOther)
+            : `<div class="pp-block"><div class="pp-body"><div class="pp-row"><div class="pp-row-value"><span class="pp-blank">未入力（任意）。認定日ごろ（初診日から1年6か月、またはそれ以前に治った場合は治った日）の状況です。</span></div></div></div></div>`}
+        </div>
+
+        <div id="preview-sec-current">
+          <div class="pp-chapter-title">２．現在（請求日頃）の状況</div>
+          ${renderPreviewWorkSectionHtml(state.work, state.notWorkReasons, state.adl, state.otherChips, state.otherNote, state.notWorkReasonOther)}
+          <div id="preview-sec-notebook" class="pp-block" style="border-bottom:none;">
+            <div class="pp-label">障害者手帳</div>
+            <div class="pp-body">${renderPreviewNotebookSectionHtml()}</div>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" id="previewExportFormBtn" style="width:100%;padding:12px;border-radius:8px;border:none;background:var(--accent-strong);color:#fff;font-size:15px;cursor:pointer;margin-top:14px;">申立書（Excel）をダウンロード</button>
+      <p class="small" id="previewExportFormStatus" style="margin-top:8px;color:var(--accent-strong);"></p>
+
+      <div class="accordion-group" style="margin-top:10px;">
+        <div class="accordion-item">
+          <button type="button" class="accordion-trigger" data-accordion="acc-other-output">その他の出力（PDFなど）</button>
+          <div class="accordion-panel" id="acc-other-output" hidden>
+            <p class="small" style="margin:0;">PDF出力は今後対応予定です。現在はExcel出力のみご利用いただけます。</p>
+          </div>
+        </div>
+      </div>
+
+      <p class="preview-output-note">Excel・PDFは、このプレビューの内容をもとに作成されます</p>
+    </div>`;
+
+  document.querySelectorAll('.preview-jump').forEach(btn=>{
+    btn.onclick = ()=>{
+      const target = document.getElementById(btn.getAttribute('data-jump'));
+      if(target && typeof target.scrollIntoView === 'function') target.scrollIntoView({block:'start', behavior:'smooth'});
+    };
+  });
+  document.querySelectorAll('.accordion-trigger').forEach(btn=>{
+    btn.onclick = ()=>{
+      const panel = document.getElementById(btn.getAttribute('data-accordion'));
+      const isOpen = !panel.hidden;
+      panel.hidden = isOpen;
+      btn.classList.toggle('accordion-trigger-open', !isOpen);
+    };
+  });
+  document.getElementById('previewExportFormBtn').onclick = async ()=>{
+    const btn = document.getElementById('previewExportFormBtn');
+    const statusEl = document.getElementById('previewExportFormStatus');
     btn.disabled = true;
     btn.textContent = '作成中…';
     statusEl.textContent = '';
@@ -2888,13 +3291,8 @@ function stepCh5Done(){
       btn.textContent = '申立書（Excel）をダウンロード';
     }
   };
-  document.querySelectorAll('[data-edit-chapter]').forEach(btn=>{
-    btn.onclick = ()=>{
-      state.returnTo = 'ch5_done';
-      goTo(btn.getAttribute('data-edit-chapter'));
-    };
-  });
-  setFooter({secondaryLabel:'戻る', secondaryFn:goBack});
+
+  setFooter({secondaryLabel:'戻る', secondaryFn:()=>goTo('ch5_done')});
 }
 
 // =====================================================================
@@ -3558,14 +3956,26 @@ function stepCh2WorkDetail(){
 }
 
 function stepCh2NotworkReason(){
+  const showOtherNote = state.notWorkReasons.includes('その他');
   document.getElementById('screen').innerHTML = `
     <div class="card">
       <h2>仕事をしていない理由を教えてください</h2>
       <p class="lead">当てはまるものをすべて選んでください</p>
       <p class="small hint" style="margin-bottom:14px;">${esc(ADL_HELP_NOTICE)}</p>
       <div id="reasonList"></div>
+      <div id="notWorkReasonOtherBlock" style="display:${showOtherNote?'':'none'};margin-top:10px;">
+        <label class="field-label">「その他」の具体的な理由</label>
+        <textarea id="notWorkReasonOtherText" placeholder="具体的な理由を記入してください"></textarea>
+      </div>
     </div>`;
-  renderStringCheckList('reasonList', NOTWORK_REASONS.map(l=>[l,l]), state.notWorkReasons, NOTWORK_REASON_HELP_TEXTS);
+  renderStringCheckList('reasonList', NOTWORK_REASONS.map(l=>[l,l]), state.notWorkReasons, NOTWORK_REASON_HELP_TEXTS, (key)=>{
+    if(key==='その他'){
+      document.getElementById('notWorkReasonOtherBlock').style.display = state.notWorkReasons.includes('その他') ? '' : 'none';
+    }
+  });
+  const otherTextEl = document.getElementById('notWorkReasonOtherText');
+  otherTextEl.value = state.notWorkReasonOther;
+  otherTextEl.oninput = e=>state.notWorkReasonOther = e.target.value;
   setFooter({secondaryLabel:'戻る', secondaryFn:goBack, primaryLabel:'次へ', primaryEnabled:true, primaryFn:()=>goTo('ch2_adl')});
 }
 
@@ -3619,7 +4029,24 @@ function stepCh2Other(){
 // 別state（recognitionSnapshot/disabilityNotebook）で持ち、混ぜない（今回の実装方針）。
 // =====================================================================
 
-// ---- ch5_recognition：障害認定日頃の状況の入力（任意）。02裏面4-30行目に対応 ----
+// ---- 認定日欄共通：入力を取りやめて空欄に戻す処理。就労状況画面・日常生活画面の両方から呼ぶ ----
+function disableRecognitionInput(){
+  const snap = state.recognitionSnapshot;
+  const ok = confirm('入力した内容を消して、認定日ごろの状態を未入力（空欄で出力）に戻します。よろしいですか？');
+  if(!ok) return;
+  snap.enabled = false;
+  snap.work = {status:null, jobType:'', commute:[], commuteTime:null, workDays:'', condition:[]};
+  snap.notWorkReasons = [];
+  snap.notWorkReasonOther = '';
+  snap.adl = {};
+  snap.otherChips = [];
+  snap.otherNote = '';
+  showScreen();
+}
+
+// ---- ch5_recognition：障害認定日頃の就労状況の入力（任意・1画面目）。02裏面4-17行目に対応。
+//      現在欄（ch1_work_status→ch2_work_detail/ch2_notwork_reason）と同様、就労状況とADLを
+//      別画面に分ける（一画面に情報を詰め込みすぎると認知負荷が高いため、2026-06-30対応）。 ----
 function stepCh5Recognition(){
   const snap = state.recognitionSnapshot;
   const enabled = snap.enabled;
@@ -3669,16 +4096,11 @@ function stepCh5Recognition(){
         <p class="small" style="margin-bottom:4px;color:var(--accent-strong);">${esc(RECOGNITION_PERIOD_NOTICE_SHORT)}</p>
         <p class="small hint" style="margin-bottom:10px;">${esc(ADL_HELP_NOTICE)}</p>
         <div id="recogReasonList"></div>
+        <div id="recogReasonOtherBlock" style="display:${snap.notWorkReasons.includes('その他')?'':'none'};margin-top:10px;">
+          <label class="field-label">「その他」の具体的な理由</label>
+          <textarea id="recogReasonOtherText" placeholder="具体的な理由を記入してください"></textarea>
+        </div>
       </div>
-
-      <p class="edit-section-label" style="margin-top:18px;">日常生活について</p>
-      <p class="small" style="margin-bottom:4px;color:var(--accent-strong);">${esc(RECOGNITION_PERIOD_NOTICE_SHORT)}</p>
-      <p class="small hint" style="margin-bottom:10px;">${esc(ADL_HELP_NOTICE)}</p>
-      <div id="recogAdlList"></div>
-
-      <label class="field-label">その他、認定日ごろの生活で困っていたこと（任意）</label>
-      <textarea id="recogOtherNote" placeholder="${esc(OTHER_NOTE_PLACEHOLDER)}"></textarea>
-      ${renderHelpListHtml(OTHER_NOTE_HELP_ITEMS)}
 
       <button type="button" id="disableRecognitionBtn" style="width:100%;margin-top:18px;padding:10px;border-radius:8px;border:1px solid var(--danger);background:var(--danger-soft);color:var(--danger);font-size:14px;cursor:pointer;">この入力を取りやめて空欄に戻す</button>
 
@@ -3694,7 +4116,14 @@ function stepCh5Recognition(){
   renderChipGroup('recogCommuteChips', COMMUTE_METHOD, snap.work.commute, true, ()=>{});
   renderChipGroup('recogCommuteTimeChips', COMMUTE_TIME, snap.work.commuteTime ? [snap.work.commuteTime] : [], false, v=>{ snap.work.commuteTime = v; });
   renderChipGroup('recogConditionChips', WORK_CONDITION, snap.work.condition, true, ()=>{});
-  renderStringCheckList('recogReasonList', NOTWORK_REASONS.map(l=>[l,l]), snap.notWorkReasons, NOTWORK_REASON_HELP_TEXTS);
+  renderStringCheckList('recogReasonList', NOTWORK_REASONS.map(l=>[l,l]), snap.notWorkReasons, NOTWORK_REASON_HELP_TEXTS, (key)=>{
+    if(key==='その他'){
+      document.getElementById('recogReasonOtherBlock').style.display = snap.notWorkReasons.includes('その他') ? '' : 'none';
+    }
+  });
+  const recogReasonOtherEl = document.getElementById('recogReasonOtherText');
+  recogReasonOtherEl.value = snap.notWorkReasonOther;
+  recogReasonOtherEl.oninput = e=>snap.notWorkReasonOther = e.target.value;
 
   const workingBlock = document.getElementById('recogWorkingBlock');
   const notWorkingBlock = document.getElementById('recogNotWorkingBlock');
@@ -3740,6 +4169,32 @@ function stepCh5Recognition(){
   });
   syncWorkStatusBlocks();
 
+  document.getElementById('disableRecognitionBtn').onclick = disableRecognitionInput;
+
+  setFooter({secondaryLabel:'戻る', secondaryFn:()=>{
+    const dest = state.returnTo || 'ch5_done';
+    goTo(dest);
+  }, primaryLabel:'次へ', primaryEnabled:true, primaryFn:()=>goTo('ch5_recognition_adl')});
+}
+
+// ---- ch5_recognition_adl：障害認定日頃の日常生活の入力（任意・2画面目）。02裏面19-30行目に対応。
+//      就労状況（stepCh5Recognition）とは別画面に分離（情報過多を避けるため）。 ----
+function stepCh5RecognitionAdl(){
+  const snap = state.recognitionSnapshot;
+
+  document.getElementById('screen').innerHTML = `
+    <div class="card">
+      <h2>障害認定日ごろの日常生活について（任意）</h2>
+      <p class="lead" style="font-weight:600;color:var(--accent-strong);">${esc(RECOGNITION_PERIOD_NOTICE_MAIN)}</p>
+      <p class="small" style="margin-bottom:4px;color:var(--accent-strong);">${esc(RECOGNITION_PERIOD_NOTICE_SHORT)}</p>
+      <p class="small hint" style="margin-bottom:10px;">${esc(ADL_HELP_NOTICE)}</p>
+      <div id="recogAdlList"></div>
+
+      <button type="button" id="disableRecognitionBtn" style="width:100%;margin-top:18px;padding:10px;border-radius:8px;border:1px solid var(--danger);background:var(--danger-soft);color:var(--danger);font-size:14px;cursor:pointer;">この入力を取りやめて空欄に戻す</button>
+
+      <p class="small" style="margin-top:14px;text-align:center;">入力した内容は自動的に保存されます。そのまま戻っても消えません。</p>
+    </div>`;
+
   let adlHtml = '';
   ADL_ITEMS.forEach(([key,label])=>{
     adlHtml += renderAdlItemHtml(key, label, 'recogAdl_');
@@ -3761,23 +4216,39 @@ function stepCh5Recognition(){
     });
   });
 
+  document.getElementById('disableRecognitionBtn').onclick = disableRecognitionInput;
+
+  setFooter({secondaryLabel:'戻る', secondaryFn:()=>goTo('ch5_recognition'), primaryLabel:'次へ', primaryEnabled:true, primaryFn:()=>goTo('ch5_recognition_other')});
+}
+
+// ---- ch5_recognition_other：障害認定日頃の「その他」生活の困りごと（任意・3画面目）。
+//      現在欄のch2_adl→ch2_otherと同じ構成に合わせ、ADL画面（stepCh5RecognitionAdl）とは
+//      別画面に分離（2026-07-01対応）。 ----
+function stepCh5RecognitionOther(){
+  const snap = state.recognitionSnapshot;
+
+  document.getElementById('screen').innerHTML = `
+    <div class="card">
+      <h2>その他、認定日ごろの生活で困っていたことは？</h2>
+      <div id="recogOtherList"></div>
+      <label class="field-label">補足（任意）</label>
+      <textarea id="recogOtherNote" placeholder="${esc(OTHER_NOTE_PLACEHOLDER)}"></textarea>
+      ${renderHelpListHtml(OTHER_NOTE_HELP_ITEMS)}
+
+      <button type="button" id="disableRecognitionBtn" style="width:100%;margin-top:18px;padding:10px;border-radius:8px;border:1px solid var(--danger);background:var(--danger-soft);color:var(--danger);font-size:14px;cursor:pointer;">この入力を取りやめて空欄に戻す</button>
+
+      <p class="small" style="margin-top:14px;text-align:center;">入力した内容は自動的に保存されます。そのまま戻っても消えません。</p>
+    </div>`;
+
+  renderStringCheckList('recogOtherList', OTHER_DIFFICULTIES.map(l=>[l,l]), snap.otherChips);
+
   const otherNoteEl = document.getElementById('recogOtherNote');
   otherNoteEl.value = snap.otherNote;
   otherNoteEl.oninput = e=>snap.otherNote = e.target.value;
 
-  document.getElementById('disableRecognitionBtn').onclick = ()=>{
-    const ok = confirm('入力した内容を消して、認定日ごろの状態を未入力（空欄で出力）に戻します。よろしいですか？');
-    if(!ok) return;
-    snap.enabled = false;
-    snap.work = {status:null, jobType:'', commute:[], commuteTime:null, workDays:'', condition:[]};
-    snap.notWorkReasons = [];
-    snap.adl = {};
-    snap.otherChips = [];
-    snap.otherNote = '';
-    showScreen();
-  };
+  document.getElementById('disableRecognitionBtn').onclick = disableRecognitionInput;
 
-  setFooter({secondaryLabel:'戻る', secondaryFn:()=>{
+  setFooter({secondaryLabel:'戻る', secondaryFn:()=>goTo('ch5_recognition_adl'), primaryLabel:'完了', primaryEnabled:true, primaryFn:()=>{
     const dest = state.returnTo || 'ch5_done';
     goTo(dest);
   }});
@@ -3915,8 +4386,11 @@ const STEPS = {
   ch5_intro: stepCh5Intro,
   ch5_place: stepCh5Place,
   ch5_done: stepCh5Done,
+  ch5_preview: stepCh5Preview,
   ch5_edit: stepCh5Edit,
   ch5_recognition: stepCh5Recognition,
+  ch5_recognition_adl: stepCh5RecognitionAdl,
+  ch5_recognition_other: stepCh5RecognitionOther,
   ch5_notebook: stepCh5Notebook,
   ch2_intro: stepCh2Intro,
   ch2_work_detail: stepCh2WorkDetail,
