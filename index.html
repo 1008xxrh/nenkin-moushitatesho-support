@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -43,6 +42,7 @@ h2{font-size:17px;font-weight:500;margin:0 0 12px;}
 .card-name-big{font-size:24px;font-weight:500;color:var(--accent-strong);margin:0 0 4px;line-height:1.4;}
 .card-name-sub{font-size:14px;color:var(--ink-soft);margin:0 0 20px;}
 p.lead{color:var(--ink-soft);font-size:14px;margin:0 0 20px;}
+p.optional-notice{color:var(--ink);font-size:14px;font-weight:700;margin:-2px 0 16px;}
 .hint{background:var(--accent-soft);color:var(--accent-strong);font-size:13px;padding:10px 14px;border-radius:10px;margin:12px 0;}
 .chip-group{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
 .chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:8px 14px;font-size:14px;color:var(--ink);cursor:pointer;}
@@ -52,6 +52,7 @@ p.lead{color:var(--ink-soft);font-size:14px;margin:0 0 20px;}
 .option.selected{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-strong);font-weight:500;}
 label.field-label{display:block;font-size:13px;color:var(--ink-soft);margin:16px 0 6px;}
 input[type=text],input[type=number]{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:15px;background:#fff;color:var(--ink);}
+input[type=text]::placeholder,input[type=number]::placeholder,textarea::placeholder{color:#b0b0ac;}
 textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:15px;min-height:80px;font-family:inherit;}
 .row{display:flex;gap:10px;}
 .row > *{flex:1;}
@@ -181,6 +182,72 @@ button:focus-visible, .option:focus-visible, .chip:focus-visible, [role="button"
 
 .preview-output-note{font-size:11px;color:var(--ink-soft);text-align:center;margin-top:8px;}
 .preview-jump{background:none;border:none;padding:0;font-size:12px;cursor:pointer;color:var(--ink);}
+
+/* ---- ch5_place 再設計：出来事カード配置画面（画面仕様書 全14章） ---- */
+/* 画面全体：上2/3年表・下1/3手札の上下2段固定（4.1節・4.7節）。
+   比率はここ1箇所（--place-timeline-flex / --place-hand-flex）で切り替えられるようにする。 */
+.place-screen{
+  --place-timeline-flex:2;
+  --place-hand-flex:1;
+  display:flex;flex-direction:column;height:calc(100vh - 140px);min-height:420px;
+}
+.place-header{display:flex;align-items:center;justify-content:space-between;padding:4px 0 10px;flex-shrink:0;}
+.place-header h2{margin:0;}
+/* 西暦⇄元号切り替えボタン：画面右上（4.6節） */
+.place-era-toggle{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:12px;color:var(--ink);cursor:pointer;flex-shrink:0;}
+.place-era-toggle.place-era-active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-strong);font-weight:500;}
+
+.place-timeline{
+  flex:var(--place-timeline-flex);min-height:0;overflow-y:auto;
+  background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:4px 12px;margin-bottom:10px;
+}
+/* 年表と手札の境目をはっきり分ける（4.7節確定） */
+.place-hand{
+  flex:var(--place-hand-flex);min-height:0;overflow-y:auto;
+  background:var(--accent-soft);border:1px solid var(--accent);border-radius:14px;
+  padding:10px 12px;
+}
+
+.place-band{padding:12px 0;border-bottom:1px solid var(--line);}
+.place-band:last-child{border-bottom:none;}
+.place-band-label{font-size:13px;font-weight:600;color:var(--ink-soft);margin-bottom:8px;}
+/* 帯本体：タップして配置先にできる領域（帯全体がタップ対象、6.3節と同じ考え方） */
+.place-band-body{border-radius:10px;padding:6px;cursor:pointer;min-height:12px;}
+.place-band-body:hover{background:var(--neutral-soft);}
+.place-band-body.place-target-active{background:var(--accent-soft);outline:2px dashed var(--accent);}
+
+/* 通院バー・義務教育バー：背景情報、操作不可（4.4節） */
+/* 帯全体がその期間（3〜5年）を表す背景トラック。セグメントはこの中の実際の時期の位置に絶対配置する。 */
+.place-bar-row{position:relative;height:22px;border-radius:0;overflow:visible;margin-bottom:4px;background:var(--neutral-soft);border:1px solid var(--line);}
+.place-bar-seg{position:absolute;top:0;height:100%;display:flex;align-items:center;justify-content:center;font-size:10px;white-space:nowrap;overflow:hidden;border-radius:0;}
+.place-bar-hospital{background:var(--accent);color:#fff;}
+.place-bar-education{background:var(--accent-soft);color:var(--accent-strong);border:1px solid var(--accent);}
+
+/* 出来事カード：操作対象。既存チップ（角丸999px）を踏襲し、バー（角丸なし）と形で区別する（4.4.4節） */
+.place-card-group{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;position:relative;z-index:1;}
+.place-card{
+  border:1px solid var(--line);background:var(--card);border-radius:999px;
+  padding:8px 14px;font-size:13px;color:var(--ink);cursor:pointer;
+  transition:background 0.2s, border-color 0.2s, transform 0.2s;
+}
+.place-card.place-card-selected{
+  background:var(--accent);border-color:var(--accent);color:#fff;
+  outline:2px solid var(--accent-strong);outline-offset:1px;
+}
+
+.place-hand-label{font-size:12px;color:var(--accent-strong);font-weight:600;margin-bottom:6px;}
+.place-hand-body{border-radius:10px;min-height:60px;position:relative;}
+.place-hand-body.place-target-active{outline:2px dashed var(--accent-strong);background:rgba(255,255,255,0.4);}
+.place-hand-empty{font-size:12px;color:var(--ink-soft);}
+/* 「手札が残っていても先へ進めます」を手札エリア中央の透かし文字として表示する。
+   カード（.place-card-group）はz-indexで手前に重なる。 */
+.place-hand-watermark{
+  position:absolute;top:0;left:0;right:0;bottom:0;
+  display:flex;align-items:center;justify-content:center;text-align:center;
+  padding:8px;pointer-events:none;
+  font-size:20px;line-height:1.4;font-weight:700;color:var(--ink-soft);opacity:0.5;
+}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 </head>
@@ -258,7 +325,9 @@ function buildEventYearRanges(){
   const ranges = [];
   state.selectedEvents.forEach(ev=>{
     const placement = state.eventPlacements[ev.id];
-    if(!placement || placement==='unknown') return;
+    // 未配置（手札に残っている）出来事は範囲を持たないため除外する。
+    // 旧'unknown'状態はch5_place再設計により廃止済み（ch5_place_再設計_画面仕様書.md 5章）。
+    if(!placement) return;
     const band = bands[placement.bandIndex];
     if(!band) return;
     ranges.push({startYear:band.startYear, endYear:band.endYear, label:ev.label});
@@ -625,12 +694,15 @@ const OTHER_DIFFICULTIES = [
 // 複数回起こりうる出来事（+追加形式で扱う）
 const REPEATABLE_EVENTS = [
   ['shushoku','就職'],['taishoku','退職'],['kyushoku','休職'],['fukushoku','復職'],
-  ['tenshoku','転職'],['tenkyo','転居'],['kekkon','結婚'],['rikon','離婚']
+  ['tenshoku','転職'],['tenkyo','転居'],['kekkon','結婚'],['rikon','離婚'],
+  ['taigaku','退学'],
+  ['koko_nyugaku','高校入学'],['koko_sotsugyo','高校卒業'],
+  ['daigaku_nyugaku','大学入学'],['daigaku_sotsugyo','大学卒業']
 ];
 const REPEATABLE_KEYS = new Set(REPEATABLE_EVENTS.map(e=>e[0]));
 
 const EVENT_GROUPS = {
-  life:[['shibetsu','死別'],['ryunen','留年'],['taigaku','退学']],
+  life:[['shibetsu','死別'],['ryunen','留年']],
   impact:[['futoko','不登校'],['hikikomori','引きこもり'],['choukiketsukin','長期欠勤'],['kansho','退職勧奨を受けた'],['harassment','ハラスメントを受けた'],['kazoku','家族とのトラブル'],['fukushi','福祉サービスを利用開始した'],['techo','障害者手帳を取得した']]
 };
 const EVENT_GROUP_LABELS = {life:'その他の出来事', impact:'症状が生活に影響した出来事'};
@@ -704,7 +776,7 @@ const PAST_HOSPITAL_CONFIDENCE = [['certain','資料で確認した'],['approxim
 // に対応したのが version 3。
 // 不就労理由「オ：その他」専用の自由記述欄（notWorkReasonOther）追加に対応したのが version 4。
 // version自体を持たない保存データ（過去編実装より前のもの）は version 1 とみなす。
-const CURRENT_STATE_VERSION = 4;
+const CURRENT_STATE_VERSION = 5;
 
 let state, historyStack, current;
 
@@ -718,6 +790,7 @@ function resetState(){
     otherChips:[], otherNote:'',
     selectedEvents:[],
     eventPlacements:{},
+    eraDisplayMode:'seireki', // 'seireki'（西暦）| 'wareki'（元号）。ch5_place画面全体の西暦⇄元号切替（仕様書4.6節）。stateに持たせ永続化する。
     hospitals:[], draft:{},
     gapReasonsByKey:{},      // 永続保存：病院ペアごとの空白理由 { "id1__id2": ["理由",...] }
     tempGapReasons:[],       // 一時UI状態：今入力中のギャップの理由
@@ -820,6 +893,53 @@ function migrateAppState(raw){
     if(s.recognitionSnapshot && typeof s.recognitionSnapshot === 'object'
        && typeof s.recognitionSnapshot.notWorkReasonOther !== 'string'){
       s.recognitionSnapshot.notWorkReasonOther = '';
+    }
+  }
+
+  if(currentVersion < 5){
+    // 西暦⇄元号切替フラグが無い場合のみ初期値で補う（ch5_place再設計仕様書4.6節）
+    if(s.eraDisplayMode !== 'seireki' && s.eraDisplayMode !== 'wareki'){
+      s.eraDisplayMode = 'seireki';
+    }
+    // eventPlacements を {bandIndex, order} 形式へ統一する（ch5_place再設計仕様書13章）。
+    // 旧形式：{bandIndex:number}（orderが無い）、または文字列 'unknown'（帯不明）。
+    // 新設計では「わからない」状態を廃止し、'unknown' は最後の帯（現在に最も近い帯）へ
+    // 便宜的に割り当てる。既存の並び順を壊さないよう、帯ごとにorderを新規採番する。
+    if(s.eventPlacements && typeof s.eventPlacements === 'object'){
+      const bands = (function(){
+        // migrateAppState実行時点ではbuildAgeBands()と同じロジックをここでも使えないため
+        // （state未確定のグローバル関数に依存させない）、簡易に必要な情報だけ複製する。
+        const birth = parseInt(s.profile && s.profile.birthYear);
+        const size = (s.profile && s.profile.bandSize) || 5;
+        const currentAge = birth ? (new Date().getFullYear() - birth) : null;
+        if(!birth || currentAge===null) return [];
+        const list = [];
+        let startAge = 0;
+        while(startAge < currentAge){
+          const endAge = Math.min(startAge + size, currentAge);
+          list.push({startAge, endAge});
+          startAge += size;
+        }
+        if(list.length===0) list.push({startAge:0, endAge:currentAge});
+        return list;
+      })();
+      const lastBandIndex = bands.length ? bands.length - 1 : 0;
+      const orderCounters = {};
+      Object.keys(s.eventPlacements).forEach(key=>{
+        const p = s.eventPlacements[key];
+        let bandIndex;
+        if(p === 'unknown'){
+          bandIndex = lastBandIndex;
+        } else if(p && typeof p === 'object' && typeof p.bandIndex === 'number'){
+          bandIndex = p.bandIndex;
+        } else {
+          delete s.eventPlacements[key];
+          return;
+        }
+        if(typeof orderCounters[bandIndex] !== 'number') orderCounters[bandIndex] = 0;
+        s.eventPlacements[key] = { bandIndex, order: orderCounters[bandIndex] };
+        orderCounters[bandIndex] += 1;
+      });
     }
   }
 
@@ -948,6 +1068,26 @@ function deletePastHospital(hospitalId){
   state.pastFragments.forEach(f=>{
     if(f.linkedHospitalId === hospitalId){
       f.linkedHospitalId = undefined;
+    }
+  });
+  return true;
+}
+
+// 現状編（第4章）の通院記録を削除する。
+// computeGaps()は毎回state.hospitalsから計算し直す純粋関数のため、削除するだけで
+// 空白期間（gap）の一覧は自動的に再計算される（削除した病院が関わるgapは消え、
+// 新しく隣接した2件の間に新しいgapが生まれる可能性もある）。
+// ただし、削除前に入力済みだったgapReasonsByKeyの理由データは、削除した病院のhospitalIdを
+// 含むキーのままstateに残り続けてしまう（二度と参照されない孤立データ）ため、
+// ここで該当キーを掃除しておく。
+function deleteCurrentHospital(hospitalId){
+  const idx = state.hospitals.findIndex(h=>h.hospitalId===hospitalId);
+  if(idx<0) return false;
+  state.hospitals.splice(idx,1);
+  Object.keys(state.gapReasonsByKey).forEach(key=>{
+    const [id1, id2] = key.split('__').map(s=>parseInt(s));
+    if(id1===hospitalId || id2===hospitalId){
+      delete state.gapReasonsByKey[key];
     }
   });
   return true;
@@ -1867,17 +2007,22 @@ function buildAgeBands(){
   while(startAge < currentAge){
     const endAge = Math.min(startAge + size, currentAge);
     const isLast = endAge >= currentAge;
+    const startYear = birth + startAge;
+    const endYear = birth + endAge;
     bands.push({
       startAge, endAge,
-      startYear: birth + startAge,
-      endYear: birth + endAge,
-      label: isLast ? `${startAge}歳〜現在` : `${startAge}〜${endAge}歳ごろ`,
+      startYear, endYear,
+      // 帯ラベルは西暦を先頭、年齢を括弧書きの補足とする（仕様書4.3節）。
+      // 例：「2010〜2014年（20〜24歳ごろ）」「2022年〜現在（52歳〜現在）」
+      label: isLast
+        ? `${startYear}年〜現在（${startAge}歳〜現在）`
+        : `${startYear}〜${endYear}年（${startAge}〜${endAge}歳ごろ）`,
       isLast
     });
     startAge += size;
   }
   if(bands.length===0){
-    bands.push({startAge:0, endAge:currentAge, startYear:birth, endYear:birth+currentAge, label:`0歳〜現在`, isLast:true});
+    bands.push({startAge:0, endAge:currentAge, startYear:birth, endYear:birth+currentAge, label:`${birth}年〜現在（0歳〜現在）`, isLast:true});
   }
   return bands;
 }
@@ -1894,6 +2039,32 @@ function hospitalOverlapsBand(hospital, band){
 // 与えられた年齢帯に重なる通院カードの一覧を返す（手がかり表示用）。
 function hospitalsInBand(band){
   return state.hospitals.filter(h=>hospitalOverlapsBand(h, band));
+}
+
+// ===== 義務教育期間（小学校・中学校）の自動計算（ch5_place再設計仕様書4.4.1節・4.5節）=====
+// state.hospitalsのような入力データは無く、生年（西暦）のみから日本の学制に沿って計算する。
+// 標準的な就学時期（満6歳になった後の4月に小学校入学）を前提とし、留年・浪人等の個別事情は
+// 扱わない（背景情報としての目安表示のため）。
+// 戻り値の年齢は「その年の4月時点の満年齢」に相当する startAge/endAge（buildAgeBandsと
+// 同じ単位）で表す。
+function buildCompulsoryEducationSegments(){
+  const birth = parseInt(state.profile.birthYear);
+  if(!birth) return [];
+  // 満6歳になった年の4月に小学校入学 → 生まれた年から6年後の4月
+  // 年齢帯はbuildAgeBands()同様「誕生年からの経過年数」で管理しているため、
+  // 「小学校入学＝6歳」「小学校卒業＝12歳（6年間）」「中学校卒業＝15歳（3年間）」を
+  // startAge/endAgeとしてそのまま使う。
+  return [
+    { key:'elementary', label:'小学校', startAge:6, endAge:12 },
+    { key:'junior_high', label:'中学校', startAge:12, endAge:15 }
+  ];
+}
+
+// 与えられた年齢帯（buildAgeBandsの1要素）に重なる義務教育区間を返す（4.4.3節：無ければ空配列）。
+function compulsoryEducationSegmentsInBand(band){
+  return buildCompulsoryEducationSegments().filter(seg=>
+    seg.startAge < band.endAge && seg.endAge > band.startAge
+  );
 }
 
 function renderChipGroup(containerId, items, selectedArr, multi, onToggle){
@@ -2340,6 +2511,7 @@ function stepCh3Events(){
   document.getElementById('screen').innerHTML = `
     <div class="card">
       <h2>当時の生活を思い出す手がかり</h2>
+      <p class="optional-notice">入力しなくても進めます</p>
       <p class="lead">経験した出来事を選んでください。日付はあとで通院記録を思い出すときに使うので、ここでは選ぶだけで大丈夫です。</p>
       <div class="small" style="margin-bottom:8px;">仕事・結婚・転居などの出来事（複数回ある場合は何度でも追加できます）</div>
       <div id="evRepeatable">${buildRepeatableListHtml()}</div>
@@ -2422,6 +2594,7 @@ function stepCh4HospitalName(){
   document.getElementById('screen').innerHTML = `
     <div class="card">
       <h2>${isFirst ? '今、通っている病院・クリニックの名前は？' : 'この病院・クリニックの名前は？'}</h2>
+      <p class="optional-notice">入力しなくても進めます</p>
       <input type="text" id="hospName" placeholder="病院名" />
       <div class="hint">わからなくても進められます</div>
       <button type="button" class="link-btn" id="dontKnowBtn">名前がわからない →</button>
@@ -2482,6 +2655,7 @@ function stepCh4MemoryDig(){
   document.getElementById('screen').innerHTML = `
     <div class="card">
       <h2>病院を思い出す</h2>
+      <p class="optional-notice">入力しなくても進めます</p>
       <p class="hint">覚えていなくても大丈夫です。一緒に思い出しましょう。</p>
       <label class="field-label">当時住んでいた市区町村は？</label>
       <input type="text" id="loc" />
@@ -2520,6 +2694,7 @@ function stepCh4Period(){
   document.getElementById('screen').innerHTML = `
     <div class="card">
       <h2>いつからいつまで通いましたか？</h2>
+      <p class="optional-notice">入力しなくても進めます</p>
       <label class="field-label">いつから（西暦）</label>
       <div class="row"><input type="number" id="fromYear" placeholder="例：2020" /><input type="number" id="fromMonth" placeholder="月" min="1" max="12" /></div>
       ${estHint}
@@ -2560,6 +2735,7 @@ function stepCh4Confidence(){
   document.getElementById('screen').innerHTML = `
     <div class="card">
       <h2>この日付はどのくらい確かですか？</h2>
+      <p class="optional-notice">入力しなくても進めます</p>
       <div class="chip-group" id="confChips"></div>
     </div>`;
   renderChipGroup('confChips', CONFIDENCE.map(c=>c[1]), state.draft.confidence ? [CONFIDENCE.find(c=>c[0]===state.draft.confidence)[1]] : [], false, v=>{
@@ -2652,6 +2828,7 @@ function stepCh4GapReview(){
       ${progressHtml}
       <p class="hint">${esc(target.fromLabel)} から ${esc(target.toLabel)} までの間は、通院の記録がありませんでした。</p>
       <h2>この時期のことを少し教えてください</h2>
+      <p class="optional-notice">入力しなくても進めます</p>
       <div id="gapReasons"></div>
       <p class="small" style="margin-top:14px;">どんな理由も審査の参考になります。正直に選んで大丈夫です。</p>
     </div>`;
@@ -2689,7 +2866,7 @@ function stepCh4Summary(){
       const relatedNote = (h.relatedEvents && h.relatedEvents.length)
         ? `<div class="small" style="margin-top:-6px;margin-bottom:8px;">手がかり：${h.relatedEvents.map(k=>esc(findEventLabel(k))).join('・')}</div>`
         : '';
-      return `<div class="timeline-row"><span>${fromLabel}〜${toLabel}　${name}</span>${badgeForConfidence(h.confidence)}</div>${relatedNote}<button type="button" class="link-btn" data-edit-hospital="${h.hospitalId}" style="margin:-4px 0 8px;">この通院記録を修正する →</button>`;
+      return `<div class="timeline-row"><span>${fromLabel}〜${toLabel}　${name}</span>${badgeForConfidence(h.confidence)}</div>${relatedNote}<div style="display:flex;gap:14px;margin:-4px 0 8px;"><button type="button" class="link-btn" data-edit-hospital="${h.hospitalId}">この通院記録を修正する →</button><button type="button" class="link-btn" data-delete-hospital="${h.hospitalId}" style="color:var(--danger);">削除する</button></div>`;
     }
     const g = item.data;
     const answered = isGapReasonAnswered(g.key);
@@ -2725,6 +2902,16 @@ function stepCh4Summary(){
       goTo('ch4_hospital_name');
     };
   });
+  document.querySelectorAll('[data-delete-hospital]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const id = parseInt(btn.getAttribute('data-delete-hospital'));
+      const ok = confirm('この通院記録を削除します。よろしいですか？');
+      if(!ok) return;
+      deleteCurrentHospital(id);
+      saveStateToStorage();
+      stepCh4Summary(); // 空白期間（gap）を再計算した上で同じ画面を再描画する
+    };
+  });
   document.getElementById('addHospitalBtn').onclick = ()=>{
     state.draft = {};
     state.editingHospitalId = null;
@@ -2757,62 +2944,248 @@ function stepCh5Intro(){
   setFooter({secondaryLabel:'戻る', secondaryFn:goBack, primaryLabel:'はじめる', primaryEnabled:true, primaryFn:()=>goTo('ch5_place')});
 }
 
-function buildBandCardLabel(band){
+// ===== ch5_place（出来事カード配置画面・再設計版）=====
+// 画面仕様書：ch5_place_再設計_画面仕様書.md（全14章）に準拠。
+// 操作モデルは「選ぶ→行き先をタップ」の1パターンのみ（6章）。ドラッグ操作は使わない。
+
+// 選択状態は state には持たせず、画面ローカル変数として保持する（6.2節：画面離脱時に解除）。
+let placeSelectedKey = null; // 選択中の出来事カードのid。手札・年表どちらのカードでも同じ変数を使う。
+
+// 帯内カード一覧を order の昇順で返す（13.1節・13.2節）。
+function eventsInBand(bandIndex){
+  return Object.keys(state.eventPlacements)
+    .filter(k=>state.eventPlacements[k].bandIndex===bandIndex)
+    .sort((a,b)=> state.eventPlacements[a].order - state.eventPlacements[b].order);
+}
+
+// 手札（未配置）の出来事一覧。selectedEventsの登録順を保つ。
+function eventsInHand(){
+  return state.selectedEvents.filter(ev=>!state.eventPlacements[ev.id]);
+}
+
+// 指定の帯における次のorder値（末尾追加、13.2節）。
+function nextOrderInBand(bandIndex){
+  const keys = eventsInBand(bandIndex);
+  if(keys.length===0) return 0;
+  const maxOrder = Math.max(...keys.map(k=>state.eventPlacements[k].order));
+  return maxOrder + 1;
+}
+
+// 出来事カードを指定の帯へ配置・移動する（末尾追加、13.2節）。手札からでも年表からでも同じ処理。
+function placeEventToBand(key, bandIndex){
+  state.eventPlacements[key] = { bandIndex, order: nextOrderInBand(bandIndex) };
+}
+
+// 出来事カードを手札へ戻す（年表からは消える、6.3節）。
+function returnEventToHand(key){
+  delete state.eventPlacements[key];
+}
+
+// 同じ帯の中の2枚の位置を交換する（6.4節・A方式：2枚だけ入れ替え、他は動かさない）。
+function swapEventsInBand(keyA, keyB){
+  const a = state.eventPlacements[keyA];
+  const b = state.eventPlacements[keyB];
+  if(!a || !b || a.bandIndex !== b.bandIndex) return;
+  const tmp = a.order;
+  a.order = b.order;
+  b.order = tmp;
+}
+
+// 通院バーの区画を描画する。帯全体がその期間（3〜5年）を表す背景トラックで、
+// 通院していた時期だけを実際の時間軸上の位置（left）・期間の長さ（width）で表す
+// （左端寄せではなく、帯内での実際の時期の位置に配置する）。
+// 文字が入らない幅なら色のみにする（4.4.2節）。
+function renderHospitalBarRow(band){
   const hs = hospitalsInBand(band);
   if(hs.length===0) return '';
-  const names = hs.map(h=>h.nameUnknown ? `（${h.hospitalType || '病院名不明'}）` : (h.name || '（未入力）'));
-  return `通院：${names.join('・')}`;
+  const bandMonths = Math.max(1, (band.endYear - band.startYear) * 12);
+  const segsHtml = hs.map(h=>{
+    const fromYear = parseInt(h.fromYear), fromMonth = parseInt(h.fromMonth) || 1;
+    const toYear = h.ongoing ? getCurrentYear() : (parseInt(h.toYear) || fromYear);
+    const toMonth = h.ongoing ? (new Date().getMonth()+1) : (parseInt(h.toMonth) || 12);
+    // 帯の範囲に収まるようクリップしてから、月数ベースの比率（開始位置・幅）を出す。
+    const segStartYear = Math.max(fromYear, band.startYear);
+    const segEndYear = Math.min(toYear, band.endYear);
+    const startOffsetMonths = Math.max(0, (segStartYear - band.startYear) * 12 + (segStartYear===fromYear ? fromMonth-1 : 0));
+    const endOffsetMonths = Math.min(bandMonths, (segEndYear - band.startYear) * 12 + (segEndYear===toYear ? toMonth : 12));
+    const leftPct = (startOffsetMonths / bandMonths) * 100;
+    const widthPct = Math.max(2, ((endOffsetMonths - startOffsetMonths) / bandMonths) * 100);
+    const name = h.nameUnknown ? (h.hospitalType || '通院') : (h.name || '通院');
+    // 「通院」の2文字を表示できる幅の目安として8%未満は文字を諦める（4.4.2節）。
+    const showLabel = widthPct >= 8;
+    return `<div class="place-bar-seg place-bar-hospital" style="left:${leftPct}%;width:${widthPct}%;" title="${esc(name)}">${showLabel ? '通院' : ''}</div>`;
+  }).join('');
+  return `<div class="place-bar-row">${segsHtml}</div>`;
+}
+
+// 義務教育バーの区画を描画する（1本のバーの中に小学校・中学校を隣接区画として表示、4.4.1節）。
+// 帯全体がその期間を表す背景トラックであることに合わせ、実際の在学時期の位置（left）で配置する。
+function renderEducationBarRow(band){
+  const segs = compulsoryEducationSegmentsInBand(band);
+  if(segs.length===0) return '';
+  const bandSpan = Math.max(1, band.endAge - band.startAge);
+  const segsHtml = segs.map(seg=>{
+    const segStart = Math.max(seg.startAge, band.startAge);
+    const segEnd = Math.min(seg.endAge, band.endAge);
+    const leftPct = ((segStart - band.startAge) / bandSpan) * 100;
+    const widthPct = Math.max(2, ((segEnd - segStart) / bandSpan) * 100);
+    const showLabel = widthPct >= 8;
+    return `<div class="place-bar-seg place-bar-education" style="left:${leftPct}%;width:${widthPct}%;">${showLabel ? esc(seg.label) : ''}</div>`;
+  }).join('');
+  return `<div class="place-bar-row">${segsHtml}</div>`;
+}
+
+// 出来事カード1枚分のHTML（手札・年表どちらでも共通、14章：横並び・折り返し）。
+function renderPlaceCard(ev){
+  const selected = placeSelectedKey === ev.id ? ' place-card-selected' : '';
+  return `<button type="button" class="place-card${selected}" data-event-id="${esc(ev.id)}">${esc(ev.label)}</button>`;
 }
 
 function stepCh5Place(){
-  const bands = buildAgeBands();
-  const placedKeys = new Set(Object.keys(state.eventPlacements));
-  const unplaced = state.selectedEvents.filter(ev=>!placedKeys.has(ev.id));
-
-  if(unplaced.length===0){
-    const hasEvents = state.selectedEvents.length > 0;
-    document.getElementById('screen').innerHTML = `
-      <div class="card">
-        <h2>${hasEvents ? '出来事はすべて配置できました' : '配置する出来事はありません'}</h2>
-        <p class="lead">${hasEvents ? 'お疲れさまでした。次は年表を確認しましょう。' : '出来事が選択されていないため、このまま次に進みます。'}</p>
-      </div>`;
-    setFooter({secondaryLabel:'戻る', secondaryFn:goBack, primaryLabel:'次へ', primaryEnabled:true, primaryFn:()=>{ state.completed.ch5 = true; goTo('ch5_done'); }});
-    return;
-  }
-
-  const eventObj = unplaced[0];
-  const key = eventObj.id;
-  let html = `
-    <div class="card">
-      <p class="card-name-label">この出来事は、いつ頃でしたか？</p>
-      <p class="card-name-big">${esc(eventObj.label)}</p>
-      <p class="card-name-sub">近いところをタップしてください。あとから直せます。</p>
-      <div id="bandList"></div>
-      <button type="button" class="link-btn" id="unknownBtn">わからない →</button>
+  placeSelectedKey = null; // 画面表示のたびに選択状態を初期化（6.2節：画面離脱時に解除）
+  document.getElementById('screen').innerHTML = `
+    <div class="place-screen">
+      <div class="place-header">
+        <h2>出来事を年表に置いてみましょう</h2>
+        <button type="button" class="place-era-toggle" id="placeEraToggle"></button>
+      </div>
+      <div class="place-timeline" id="placeTimeline"></div>
+      <div class="place-hand" id="placeHand">
+        <p class="place-hand-label">出来事の手札</p>
+        <div class="place-hand-body" id="placeHandBody">
+          <div class="place-hand-watermark">手札が残っていても<br>先へ進めます</div>
+        </div>
+      </div>
     </div>`;
-  document.getElementById('screen').innerHTML = html;
+  renderCh5PlaceScreen();
+  setFooter({secondaryLabel:'戻る', secondaryFn:goBack, primaryLabel:'年表ができました画面へ', primaryEnabled:true, primaryFn:()=>{ state.completed.ch5 = true; goTo('ch5_done'); }});
+}
 
-  const listEl = document.getElementById('bandList');
-  bands.forEach((band, i)=>{
-    const hint = buildBandCardLabel(band);
-    const row = document.createElement('div');
-    row.className = 'option';
-    row.style.marginBottom = '10px';
-    row.innerHTML = `${esc(band.label)}${hint ? `<div class="small">${esc(hint)}</div>` : ''}`;
-    const handler = ()=>{
-      state.eventPlacements[key] = {bandIndex:i};
-      goTo('ch5_place');
-    };
-    row.onclick = handler;
-    makeFocusable(row, handler);
-    listEl.appendChild(row);
-  });
-  document.getElementById('unknownBtn').onclick = ()=>{
-    state.eventPlacements[key] = 'unknown';
-    goTo('ch5_place');
+function renderCh5PlaceScreen(){
+  const bands = buildAgeBands();
+
+  // 西暦⇄元号切り替えボタン（4.6節：状態はstateに保持、押した状態は保持される）
+  const eraBtn = document.getElementById('placeEraToggle');
+  const isWareki = state.eraDisplayMode === 'wareki';
+  eraBtn.textContent = isWareki ? '元号表示中' : '西暦表示中';
+  eraBtn.classList.toggle('place-era-active', isWareki);
+  eraBtn.onclick = ()=>{
+    state.eraDisplayMode = isWareki ? 'seireki' : 'wareki';
+    renderCh5PlaceScreen();
   };
 
-  setFooter({secondaryLabel:'戻る', secondaryFn:goBack});
+  // ---- 年表（上2/3、独立スクロール） ----
+  const timelineEl = document.getElementById('placeTimeline');
+  timelineEl.innerHTML = bands.map((band, i)=>{
+    let label = band.label;
+    if(isWareki){
+      const [g1, y1] = yearToWareki(band.startYear);
+      if(band.isLast){
+        label = g1 ? `${g1}${y1}年〜現在（${band.startAge}歳〜現在）` : label;
+      } else {
+        const [g2, y2] = yearToWareki(band.endYear);
+        label = (g1 && g2) ? `${g1}${y1}〜${g2==g1?'':g2}${y2}年（${band.startAge}〜${band.endAge}歳ごろ）` : label;
+      }
+    }
+    const hospitalBar = renderHospitalBarRow(band);
+    const educationBar = renderEducationBarRow(band);
+    const cardsHere = eventsInBand(i).map(k=>renderPlaceCard(findEventObj(k))).join('');
+    return `
+      <div class="place-band">
+        <div class="place-band-label">${esc(label)}</div>
+        <div class="place-band-body" data-band-index="${i}">
+          ${hospitalBar}
+          ${educationBar}
+          <div class="place-card-group">${cardsHere}</div>
+        </div>
+      </div>`;
+  }).join('');
+
+  // ---- 出来事の手札（下1/3、独立スクロール） ----
+  const handBodyEl = document.getElementById('placeHandBody');
+  const handEvents = eventsInHand();
+  const watermarkHtml = '<div class="place-hand-watermark">手札が残っていても<br>先へ進めます</div>';
+  handBodyEl.innerHTML = watermarkHtml + (handEvents.length
+    ? `<div class="place-card-group">${handEvents.map(renderPlaceCard).join('')}</div>`
+    : '');
+
+  bindCh5PlaceHandlers(bands);
+}
+
+function findEventObj(id){
+  return state.selectedEvents.find(ev=>ev.id===id) || {id, label:findEventLabel(id)};
+}
+
+// 「選ぶ→行き先をタップ」の1パターンで全操作を表現する（6章）。
+function bindCh5PlaceHandlers(bands){
+  const timelineEl = document.getElementById('placeTimeline');
+  const handBodyEl = document.getElementById('placeHandBody');
+
+  // 帯本体のタップ（配置・移動・同帯内交換の行き先）
+  timelineEl.querySelectorAll('.place-band-body').forEach(bandEl=>{
+    const bandIndex = parseInt(bandEl.getAttribute('data-band-index'), 10);
+    bandEl.classList.toggle('place-target-active', placeSelectedKey !== null);
+    bandEl.onclick = (e)=>{
+      // カード自体のクリックは個別ハンドラで処理するため、ここでは伝播を見て判定する
+      const cardEl = e.target.closest('.place-card');
+      if(cardEl){
+        const clickedKey = cardEl.getAttribute('data-event-id');
+        if(placeSelectedKey === null){
+          // 1回目タップ：選ぶ
+          placeSelectedKey = clickedKey;
+          renderCh5PlaceScreen();
+          return;
+        }
+        if(placeSelectedKey === clickedKey){
+          // 選択中のカードをもう一度タップ→選択解除（6.2節）
+          placeSelectedKey = null;
+          renderCh5PlaceScreen();
+          return;
+        }
+        // 別のカードをタップ：同じ帯なら交換、違う帯ならその帯への移動として扱う
+        const selPlacement = state.eventPlacements[placeSelectedKey];
+        if(selPlacement && selPlacement.bandIndex === bandIndex){
+          swapEventsInBand(placeSelectedKey, clickedKey);
+        } else {
+          placeEventToBand(placeSelectedKey, bandIndex);
+        }
+        placeSelectedKey = null;
+        renderCh5PlaceScreen();
+        return;
+      }
+      // 帯の中の空いている場所をタップ：選択中カードをこの帯へ配置・移動
+      if(placeSelectedKey !== null){
+        placeEventToBand(placeSelectedKey, bandIndex);
+        placeSelectedKey = null;
+        renderCh5PlaceScreen();
+      }
+    };
+  });
+
+  // 手札エリアのタップ（タップ対象はエリア全体、6.3節）
+  handBodyEl.classList.toggle('place-target-active', placeSelectedKey !== null);
+  handBodyEl.onclick = (e)=>{
+    const cardEl = e.target.closest('.place-card');
+    if(cardEl){
+      const clickedKey = cardEl.getAttribute('data-event-id');
+      if(placeSelectedKey === null){
+        placeSelectedKey = clickedKey;
+      } else if(placeSelectedKey === clickedKey){
+        placeSelectedKey = null;
+      } else {
+        // 手札の中の別カードをタップ：6.3節「そのカードを選ぶ」動作に切り替わる
+        placeSelectedKey = clickedKey;
+      }
+      renderCh5PlaceScreen();
+      return;
+    }
+    // 手札の空いている場所をタップ：選択中カードを手札へ戻す
+    if(placeSelectedKey !== null){
+      returnEventToHand(placeSelectedKey);
+      placeSelectedKey = null;
+      renderCh5PlaceScreen();
+    }
+  };
 }
 
 function stepCh5Done(){
@@ -2821,7 +3194,8 @@ function stepCh5Done(){
     const eventsHere = Object.keys(state.eventPlacements).filter(k=>{
       const p = state.eventPlacements[k];
       return p && typeof p==='object' && p.bandIndex===i;
-    }).map(k=>esc(findEventLabel(k)));
+    }).sort((a,b)=> state.eventPlacements[a].order - state.eventPlacements[b].order)
+      .map(k=>esc(findEventLabel(k)));
     const hospitalsHere = hospitalsInBand(band).map(h=>{
       const name = h.nameUnknown ? `（${esc(h.hospitalType) || '病院名不明'}）` : (esc(h.name) || '（未入力）');
       return `通院：${name}`;
@@ -2838,10 +3212,9 @@ function stepCh5Done(){
     `<div class="timeline-row gap">${esc(g.fromLabel)}〜${esc(g.toLabel)}は、通院していない時期です</div>`
   ).join('');
 
-  const unknownKeys = Object.keys(state.eventPlacements).filter(k=>state.eventPlacements[k]==='unknown');
-  const unknownHtml = unknownKeys.length
-    ? `<p class="small" style="margin-top:14px;">時期がわからない出来事：${unknownKeys.map(k=>esc(findEventLabel(k))).join('・')}</p>`
-    : '';
+  // 注：旧実装にあった「わからない」状態（'unknown'）はch5_place再設計により廃止された
+  // （画面仕様書5章・10章）。すべての配置済み出来事は必ずいずれかの帯に属するため、
+  // ここでの専用表示は不要になった。
 
   // ---- アコーディオン4項目（ch5_done仕様書3.6）。出力に関する説明・注意書きは
   // ここに集約し、出力ボタン自体はch5_previewに移したため、このページでは「説明のみ」。
@@ -2913,7 +3286,6 @@ function stepCh5Done(){
       <p class="lead">ここまでで、申立書の土台ができました。</p>
       ${rowsHtml}
       ${gapHtml ? `<div style="margin-top:12px;">${gapHtml}</div>` : ''}
-      ${unknownHtml}
       <button type="button" class="link-btn" id="editPlacementBtn" style="margin-top:14px;">出来事の配置を直す →</button>
 
       <p class="small" style="margin-top:18px;">ここまで入力した内容は、あとから何度でも修正できます。</p>
@@ -2944,7 +3316,7 @@ function stepCh5Done(){
       </div>
     </div>`;
 
-  document.getElementById('editPlacementBtn').onclick = ()=>goTo('ch5_edit');
+  document.getElementById('editPlacementBtn').onclick = ()=>goTo('ch5_place');
   document.getElementById('goToPreviewBtn').onclick = ()=>goTo('ch5_preview');
 
   // アコーディオン開閉（ch5_done仕様書3.6：デフォルト閉じた状態、タップで開閉）
@@ -2972,7 +3344,7 @@ function stepCh5Done(){
     goTo('ch5_notebook');
   };
   const placementChip = document.getElementById('editPlacementChip');
-  if(placementChip) placementChip.onclick = ()=>goTo('ch5_edit');
+  if(placementChip) placementChip.onclick = ()=>goTo('ch5_place');
 
   document.getElementById('restartFromScratchBtn').onclick = ()=>{
     const ok = confirm('保存されている入力内容を削除して、最初からやり直します。よろしいですか？');
@@ -3884,32 +4256,9 @@ function stepCh8PastReview(){
   });
 }
 
-function stepCh5Edit(){
-  const bands = buildAgeBands();
-  let html = `<div class="card"><h2>出来事の配置を直す</h2><p class="lead">選んだ出来事の時期を、あとから変更できます。</p>`;
-  state.selectedEvents.forEach(ev=>{
-    html += `<label class="field-label">${esc(ev.label)}</label><div class="chip-group" id="edit_${esc(ev.id)}"></div>`;
-  });
-  html += '</div>';
-  document.getElementById('screen').innerHTML = html;
-
-  state.selectedEvents.forEach(ev=>{
-    const key = ev.id;
-    const options = bands.map(b=>b.label).concat(['わからない']);
-    const current = state.eventPlacements[key];
-    const currentLabel = current==='unknown' ? 'わからない' : (current && typeof current==='object' ? bands[current.bandIndex].label : null);
-    renderChipGroup('edit_'+key, options, currentLabel ? [currentLabel] : [], false, v=>{
-      if(v==='わからない'){
-        state.eventPlacements[key] = 'unknown';
-      } else {
-        const idx = bands.findIndex(b=>b.label===v);
-        if(idx>=0) state.eventPlacements[key] = {bandIndex:idx};
-      }
-    });
-  });
-
-  setFooter({secondaryLabel:'戻る', secondaryFn:goBack, primaryLabel:'年表に戻る', primaryEnabled:true, primaryFn:()=>goTo('ch5_done')});
-}
+// 注：旧stepCh5Edit()（「出来事の配置を直す」チップ選択式編集画面）は、ch5_place再設計により
+// 廃止された（ch5_place_再設計_画面仕様書.md 12.2節）。新しいch5_place自体が「配置しながら
+// 何度でも置き直せる」画面になったため、ch5_doneからの導線もch5_placeへ一本化している。
 
 function stepCh2Intro(){
   const changedNotice = state.workStatusJustChanged
@@ -3919,7 +4268,7 @@ function stepCh2Intro(){
   document.getElementById('screen').innerHTML = `
     <div class="card">
       <h2>今の生活について、もう少し教えてください</h2>
-      <p class="lead">最後に、今の仕事や日常生活についての詳しい状況を教えてください。</p>
+      <p class="lead">今の仕事や日常生活についての詳しい状況を教えてください。</p>
       ${changedNotice}
     </div>`;
   setFooter({secondaryLabel:'戻る', secondaryFn:goBack, primaryLabel:'はじめる', primaryEnabled:true, primaryFn:()=>{
@@ -3932,8 +4281,9 @@ function stepCh2WorkDetail(){
   document.getElementById('screen').innerHTML = `
     <div class="card">
       <h2>仕事の内容を教えてください</h2>
+      <p class="optional-notice">入力しなくても進めます</p>
       <label class="field-label">職種・仕事の内容（短くでOK）</label>
-      <input type="text" id="jobType" />
+      <input type="text" id="jobType" placeholder="例：事務職、清掃業、接客業" />
       <label class="field-label">通勤方法（複数選択可）</label>
       <div class="chip-group" id="commuteChips"></div>
       <label class="field-label">片道の通勤時間</label>
@@ -3960,7 +4310,7 @@ function stepCh2NotworkReason(){
   document.getElementById('screen').innerHTML = `
     <div class="card">
       <h2>仕事をしていない理由を教えてください</h2>
-      <p class="lead">当てはまるものをすべて選んでください</p>
+      <p class="optional-notice">入力しなくても進めます</p>
       <p class="small hint" style="margin-bottom:14px;">${esc(ADL_HELP_NOTICE)}</p>
       <div id="reasonList"></div>
       <div id="notWorkReasonOtherBlock" style="display:${showOtherNote?'':'none'};margin-top:10px;">
@@ -3980,7 +4330,7 @@ function stepCh2NotworkReason(){
 }
 
 function stepCh2Adl(){
-  let html = `<div class="card"><h2>最近の日常生活について教えてください</h2><p class="lead">それぞれ近いものを選んでください</p><p class="small hint" style="margin-bottom:14px;">${esc(ADL_HELP_NOTICE)}</p>`;
+  let html = `<div class="card"><h2>最近の日常生活について教えてください</h2><p class="optional-notice">入力しなくても進めます</p><p class="small hint" style="margin-bottom:14px;">${esc(ADL_HELP_NOTICE)}</p>`;
   ADL_ITEMS.forEach(([key,label])=>{
     html += renderAdlItemHtml(key, label, 'adl_');
   });
@@ -4008,6 +4358,7 @@ function stepCh2Other(){
   document.getElementById('screen').innerHTML = `
     <div class="card">
       <h2>その他、生活で困っていることは？</h2>
+      <p class="optional-notice">入力しなくても進めます</p>
       <div id="otherList"></div>
       <label class="field-label">補足（任意）</label>
       <textarea id="otherNote" placeholder="${esc(OTHER_NOTE_PLACEHOLDER)}"></textarea>
@@ -4387,7 +4738,6 @@ const STEPS = {
   ch5_place: stepCh5Place,
   ch5_done: stepCh5Done,
   ch5_preview: stepCh5Preview,
-  ch5_edit: stepCh5Edit,
   ch5_recognition: stepCh5Recognition,
   ch5_recognition_adl: stepCh5RecognitionAdl,
   ch5_recognition_other: stepCh5RecognitionOther,
