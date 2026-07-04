@@ -1093,6 +1093,25 @@ function deleteCurrentHospital(hospitalId){
   return true;
 }
 
+// 出来事カード（selectedEvents）が削除されたとき、通院記録側（state.hospitals[].relatedEvents、
+// および入力中のstate.draft.relatedEvents）に残る孤立参照を掃除する。
+// 「病院を思い出す」画面（ch4_memory_dig）で出来事idを手がかりとして保存した後、
+// 第3章に戻ってその出来事を削除した場合に、findEventLabel()が解決できないidが
+// 通院記録一覧にそのまま表示されてしまう問題への対処（deleteCurrentHospitalの
+// gapReasonsByKeyクリーンアップと同じ方針）。
+function removeEventIdFromRelatedEvents(eventId){
+  state.hospitals.forEach(h=>{
+    if(Array.isArray(h.relatedEvents)){
+      const idx = h.relatedEvents.indexOf(eventId);
+      if(idx>=0) h.relatedEvents.splice(idx,1);
+    }
+  });
+  if(state.draft && Array.isArray(state.draft.relatedEvents)){
+    const idx = state.draft.relatedEvents.indexOf(eventId);
+    if(idx>=0) state.draft.relatedEvents.splice(idx,1);
+  }
+}
+
 // 過去編病院専用の確信度バッジ。既存badgeForConfidence()はCONFIDENCE（'certain'|'approximate'|'unknown'）
 // 専用で3値目の名称が異なるため、PAST_HOSPITAL_CONFIDENCE（3値目'unsure'）用に分けて定義する。
 function badgeForPastConfidence(conf){
@@ -2106,7 +2125,12 @@ function renderCheckList(containerId, items, selectedEvents){
     row.appendChild(text);
     const handler = ()=>{
       const idx = selectedEvents.findIndex(ev=>ev.id===key);
-      if(idx>=0){ selectedEvents.splice(idx,1); }
+      if(idx>=0){
+        selectedEvents.splice(idx,1);
+        // 配置情報・通院記録側の「手がかり」参照も削除しておく（REPEATABLE用の削除と同様）
+        delete state.eventPlacements[key];
+        removeEventIdFromRelatedEvents(key);
+      }
       else { selectedEvents.push({id:key, type:key, label:label, repeatable:false}); }
       box.className = 'check-box' + (isSelected(key) ? ' on' : '');
       box.innerHTML = isSelected(key) ? '<span>&#10003;</span>' : '';
@@ -2502,6 +2526,8 @@ function bindRepeatableListEvents(){
       if(idx>=0) state.selectedEvents.splice(idx,1);
       // 配置情報も削除しておく（存在しないカードの配置が残らないように）
       delete state.eventPlacements[id];
+      // 通院記録側の「手がかり」参照も削除しておく（存在しない出来事idが残らないように）
+      removeEventIdFromRelatedEvents(id);
       stepCh3Events();
     };
   });
@@ -2586,7 +2612,15 @@ function stepCh4Intro(){
     makeFocusable(div, handler);
     optsEl.appendChild(div);
   });
-  setFooter({secondaryLabel:'戻る', secondaryFn:goBack});
+  setFooter({secondaryLabel:'戻る', secondaryFn:goBack, primaryLabel:'第5章へ進む', primaryEnabled:true, primaryFn:()=>{
+    // ch4_summaryの「第5章へ進む」と同じロジック：未回答のgapがあれば先に確認させる
+    if(findFirstUnansweredGap()){
+      state.afterGapReviewAction = 'go_ch5';
+      goTo('ch4_gap_review');
+      return;
+    }
+    finishChapter('ch4','ch5_intro');
+  }});
 }
 
 function stepCh4HospitalName(){
