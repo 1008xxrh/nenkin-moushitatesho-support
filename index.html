@@ -218,14 +218,13 @@ button:focus-visible, .option:focus-visible, .chip:focus-visible, [role="button"
 .place-band-body.place-target-active{background:var(--accent-soft);outline:2px dashed var(--accent);}
 
 /* 通院バー・義務教育バー：背景情報、操作不可（4.4節） */
-/* 帯全体がその期間（3〜5年）を表す背景トラック。セグメントはこの中の実際の時期の位置に絶対配置する。 */
-.place-bar-row{position:relative;height:22px;border-radius:0;overflow:visible;margin-bottom:4px;background:var(--neutral-soft);border:1px solid var(--line);}
-.place-bar-seg{position:absolute;top:0;height:100%;display:flex;align-items:center;justify-content:center;font-size:10px;white-space:nowrap;overflow:hidden;border-radius:0;}
+.place-bar-row{display:flex;height:22px;border-radius:0;overflow:hidden;margin-bottom:4px;gap:1px;}
+.place-bar-seg{display:flex;align-items:center;justify-content:center;font-size:10px;white-space:nowrap;overflow:hidden;border-radius:0;}
 .place-bar-hospital{background:var(--accent);color:#fff;}
 .place-bar-education{background:var(--accent-soft);color:var(--accent-strong);border:1px solid var(--accent);}
 
 /* 出来事カード：操作対象。既存チップ（角丸999px）を踏襲し、バー（角丸なし）と形で区別する（4.4.4節） */
-.place-card-group{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;position:relative;z-index:1;}
+.place-card-group{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;}
 .place-card{
   border:1px solid var(--line);background:var(--card);border-radius:999px;
   padding:8px 14px;font-size:13px;color:var(--ink);cursor:pointer;
@@ -236,18 +235,11 @@ button:focus-visible, .option:focus-visible, .chip:focus-visible, [role="button"
   outline:2px solid var(--accent-strong);outline-offset:1px;
 }
 
-.place-hand-label{font-size:12px;color:var(--accent-strong);font-weight:600;margin-bottom:6px;}
-.place-hand-body{border-radius:10px;min-height:60px;position:relative;}
+.place-hand-label{font-size:12px;color:var(--accent-strong);font-weight:600;margin-bottom:2px;}
+.place-hand-message{font-size:12px;color:var(--accent-strong);margin:0 0 8px;}
+.place-hand-body{border-radius:10px;min-height:40px;}
 .place-hand-body.place-target-active{outline:2px dashed var(--accent-strong);background:rgba(255,255,255,0.4);}
 .place-hand-empty{font-size:12px;color:var(--ink-soft);}
-/* 「手札が残っていても先へ進めます」を手札エリア中央の透かし文字として表示する。
-   カード（.place-card-group）はz-indexで手前に重なる。 */
-.place-hand-watermark{
-  position:absolute;top:0;left:0;right:0;bottom:0;
-  display:flex;align-items:center;justify-content:center;text-align:center;
-  padding:8px;pointer-events:none;
-  font-size:20px;line-height:1.4;font-weight:700;color:var(--ink-soft);opacity:0.5;
-}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 </head>
@@ -1068,26 +1060,6 @@ function deletePastHospital(hospitalId){
   state.pastFragments.forEach(f=>{
     if(f.linkedHospitalId === hospitalId){
       f.linkedHospitalId = undefined;
-    }
-  });
-  return true;
-}
-
-// 現状編（第4章）の通院記録を削除する。
-// computeGaps()は毎回state.hospitalsから計算し直す純粋関数のため、削除するだけで
-// 空白期間（gap）の一覧は自動的に再計算される（削除した病院が関わるgapは消え、
-// 新しく隣接した2件の間に新しいgapが生まれる可能性もある）。
-// ただし、削除前に入力済みだったgapReasonsByKeyの理由データは、削除した病院のhospitalIdを
-// 含むキーのままstateに残り続けてしまう（二度と参照されない孤立データ）ため、
-// ここで該当キーを掃除しておく。
-function deleteCurrentHospital(hospitalId){
-  const idx = state.hospitals.findIndex(h=>h.hospitalId===hospitalId);
-  if(idx<0) return false;
-  state.hospitals.splice(idx,1);
-  Object.keys(state.gapReasonsByKey).forEach(key=>{
-    const [id1, id2] = key.split('__').map(s=>parseInt(s));
-    if(id1===hospitalId || id2===hospitalId){
-      delete state.gapReasonsByKey[key];
     }
   });
   return true;
@@ -2866,7 +2838,7 @@ function stepCh4Summary(){
       const relatedNote = (h.relatedEvents && h.relatedEvents.length)
         ? `<div class="small" style="margin-top:-6px;margin-bottom:8px;">手がかり：${h.relatedEvents.map(k=>esc(findEventLabel(k))).join('・')}</div>`
         : '';
-      return `<div class="timeline-row"><span>${fromLabel}〜${toLabel}　${name}</span>${badgeForConfidence(h.confidence)}</div>${relatedNote}<div style="display:flex;gap:14px;margin:-4px 0 8px;"><button type="button" class="link-btn" data-edit-hospital="${h.hospitalId}">この通院記録を修正する →</button><button type="button" class="link-btn" data-delete-hospital="${h.hospitalId}" style="color:var(--danger);">削除する</button></div>`;
+      return `<div class="timeline-row"><span>${fromLabel}〜${toLabel}　${name}</span>${badgeForConfidence(h.confidence)}</div>${relatedNote}<button type="button" class="link-btn" data-edit-hospital="${h.hospitalId}" style="margin:-4px 0 8px;">この通院記録を修正する →</button>`;
     }
     const g = item.data;
     const answered = isGapReasonAnswered(g.key);
@@ -2900,16 +2872,6 @@ function stepCh4Summary(){
       state.editingHospitalId = id;
       state.draft = {...h};
       goTo('ch4_hospital_name');
-    };
-  });
-  document.querySelectorAll('[data-delete-hospital]').forEach(btn=>{
-    btn.onclick = ()=>{
-      const id = parseInt(btn.getAttribute('data-delete-hospital'));
-      const ok = confirm('この通院記録を削除します。よろしいですか？');
-      if(!ok) return;
-      deleteCurrentHospital(id);
-      saveStateToStorage();
-      stepCh4Summary(); // 空白期間（gap）を再計算した上で同じ画面を再描画する
     };
   });
   document.getElementById('addHospitalBtn').onclick = ()=>{
@@ -2991,10 +2953,7 @@ function swapEventsInBand(keyA, keyB){
   b.order = tmp;
 }
 
-// 通院バーの区画を描画する。帯全体がその期間（3〜5年）を表す背景トラックで、
-// 通院していた時期だけを実際の時間軸上の位置（left）・期間の長さ（width）で表す
-// （左端寄せではなく、帯内での実際の時期の位置に配置する）。
-// 文字が入らない幅なら色のみにする（4.4.2節）。
+// 通院バーの区画を描画する。文字が入らない幅なら色のみにする（4.4.2節）。
 function renderHospitalBarRow(band){
   const hs = hospitalsInBand(band);
   if(hs.length===0) return '';
@@ -3003,23 +2962,21 @@ function renderHospitalBarRow(band){
     const fromYear = parseInt(h.fromYear), fromMonth = parseInt(h.fromMonth) || 1;
     const toYear = h.ongoing ? getCurrentYear() : (parseInt(h.toYear) || fromYear);
     const toMonth = h.ongoing ? (new Date().getMonth()+1) : (parseInt(h.toMonth) || 12);
-    // 帯の範囲に収まるようクリップしてから、月数ベースの比率（開始位置・幅）を出す。
+    // 帯の範囲に収まるようクリップしてから、月数ベースの比率を出す。
     const segStartYear = Math.max(fromYear, band.startYear);
     const segEndYear = Math.min(toYear, band.endYear);
     const startOffsetMonths = Math.max(0, (segStartYear - band.startYear) * 12 + (segStartYear===fromYear ? fromMonth-1 : 0));
     const endOffsetMonths = Math.min(bandMonths, (segEndYear - band.startYear) * 12 + (segEndYear===toYear ? toMonth : 12));
-    const leftPct = (startOffsetMonths / bandMonths) * 100;
     const widthPct = Math.max(2, ((endOffsetMonths - startOffsetMonths) / bandMonths) * 100);
     const name = h.nameUnknown ? (h.hospitalType || '通院') : (h.name || '通院');
     // 「通院」の2文字を表示できる幅の目安として8%未満は文字を諦める（4.4.2節）。
     const showLabel = widthPct >= 8;
-    return `<div class="place-bar-seg place-bar-hospital" style="left:${leftPct}%;width:${widthPct}%;" title="${esc(name)}">${showLabel ? '通院' : ''}</div>`;
+    return `<div class="place-bar-seg place-bar-hospital" style="width:${widthPct}%;" title="${esc(name)}">${showLabel ? '通院' : ''}</div>`;
   }).join('');
   return `<div class="place-bar-row">${segsHtml}</div>`;
 }
 
 // 義務教育バーの区画を描画する（1本のバーの中に小学校・中学校を隣接区画として表示、4.4.1節）。
-// 帯全体がその期間を表す背景トラックであることに合わせ、実際の在学時期の位置（left）で配置する。
 function renderEducationBarRow(band){
   const segs = compulsoryEducationSegmentsInBand(band);
   if(segs.length===0) return '';
@@ -3027,10 +2984,9 @@ function renderEducationBarRow(band){
   const segsHtml = segs.map(seg=>{
     const segStart = Math.max(seg.startAge, band.startAge);
     const segEnd = Math.min(seg.endAge, band.endAge);
-    const leftPct = ((segStart - band.startAge) / bandSpan) * 100;
     const widthPct = Math.max(2, ((segEnd - segStart) / bandSpan) * 100);
     const showLabel = widthPct >= 8;
-    return `<div class="place-bar-seg place-bar-education" style="left:${leftPct}%;width:${widthPct}%;">${showLabel ? esc(seg.label) : ''}</div>`;
+    return `<div class="place-bar-seg place-bar-education" style="width:${widthPct}%;">${showLabel ? esc(seg.label) : ''}</div>`;
   }).join('');
   return `<div class="place-bar-row">${segsHtml}</div>`;
 }
@@ -3052,9 +3008,8 @@ function stepCh5Place(){
       <div class="place-timeline" id="placeTimeline"></div>
       <div class="place-hand" id="placeHand">
         <p class="place-hand-label">出来事の手札</p>
-        <div class="place-hand-body" id="placeHandBody">
-          <div class="place-hand-watermark">手札が残っていても<br>先へ進めます</div>
-        </div>
+        <p class="place-hand-message">手札が残っていても先へ進めます</p>
+        <div class="place-hand-body" id="placeHandBody"></div>
       </div>
     </div>`;
   renderCh5PlaceScreen();
@@ -3104,10 +3059,9 @@ function renderCh5PlaceScreen(){
   // ---- 出来事の手札（下1/3、独立スクロール） ----
   const handBodyEl = document.getElementById('placeHandBody');
   const handEvents = eventsInHand();
-  const watermarkHtml = '<div class="place-hand-watermark">手札が残っていても<br>先へ進めます</div>';
-  handBodyEl.innerHTML = watermarkHtml + (handEvents.length
+  handBodyEl.innerHTML = handEvents.length
     ? `<div class="place-card-group">${handEvents.map(renderPlaceCard).join('')}</div>`
-    : '');
+    : '';
 
   bindCh5PlaceHandlers(bands);
 }
@@ -4268,7 +4222,7 @@ function stepCh2Intro(){
   document.getElementById('screen').innerHTML = `
     <div class="card">
       <h2>今の生活について、もう少し教えてください</h2>
-      <p class="lead">今の仕事や日常生活についての詳しい状況を教えてください。</p>
+      <p class="lead">最後に、今の仕事や日常生活についての詳しい状況を教えてください。</p>
       ${changedNotice}
     </div>`;
   setFooter({secondaryLabel:'戻る', secondaryFn:goBack, primaryLabel:'はじめる', primaryEnabled:true, primaryFn:()=>{
