@@ -235,6 +235,15 @@ button:focus-visible, .option:focus-visible, .chip:focus-visible, [role="button"
   background:var(--accent);border-color:var(--accent);color:#fff;
   outline:2px solid var(--accent-strong);outline-offset:1px;
 }
+/* 断片カード（過去編「思い出したことを置く場所」から統合されたカード）は、正確な出来事
+   カードと区別できるよう、点線の境界線で「まだ曖昧な思い出」という質感を出す。
+   選択状態のスタイルは出来事カードと共通（place-card-selectedを併用する）。 */
+.place-card.place-card-fragment{
+  border-style:dashed;border-color:var(--accent-strong);background:var(--accent-soft);
+}
+.place-card.place-card-fragment.place-card-selected{
+  background:var(--accent);border-style:dashed;
+}
 
 .place-hand-label{font-size:12px;color:var(--accent-strong);font-weight:600;margin-bottom:6px;}
 .place-hand-body{border-radius:10px;min-height:60px;position:relative;}
@@ -332,6 +341,20 @@ function buildEventYearRanges(){
     if(!band) return;
     ranges.push({startYear:band.startYear, endYear:band.endYear, label:ev.label});
   });
+  // 断片（pastFragments）＝自作出来事カードとして、出来事カードと完全に同じ扱いで合流する。
+  // ch5_placeで配置された（eventPlacementsにエントリがある）断片のみ対象で、手札に残っている
+  // 断片は出来事カード同様に除外する。これにより、通院履歴の状況記載欄（buildPeriodsForForm
+  // 側の「この頃の出来事：」）に、出来事カードのラベルと断片のテキストが区別なく混在して
+  // 出力される。将来「生まれてからの履歴」全体を出力するバージョンでも、断片は常にこの
+  // 仕組みに乗る（別ルートを作らない）方針。現時点ではExcel出力自体は通院履歴のみのため、
+  // 断片が実際に反映されるのは「通院期間と時期が重なる場合」に限られる。
+  state.pastFragments.forEach(f=>{
+    const placement = state.eventPlacements[f.id];
+    if(!placement) return;
+    const band = bands[placement.bandIndex];
+    if(!band) return;
+    ranges.push({startYear:band.startYear, endYear:band.endYear, label:f.text});
+  });
   return ranges;
 }
 
@@ -357,6 +380,16 @@ function buildPeriodsForForm(){
     noteParts.push(`${h.hospitalType || ''}${hospitalName || '（病院名不明）'}に通院。`);
     if(toIsNow) noteParts.push('現在も通院中。');
     if(related.length) noteParts.push('この頃の出来事：' + related.join('・') + '。');
+    // 【病院データ一本化】以前は過去編側（buildPastPeriodGroups→buildHospitalGroupNote）が
+    // 病院のmemoや、この病院にリンクされた断片（pastFragments）のテキストをnoteに合流させていた。
+    // 病院データがstate.hospitals（第4章）に一本化されたことで、過去編は病院の行自体を
+    // 生成しなくなったため（重複防止）、その合流処理はここに移した。
+    if(h.memo && h.memo.trim()) noteParts.push(h.memo.trim());
+    const linkedFragments = state.pastFragments.filter(f=>f.linkedHospitalId===h.hospitalId);
+    linkedFragments.forEach(f=>{
+      const text = pickFragmentText(f);
+      if(text && text.trim()) noteParts.push(text.trim());
+    });
     periods.push({
       sortKey: fromY || 0,
       fromY, fromM, toY, toM, toIsNow,
@@ -717,16 +750,16 @@ const GAP_REASONS = ['お金がなかった','怖くて行けなかった','症�
 // PastFragment / PastHospital はJSではプレーンオブジェクトとして扱うが、
 // 仕様書の型定義と対応づけやすいよう、ここにフィールド一覧をコメントで明記する。
 //
-// type TimeBucket = 'child' | 'student' | 'working' | 'unknown'
-//
 // type PastFragment = {
 //   id: string                  // "pf_<番号>" 形式
 //   text: string                 // 断片の本文（必須）
-//   timeBucket: TimeBucket        // 省略時は 'unknown'
-//   timeDetail?: string           // 補助的な時期情報（自由記述）
-//   memo?: string                 // 状況欄素材としての補足
-//   linkedHospitalId?: string     // pastHospitals.hospitalId への参照
 //   createdAt: string             // ISO日時
+// }
+// 【断片＝自作出来事カード】断片は出来事カード（selectedEvents。{id,type,label}のみで時期を
+// 持たない）と同じ設計に揃えた。時期は断片自体に持たせず、ch5_placeでの配置（eventPlacements）
+// だけが「いつのことか」を表す。以前はtimeBucket/timeDetail/memo/linkedHospitalIdを持たせて
+// 断片の中で時期・状況・病院リンクまで管理していたが、ch5_place再設計で断片も年表に配置できる
+// ようになったことで、この管理方法は不要になった（二重管理になるため）。
 //   updatedAt?: string            // 編集時に更新
 // }
 //
@@ -769,14 +802,16 @@ const GAP_REASONS = ['お金がなかった','怖くて行けなかった','症�
 
 const TIME_BUCKETS = ['child','student','working','unknown'];
 const TIME_BUCKET_LABELS = {child:'子供のころ', student:'学生時代', working:'働いてから', unknown:'わからない'};
-const PAST_HOSPITAL_CONFIDENCE = [['certain','資料で確認した'],['approximate','たぶん合っている'],['unsure','覚えていない']];
+// 【病院データ一本化】以前はここにPAST_HOSPITAL_CONFIDENCE（3値目'unsure'）を定義していたが、
+// 病院データがstate.hospitals（第4章、3値目'unknown'）に一本化されたため削除した。
+// migrateAppState()のversion6移行では、旧データの'unsure'を'unknown'へ変換して引き継いでいる。
 
 // 現行のstate構造バージョン。過去編state追加（pastFragments等）に対応したのが version 2。
 // 02裏面「障害認定日頃の状況」「障害者手帳」オプション入力（recognitionSnapshot/disabilityNotebook）
 // に対応したのが version 3。
 // 不就労理由「オ：その他」専用の自由記述欄（notWorkReasonOther）追加に対応したのが version 4。
 // version自体を持たない保存データ（過去編実装より前のもの）は version 1 とみなす。
-const CURRENT_STATE_VERSION = 5;
+const CURRENT_STATE_VERSION = 6;
 
 let state, historyStack, current;
 
@@ -803,16 +838,16 @@ function resetState(){
     completed:{ch1:false, ch2:false, ch3:false, ch4:false, ch5:false},
 
     // ===== 過去編（続紙対応）永続state。Phase4仕様書4-1章 =====
-    // 現状編の state.hospitals（最近の通院）とは別の配列。混同しないこと。
+    // 【病院データ一本化】以前はここにpastHospitals（PastHospital[]）という専用配列を
+    // 持っていたが、ch7_hospital_add画面の廃止に伴い削除した。過去の通院記録も含めて
+    // state.hospitals（第4章）に一本化されている。
     pastFragments:[],          // PastFragment[]
-    pastHospitals:[],          // PastHospital[]
-    pastIdCounters:{ fragment:1, hospital:1 },
+    pastIdCounters:{ fragment:1 },
     pastPeriodSplitHints:[],   // 将来拡張用。v4.2時点・Step2時点では未使用・未読み書き
     stateVersion: CURRENT_STATE_VERSION,
 
     // 過去編：編集対象の管理は既存hospitalsと同じ「永続ID＋findIndex」方式（editingHospitalIdに揃える）
     editingPastFragmentId:null,
-    editingPastHospitalId:null,
 
     // ===== 02裏面オプション入力：障害認定日頃の状況 / 障害者手帳 =====
     // ch5の年表完成確認画面（stepCh5Done）にオプションセクションとして置く。
@@ -859,9 +894,8 @@ function migrateAppState(raw){
   if(currentVersion < 2){
     // 過去編キーが無い場合のみ初期値で補う（既存データの上書きはしない）
     if(!Array.isArray(s.pastFragments)) s.pastFragments = [];
-    if(!Array.isArray(s.pastHospitals)) s.pastHospitals = [];
     if(!s.pastIdCounters || typeof s.pastIdCounters !== 'object'){
-      s.pastIdCounters = { fragment:1, hospital:1 };
+      s.pastIdCounters = { fragment:1 };
     }
     if(!Array.isArray(s.pastPeriodSplitHints)) s.pastPeriodSplitHints = [];
   }
@@ -943,6 +977,53 @@ function migrateAppState(raw){
     }
   }
 
+  if(currentVersion < 6){
+    // 【病院データ一本化】ch7_hospital_add画面（過去編専用の病院追加画面）を廃止し、
+    // 病院データはstate.hospitals（第4章）に一本化した。旧バージョンのs.pastHospitals
+    // （PastHospital[]、from/toが'YYYY-MM'文字列、confidence3値目が'unsure'）が残っている場合、
+    // データを消さずにstate.hospitalsへ変換して移す。断片側のlinkedHospitalId（旧文字列ID）も
+    // 変換後の新しい数値IDへ付け替える。
+    if(Array.isArray(s.pastHospitals) && s.pastHospitals.length > 0){
+      if(!Array.isArray(s.hospitals)) s.hospitals = [];
+      if(typeof s.nextHospitalId !== 'number') s.nextHospitalId = 1;
+      const oldIdToNewId = {};
+      s.pastHospitals.forEach(ph=>{
+        const newId = s.nextHospitalId++;
+        oldIdToNewId[ph.hospitalId] = newId;
+        const fromMatch = (ph.from && typeof ph.from === 'string') ? ph.from.match(/^(\d{4})(?:-(\d{1,2}))?$/) : null;
+        const toMatch = (ph.to && typeof ph.to === 'string') ? ph.to.match(/^(\d{4})(?:-(\d{1,2}))?$/) : null;
+        s.hospitals.push({
+          hospitalId: newId,
+          name: ph.name || '',
+          nameUnknown: !ph.name,
+          fromYear: fromMatch ? parseInt(fromMatch[1],10) : undefined,
+          fromMonth: fromMatch && fromMatch[2] ? parseInt(fromMatch[2],10) : undefined,
+          toYear: (!ph.ongoing && toMatch) ? parseInt(toMatch[1],10) : undefined,
+          toMonth: (!ph.ongoing && toMatch && toMatch[2]) ? parseInt(toMatch[2],10) : undefined,
+          ongoing: !!ph.ongoing,
+          confidence: ph.confidence === 'unsure' ? 'unknown' : (ph.confidence || 'unknown'),
+          memo: ph.memo,
+          relatedEvents: []
+        });
+      });
+      if(Array.isArray(s.pastFragments)){
+        s.pastFragments.forEach(f=>{
+          if(f.linkedHospitalId && oldIdToNewId[f.linkedHospitalId] !== undefined){
+            f.linkedHospitalId = oldIdToNewId[f.linkedHospitalId];
+          } else if(f.linkedHospitalId){
+            // 対応が見つからない孤立参照は安全側に倒して外す
+            f.linkedHospitalId = undefined;
+          }
+        });
+      }
+    }
+    delete s.pastHospitals;
+    delete s.editingPastHospitalId;
+    if(s.pastIdCounters && typeof s.pastIdCounters === 'object'){
+      delete s.pastIdCounters.hospital;
+    }
+  }
+
   // 不足キーの個別チェックとは独立して、バージョン番号自体は必ず最新へ更新する
   s.stateVersion = CURRENT_STATE_VERSION;
 
@@ -958,17 +1039,13 @@ function validatePastFragment(input){
   if(input.text !== undefined && (!input.text || !input.text.trim())){
     errors.push('text_required');
   }
-  if(input.timeBucket !== undefined && input.timeBucket !== null && !TIME_BUCKETS.includes(input.timeBucket)){
-    errors.push('invalid_timeBucket');
-  }
-  if(input.linkedHospitalId){
-    const exists = state.pastHospitals.some(h=>h.hospitalId===input.linkedHospitalId);
-    if(!exists) errors.push('invalid_linkedHospitalId');
-  }
   return { valid: errors.length===0, errors };
 }
 
 // 役割：新規断片を追加する。Phase4仕様書5.1章。
+// 【断片＝自作出来事カード】断片は出来事カードと同じくtext（内容）のみを持つ。
+// 以前は追加時にtimeBucketも受け取っていたが、時期の管理はch5_placeへの配置に
+// 一本化されたため、断片自体はもう時期の情報を持たない。
 function addPastFragment(input){
   const check = validatePastFragment({ text: input.text });
   if(!check.valid) return null;
@@ -976,7 +1053,6 @@ function addPastFragment(input){
   const fragment = {
     id,
     text: input.text.trim(),
-    timeBucket: (input.timeBucket && TIME_BUCKETS.includes(input.timeBucket)) ? input.timeBucket : 'unknown',
     createdAt: new Date().toISOString()
   };
   state.pastFragments.push(fragment);
@@ -987,12 +1063,7 @@ function addPastFragment(input){
 function updatePastFragment(id, patch){
   const idx = state.pastFragments.findIndex(f=>f.id===id);
   if(idx<0) return null;
-  // linkedHospitalIdは存在しないIDを渡された場合、安全側に倒してundefinedへ補正する
   const safePatch = {...patch};
-  if(safePatch.linkedHospitalId){
-    const exists = state.pastHospitals.some(h=>h.hospitalId===safePatch.linkedHospitalId);
-    if(!exists) safePatch.linkedHospitalId = undefined;
-  }
   if(safePatch.text !== undefined){
     const check = validatePastFragment({ text: safePatch.text });
     if(!check.valid) return null;
@@ -1010,68 +1081,13 @@ function deletePastFragment(id){
   return true;
 }
 
-// ===== 過去編：病院（PastHospital）CRUD関数群 =====
-// Phase4仕様書5.2章。現状編 state.hospitals とは別の配列。混同しないこと。
-
-function validatePastHospital(input){
-  const errors = [];
-  if(input.name !== undefined && (!input.name || !input.name.trim())){
-    errors.push('name_required');
-  }
-  if(input.confidence !== undefined && !PAST_HOSPITAL_CONFIDENCE.some(c=>c[0]===input.confidence)){
-    errors.push('invalid_confidence');
-  }
-  return { valid: errors.length===0, errors };
-}
-
-function addPastHospital(input){
-  const check = validatePastHospital({ name: input.name, confidence: input.confidence });
-  if(!check.valid) return null;
-  const hospitalId = 'ph_' + state.pastIdCounters.hospital++;
-  const hospital = {
-    hospitalId,
-    name: input.name.trim(),
-    ongoing: !!input.ongoing,
-    confidence: input.confidence
-  };
-  if(input.from) hospital.from = input.from;
-  if(!hospital.ongoing && input.to) hospital.to = input.to;
-  if(input.memo) hospital.memo = input.memo;
-  state.pastHospitals.push(hospital);
-  return hospital;
-}
-
-function updatePastHospital(hospitalId, patch){
-  const idx = state.pastHospitals.findIndex(h=>h.hospitalId===hospitalId);
-  if(idx<0) return null;
-  if(patch.name !== undefined || patch.confidence !== undefined){
-    const check = validatePastHospital({
-      name: patch.name !== undefined ? patch.name : state.pastHospitals[idx].name,
-      confidence: patch.confidence !== undefined ? patch.confidence : state.pastHospitals[idx].confidence
-    });
-    if(!check.valid) return null;
-  }
-  const safePatch = {...patch};
-  if(safePatch.name !== undefined) safePatch.name = safePatch.name.trim();
-  // ongoing:trueにする場合は既存のtoを消す（Phase4仕様書3.3.4）
-  if(safePatch.ongoing === true) safePatch.to = undefined;
-  state.pastHospitals[idx] = {...state.pastHospitals[idx], ...safePatch};
-  return state.pastHospitals[idx];
-}
-
-// 役割：病院カードを削除する。紐づく断片のlinkedHospitalIdを必ず掃除する（Phase4仕様書5.2章）。
-function deletePastHospital(hospitalId){
-  const idx = state.pastHospitals.findIndex(h=>h.hospitalId===hospitalId);
-  if(idx<0) return false;
-  state.pastHospitals.splice(idx,1);
-  // この病院にリンクしていた断片は、断片自体は消さずlinkedHospitalIdのみ外す
-  state.pastFragments.forEach(f=>{
-    if(f.linkedHospitalId === hospitalId){
-      f.linkedHospitalId = undefined;
-    }
-  });
-  return true;
-}
+// 【病院データ一本化について】
+// 過去編は元々ここに専用のPastHospital CRUD関数群（validatePastHospital/addPastHospital/
+// updatePastHospital/deletePastHospital）を持っていたが、ch7_hospital_add画面の廃止に伴い
+// 削除した。病院の追加・修正・削除は、すべて第4章側（state.hospitals、stepCh4Confidence内の
+// 保存処理、deleteCurrentHospital()）に一本化されている。過去編ロジック（buildPastPeriodGroups
+// 等）がこの一本化されたデータを読む際は、上記のtoLegacyPastHospitalShape()/
+// getLegacyPastHospitals()で変換して使う。
 
 // 現状編（第4章）の通院記録を削除する。
 // computeGaps()は毎回state.hospitalsから計算し直す純粋関数のため、削除するだけで
@@ -1080,6 +1096,10 @@ function deletePastHospital(hospitalId){
 // ただし、削除前に入力済みだったgapReasonsByKeyの理由データは、削除した病院のhospitalIdを
 // 含むキーのままstateに残り続けてしまう（二度と参照されない孤立データ）ため、
 // ここで該当キーを掃除しておく。
+// 【病院データ一本化】過去編は元々専用のdeletePastHospital()でstate.pastFragmentsの
+// linkedHospitalIdを掃除していたが、ch7_hospital_add廃止・state.hospitals一本化に伴い、
+// 病院削除の入口はここ（第4章側）に統一された。そのため、過去編の断片が
+// この病院にリンクしていた場合のlinkedHospitalId掃除も、ここで併せて行う。
 function deleteCurrentHospital(hospitalId){
   const idx = state.hospitals.findIndex(h=>h.hospitalId===hospitalId);
   if(idx<0) return false;
@@ -1088,6 +1108,12 @@ function deleteCurrentHospital(hospitalId){
     const [id1, id2] = key.split('__').map(s=>parseInt(s));
     if(id1===hospitalId || id2===hospitalId){
       delete state.gapReasonsByKey[key];
+    }
+  });
+  // 過去編の断片がこの病院にリンクしていた場合、断片自体は消さずlinkedHospitalIdのみ外す
+  state.pastFragments.forEach(f=>{
+    if(f.linkedHospitalId === hospitalId){
+      f.linkedHospitalId = undefined;
     }
   });
   return true;
@@ -1112,22 +1138,48 @@ function removeEventIdFromRelatedEvents(eventId){
   }
 }
 
-// 過去編病院専用の確信度バッジ。既存badgeForConfidence()はCONFIDENCE（'certain'|'approximate'|'unknown'）
-// 専用で3値目の名称が異なるため、PAST_HOSPITAL_CONFIDENCE（3値目'unsure'）用に分けて定義する。
-function badgeForPastConfidence(conf){
-  if(conf==='certain') return '<span class="badge badge-good">資料で確認</span>';
-  if(conf==='approximate') return '<span class="badge badge-warn">たぶん</span>';
-  return '<span class="badge badge-neutral">覚えていない</span>';
-}
+// 【病院データ一本化】以前はbadgeForPastConfidence()（PAST_HOSPITAL_CONFIDENCEの3値目'unsure'用）
+// を別途持っていたが、病院データがstate.hospitals（第4章、3値目'unknown'）に一本化されたため、
+// 過去編側の表示も既存のbadgeForConfidence()をそのまま使うようにした。
 
 // =====================================================================
 // 過去編：group / row 生成ロジック（Phase4仕様書5.3〜5.4章）。Step4。
 // 重要：このセクションの関数はすべて pure function 寄りに作る。
-// state.pastFragments / state.pastHospitals を「読む」のみで、一切書き換えない。
+// state.pastFragments / state.hospitals を「読む」のみで、一切書き換えない。
 // 戻り値で完結させ、state.cachedXxx のような形でキャッシュ保存は絶対に行わない
 // （導出データは永続保存しない方針。仕様書4-2章・6.8章）。
 // buildPastPeriodGroups() / convertPastGroupsToFormRows() の2段階分離は崩さない。
+//
+// 【病院データ一本化について】
+// 過去編は元々state.pastHospitals（ch7_hospital_add画面で入力）という専用の病院配列を
+// 持っていたが、第4章（ch4_hospital_name〜ch4_confidence）と入力項目が完全に重複していた
+// ため、ch7_hospital_addを廃止し、過去編のHospitalGroup生成もstate.hospitals（第4章のデータ）
+// を入力元とするよう一本化した。第4章側はfromYear/fromMonthのような数値の別フィールドを
+// 持つ形式のため、下記toLegacyPastHospitalShape()で過去編ロジックが期待する
+// {hospitalId, name, from, to, ongoing, confidence, memo}形式（from/toは'YYYY-MM'文字列）
+// へその場で変換してから渡す。state.hospitals自体の保存形式は変更していない。
 // =====================================================================
+
+// ---- 補助：state.hospitals[i]（第4章形式）を、過去編ロジックが期待する形へ変換する ----
+// 第4章の確信度は'unknown'（過去編側は'unsure'）なので、意味は同じだが表記だけ揃える。
+// nameUnknown:trueの場合はname自体をundefinedにし、formatPastDateLabel等の「時期不明」表示と
+// 同じ考え方でbuildHospitalGroupNote等が「病院名なし」を判定できるようにする。
+function toLegacyPastHospitalShape(h){
+  const fromStr = h.fromYear ? (h.fromMonth ? `${h.fromYear}-${String(h.fromMonth).padStart(2,'0')}` : `${h.fromYear}`) : undefined;
+  const toStr = (!h.ongoing && h.toYear) ? (h.toMonth ? `${h.toYear}-${String(h.toMonth).padStart(2,'0')}` : `${h.toYear}`) : undefined;
+  return {
+    hospitalId: h.hospitalId,
+    name: h.nameUnknown ? undefined : h.name,
+    from: fromStr,
+    to: toStr,
+    ongoing: !!h.ongoing,
+    confidence: h.confidence === 'unknown' ? 'unsure' : h.confidence,
+    memo: h.memo
+  };
+}
+function getLegacyPastHospitals(){
+  return state.hospitals.map(toLegacyPastHospitalShape);
+}
 
 // ---- 補助：断片id→断片オブジェクトのMap（仕様書5.3章） ----
 function buildFragmentMap(fragments){
@@ -1139,9 +1191,15 @@ function buildFragmentMap(fragments){
   return map;
 }
 
+// 【病院データ一本化に伴う重複防止】以前はbuildPastPeriodGroups()内でHospitalGroup/GapGroupを
+// 生成するために、この2関数（sortPastHospitalsForTimeline/computePastGaps）を呼んでいた。
+// 病院データ一本化により、病院・空白期間の行は現状編（computeGaps()）が生成するようになった
+// ため、現在この2関数はどこからも呼ばれていない。ロジック自体は健全なため削除はせず残している
+// （将来、過去編側で改めて病院間の空白期間を扱う必要が生じた場合の参照実装として）。
+
 // ---- 補助：病院をfrom昇順でソート。from不明は末尾、内部順は登録順を保つ安定ソート（仕様書5.3章） ----
 function sortPastHospitalsForTimeline(hospitals){
-  const list = hospitals || state.pastHospitals;
+  const list = hospitals || getLegacyPastHospitals();
   // from文字列を比較可能なキーに変換する。'YYYY-MM'形式を想定するが、年のみ('YYYY')も許容する。
   // 不明（空・undefined）は最大値相当のキーを与えて末尾に送る。
   const withIndex = list.map((h, idx)=>({h, idx}));
@@ -1223,16 +1281,27 @@ function splitStudentFragmentsIntoSubGroups(studentFragments){
 }
 
 // ---- buildPastPeriodGroups()：標準順に並んだPastPeriodGroup[]を構築（仕様書5.4章、B-9） ----
+// 【断片の設計変更に伴う注記】断片は現在「内容（text）のみ」で作られ、timeBucket/
+// linkedHospitalIdはもう新規には設定されない（時期の管理はch5_placeでの配置に一本化された。
+// 断片＝自作出来事カードという位置づけ）。この関数のtimeBucket/linkedHospitalIdによる
+// グループ分けは、旧バージョンでこれらのフィールドを持って作られた既存データのみに対して
+// 意味を持つ後方互換ロジックであり、新規に作られる断片は（timeBucketがundefinedのため）
+// どのbucketにも該当せず、unknownFragmentsの判定（f.timeBucket==='unknown'）にも
+// 該当しないため、このままではExcel出力（過去編側）に一切現れない。
+// 将来、断片をch5_placeでの配置（eventPlacements）を根拠にExcel出力へ合流させる方針
+// （出来事カードのbuildEventYearRanges()と同じ扱いにする）を別途実装する予定。
 function buildPastPeriodGroups(options){
   const opts = options || {};
   const allowStudentSplit = opts.allowStudentSplit !== false; // 省略時はtrue
   const fragments = state.pastFragments;
-  const hospitals = state.pastHospitals;
 
   const groups = [];
-  const consumedFragmentIds = new Set(); // どのgroupにも吸収された断片IDを記録（unknownFallback判定に使う）
+  const consumedFragmentIds = new Set(); // ①PreClinicalBucketGroupに吸収された断片IDを記録（③unknownFallback判定に使う）。
+  // 病院にリンクされた断片（旧データのlinkedHospitalId持ち）はここに追加しなくてよい。③の絞り込み
+  // 条件自体に「!f.linkedHospitalId」があるため、リンク済み断片は元から③の対象外になる。
 
   // --- ① PreClinicalBucketGroup群：child → student → working（仕様書B-9） ---
+  // 新規断片はtimeBucketを持たないため、このfilterは常に空になる（旧データのみ該当）。
   ['child','student','working'].forEach(bucket=>{
     const bucketFragments = fragments.filter(f=>!f.linkedHospitalId && f.timeBucket===bucket);
     if(bucketFragments.length===0) return;
@@ -1248,40 +1317,20 @@ function buildPastPeriodGroups(options){
     }
   });
 
-  // --- ② HospitalGroup / GapGroup 交互列（仕様書B-9） ---
-  const sortedHospitals = sortPastHospitalsForTimeline(hospitals);
-  const gaps = computePastGaps(hospitals);
-  // 病院をfrom昇順、ongoing病院は末尾寄り（5.4章：「ongoing:trueの病院は明示的に末尾優先で扱う」）に並べ直す。
-  // sortPastHospitalsForTimeline()は既にfrom昇順だが、ongoingをさらに末尾へ寄せるため、
-  // 「ongoingでない病院（from確定）→ongoingでない病院（from不明）→ongoing病院」の順に安定的に並べ替える。
-  const nonOngoing = sortedHospitals.filter(h=>!h.ongoing);
-  const ongoingHospitals = sortedHospitals.filter(h=>h.ongoing);
-  const hospitalOrder = [...nonOngoing, ...ongoingHospitals];
-
-  hospitalOrder.forEach((h, idx)=>{
-    const linkedFragmentIds = fragments.filter(f=>f.linkedHospitalId===h.hospitalId).map(f=>f.id);
-    groups.push({
-      type:'hospital',
-      hospitalId: h.hospitalId,
-      from: h.from,
-      to: h.to,
-      ongoing: !!h.ongoing,
-      linkedFragmentIds
-    });
-    linkedFragmentIds.forEach(id=>consumedFragmentIds.add(id));
-
-    // この病院とhospitalOrder内の次の病院との間にgapがあれば、ここで挟む。
-    // 値（from/to文字列）の一致ではなく、computePastGaps()が返すprevHospitalIdで対応付ける。
-    // 同一ラベルの病院が複数あっても、IDベースなので曖昧にならない。
-    if(idx < hospitalOrder.length - 1 && !h.ongoing){
-      const matchingGap = gaps.find(g=>g.prevHospitalId===h.hospitalId);
-      if(matchingGap){
-        groups.push(matchingGap);
-      }
-    }
-  });
+  // --- ② HospitalGroup / GapGroup（病院・空白期間の行） ---
+  // 【病院データ一本化に伴う重複防止】以前はここで、過去編専用の病院データ（state.pastHospitals）
+  // からHospitalGroup・GapGroupを生成していた。病院データがstate.hospitals（第4章）に一本化された
+  // ことで、これらの行は現状編側（buildCurrentPeriodRows→buildPeriodsForForm、computeGaps）が
+  // 既に生成するようになったため、ここで同じstate.hospitalsから再度生成すると、同じ病院・同じ
+  // 空白期間が二重に出力されてしまう（プレビュー・Excel出力どちらにも影響する重大な不具合だった）。
+  // そのため、過去編はこのグループを生成しない。病院にリンクされた断片（linkedFragmentIds）の
+  // テキストや病院のmemoは、現状編側のbuildPeriodsForForm()のnote組み立てに合流させている
+  // （buildHospitalGroupNote()の考え方をそちらへ移した）。
+  // 過去編がここで扱うのは、①病院にリンクしていない断片（child/student/working）と
+  // ③病院にリンクしていないunknown断片のみ。
 
   // --- ③ UnknownFallbackGroup：常に最後尾、1件のみ（仕様書B-4、B-9） ---
+  // 新規断片はtimeBucketを持たない（undefined）ため、この条件にも該当しない（旧データのみ該当）。
   const unknownFragments = fragments.filter(f=>
     !consumedFragmentIds.has(f.id) && !f.linkedHospitalId && f.timeBucket==='unknown'
   );
@@ -1447,7 +1496,7 @@ const PAST_BUCKET_FIXED_LABELS = { child:'子供のころ', student:'学生時�
 // 書き込み側がnote欄にラベルを残す）。
 function convertPastGroupsToFormRows(groups){
   const fragmentMap = buildFragmentMap(state.pastFragments);
-  const hospitalMap = new Map(state.pastHospitals.map(h=>[h.hospitalId, h]));
+  const hospitalMap = new Map(getLegacyPastHospitals().map(h=>[h.hospitalId, h]));
 
   // 日付なしrow用の共通date parts（preClinicalBucket・unknownFallback・パース失敗時に使う）
   const NO_DATE_PARTS = { fromKind:'none', fromYear:undefined, fromMonth:undefined, toKind:'none', toYear:undefined, toMonth:undefined, toDay:undefined };
@@ -2561,9 +2610,9 @@ function stepCh3Done(){
   document.getElementById('screen').innerHTML = `
     <div class="card">
       <h2>選んだ出来事です</h2>
-      <p class="lead">日付がわからなくても大丈夫です。次の通院記録で、病院を思い出せないときの手がかりとして使います。</p>
+      <p class="lead">日付がわからなくても大丈夫です。</p>
       ${rows}
-      <button type="button" class="link-btn" id="editEventsBtn" style="margin-top:14px;">出来事を選び直す →</button>
+      <button type="button" class="link-btn" id="editEventsBtn" style="margin-top:14px;">出来事カードを追加・削除 →</button>
     </div>`;
   document.getElementById('editEventsBtn').onclick = ()=>goTo('ch3_events');
   setFooter({secondaryLabel:'戻る', secondaryFn:goBack, primaryLabel:'第4章へ進む', primaryEnabled:true, primaryFn:()=>finishChapter('ch3','ch4_intro')});
@@ -2771,10 +2820,15 @@ function stepCh4Confidence(){
       <h2>この日付はどのくらい確かですか？</h2>
       <p class="optional-notice">入力しなくても進めます</p>
       <div class="chip-group" id="confChips"></div>
+      <label class="field-label" style="margin-top:18px;">状況の補足（任意）</label>
+      <textarea id="hospMemo" placeholder="転院した理由、診断のこと、通院の頻度など"></textarea>
     </div>`;
   renderChipGroup('confChips', CONFIDENCE.map(c=>c[1]), state.draft.confidence ? [CONFIDENCE.find(c=>c[0]===state.draft.confidence)[1]] : [], false, v=>{
     state.draft.confidence = CONFIDENCE.find(c=>c[1]===v)[0];
   });
+  const memoEl = document.getElementById('hospMemo');
+  memoEl.value = state.draft.memo || '';
+  memoEl.oninput = e=>{ state.draft.memo = e.target.value; };
   setFooter({secondaryLabel:'戻る', secondaryFn:goBack, primaryLabel:'次へ', primaryEnabled:true, primaryFn:()=>{
     const editId = state.editingHospitalId;
     if(editId !== null && editId !== undefined){
@@ -2900,7 +2954,10 @@ function stepCh4Summary(){
       const relatedNote = (h.relatedEvents && h.relatedEvents.length)
         ? `<div class="small" style="margin-top:-6px;margin-bottom:8px;">手がかり：${h.relatedEvents.map(k=>esc(findEventLabel(k))).join('・')}</div>`
         : '';
-      return `<div class="timeline-row"><span>${fromLabel}〜${toLabel}　${name}</span>${badgeForConfidence(h.confidence)}</div>${relatedNote}<div style="display:flex;gap:14px;margin:-4px 0 8px;"><button type="button" class="link-btn" data-edit-hospital="${h.hospitalId}">この通院記録を修正する →</button><button type="button" class="link-btn" data-delete-hospital="${h.hospitalId}" style="color:var(--danger);">削除する</button></div>`;
+      const memoNote = h.memo
+        ? `<div class="small" style="margin-top:-6px;margin-bottom:8px;color:var(--ink-soft);">補足：${esc(h.memo)}</div>`
+        : '';
+      return `<div class="timeline-row"><span>${fromLabel}〜${toLabel}　${name}</span>${badgeForConfidence(h.confidence)}</div>${relatedNote}${memoNote}<div style="display:flex;gap:14px;margin:-4px 0 8px;"><button type="button" class="link-btn" data-edit-hospital="${h.hospitalId}">この通院記録を修正する →</button><button type="button" class="link-btn" data-delete-hospital="${h.hospitalId}" style="color:var(--danger);">削除する</button></div>`;
     }
     const g = item.data;
     const answered = isGapReasonAnswered(g.key);
@@ -2992,9 +3049,19 @@ function eventsInBand(bandIndex){
     .sort((a,b)=> state.eventPlacements[a].order - state.eventPlacements[b].order);
 }
 
-// 手札（未配置）の出来事一覧。selectedEventsの登録順を保つ。
+// 手札（未配置）の一覧。出来事カード（selectedEvents）と、過去編で「思い出したこと」に
+// 置いた断片（pastFragments）の両方を対象にする。断片も出来事と同じ「選ぶ→行き先をタップ」
+// で年表に配置できるようにするため（ch5_place再設計・断片統合）、両者を同じ手札として扱う。
+// 表示順は「出来事→断片」、それぞれ内部では登録順を保つ。戻り値はfindEventObj()と同じ形
+// {id, label, cardKind} に揃え、renderPlaceCard()側で種別の判定・表示を一箇所に統一する。
 function eventsInHand(){
-  return state.selectedEvents.filter(ev=>!state.eventPlacements[ev.id]);
+  const events = state.selectedEvents
+    .filter(ev=>!state.eventPlacements[ev.id])
+    .map(ev=>({...ev, cardKind:'event'}));
+  const fragments = state.pastFragments
+    .filter(f=>!state.eventPlacements[f.id])
+    .map(f=>({id:f.id, label:f.text, cardKind:'fragment'}));
+  return [...events, ...fragments];
 }
 
 // 指定の帯における次のorder値（末尾追加、13.2節）。
@@ -3069,10 +3136,13 @@ function renderEducationBarRow(band){
   return `<div class="place-bar-row">${segsHtml}</div>`;
 }
 
-// 出来事カード1枚分のHTML（手札・年表どちらでも共通、14章：横並び・折り返し）。
+// 出来事カード・断片カード1枚分のHTML（手札・年表どちらでも共通、14章：横並び・折り返し）。
+// cardKind==='fragment'の場合はplace-card-fragmentクラスを付け、点線境界線で
+// 出来事カードと視覚的に区別する（過去編の断片統合）。
 function renderPlaceCard(ev){
   const selected = placeSelectedKey === ev.id ? ' place-card-selected' : '';
-  return `<button type="button" class="place-card${selected}" data-event-id="${esc(ev.id)}">${esc(ev.label)}</button>`;
+  const kindClass = ev.cardKind === 'fragment' ? ' place-card-fragment' : '';
+  return `<button type="button" class="place-card${kindClass}${selected}" data-event-id="${esc(ev.id)}">${esc(ev.label)}</button>`;
 }
 
 function stepCh5Place(){
@@ -3146,8 +3216,15 @@ function renderCh5PlaceScreen(){
   bindCh5PlaceHandlers(bands);
 }
 
+// idから、出来事カードまたは断片カードのオブジェクトを見つける（ch5_place画面共通）。
+// 断片（pastFragments）はlabelを持たないため、text（先頭を短く切ったもの）をlabel相当として
+// 補う。どちらにも見つからない場合はfindEventLabel()のフォールバック表示に委ねる。
 function findEventObj(id){
-  return state.selectedEvents.find(ev=>ev.id===id) || {id, label:findEventLabel(id)};
+  const found = state.selectedEvents.find(ev=>ev.id===id);
+  if(found) return {...found, cardKind:'event'};
+  const fragment = state.pastFragments.find(f=>f.id===id);
+  if(fragment) return {id, label: fragment.text, cardKind:'fragment'};
+  return {id, label:findEventLabel(id), cardKind:'event'};
 }
 
 // 「選ぶ→行き先をタップ」の1パターンで全操作を表現する（6章）。
@@ -3229,7 +3306,7 @@ function stepCh5Done(){
       const p = state.eventPlacements[k];
       return p && typeof p==='object' && p.bandIndex===i;
     }).sort((a,b)=> state.eventPlacements[a].order - state.eventPlacements[b].order)
-      .map(k=>esc(findEventLabel(k)));
+      .map(k=>esc(findEventObj(k).label));
     const hospitalsHere = hospitalsInBand(band).map(h=>{
       const name = h.nameUnknown ? `（${esc(h.hospitalType) || '病院名不明'}）` : (esc(h.name) || '（未入力）');
       return `通院：${name}`;
@@ -3303,14 +3380,14 @@ function stepCh5Done(){
   const editListHtml = `
     <button type="button" class="edit-chip" data-edit-chapter="ch1_work_status">就労状況を修正</button>
     <button type="button" class="edit-chip" data-edit-chapter="ch2_intro">今の生活を修正</button>
-    <button type="button" class="edit-chip" data-edit-chapter="ch3_events">出来事を修正</button>
+    <button type="button" class="edit-chip" data-edit-chapter="ch3_events">出来事カードを追加・削除</button>
     <button type="button" class="edit-chip" data-edit-chapter="${state.hospitals.length>0 ? 'ch4_summary' : 'ch4_intro'}">通院記録を修正</button>
     <button type="button" class="edit-chip" id="editPlacementChip">出来事の配置を直す</button>
     ${recognitionEnabled ? `<button type="button" class="edit-chip" id="editRecognitionChip">認定日ごろの状況を直す</button>` : ''}
     ${notebookEnabled ? `<button type="button" class="edit-chip" id="editNotebookChip">障害者手帳の情報を直す</button>` : ''}`;
 
   const addListHtml = `
-    <button type="button" class="edit-chip" id="addPastChip">昔のことを記録する${pastFragmentCount > 0 ? `（${pastFragmentCount}件あり）` : ''}</button>
+    <button type="button" class="edit-chip" id="addPastChip">出来事カードを自作する${pastFragmentCount > 0 ? `（${pastFragmentCount}件あり）` : ''}</button>
     ${!recognitionEnabled ? `<button type="button" class="edit-chip" id="addRecognitionChip">認定日ごろの状況を入力する（任意）</button>` : ''}
     ${!notebookEnabled ? `<button type="button" class="edit-chip" id="addNotebookChip">障害者手帳の情報を入力する（任意）</button>` : ''}`;
 
@@ -3708,17 +3785,20 @@ function stepCh5Preview(){
 
 // ---- ch6_past_intro：過去編の入口。趣旨説明と「見るだけ」の選択肢（Phase4仕様書3.1） ----
 function stepCh6PastIntro(){
-  const hasExisting = state.pastFragments.length > 0 || state.pastHospitals.length > 0;
+  const hasExisting = state.pastFragments.length > 0 || state.hospitals.length > 0;
   document.getElementById('screen').innerHTML = `
     <div class="card">
-      <h2>過去編：昔のことを少しずつ</h2>
+      <h2>出来事カードを自作する</h2>
       <p class="lead">年表のように整理しなくても大丈夫です。思い出せることを、思い出せる形のまま、少しずつ置いていく場所です。</p>
       <ul style="margin:10px 0 0;padding-left:18px;font-size:14px;line-height:1.7;">
-        <li>「いつのことか分からない」も、そのままで構いません。</li>
-        <li>病院の記録がなくても、思い出した出来事だけを置いていけます。</li>
-        <li>今日は何も書かずに見るだけでも、それで終了して大丈夫です。</li>
+        <li>作ったカードは「出来事の配置」画面の手札に追加され、年表の好きな場所に置けます。</li>
+        <li>ささいなことでも構いません。</li>
+        <li>「いつのことか分からない」記憶の断片だけを置いておいても大丈夫です。</li>
+        <li>付箋紙のような感覚で、思いついたときに使ってください。</li>
+        <li>病院の記録がなくても作れます。</li>
+        <li>今日は何も作らずに終了しても大丈夫です。</li>
       </ul>
-      ${hasExisting ? `<p class="small" style="margin-top:14px;color:var(--accent-strong);">前回の続きがあります（断片${state.pastFragments.length}件・病院${state.pastHospitals.length}件）。</p>` : ''}
+      ${hasExisting ? `<p class="small" style="margin-top:14px;color:var(--accent-strong);">前回の続きがあります（自作カード${state.pastFragments.length}件）。</p>` : ''}
     </div>`;
   setFooter({
     secondaryLabel:'今日は見るだけにする',
@@ -3728,7 +3808,7 @@ function stepCh6PastIntro(){
       state.returnTo = null;
       goTo(dest);
     },
-    primaryLabel:'思い出してみる',
+    primaryLabel:'出来事カードを作成する',
     primaryEnabled:true,
     primaryFn:()=>goTo('ch7_fragment_board')
   });
@@ -3746,37 +3826,19 @@ function renderPastFragmentList(){
   }
   listEl.innerHTML = sorted.map(f=>{
     const isExpanded = state.editingPastFragmentId === f.id;
-    const bucketLabel = TIME_BUCKET_LABELS[f.timeBucket] || TIME_BUCKET_LABELS.unknown;
-    const linkedHospital = f.linkedHospitalId ? state.pastHospitals.find(h=>h.hospitalId===f.linkedHospitalId) : null;
     if(!isExpanded){
       return `
         <div class="timeline-row" style="flex-direction:column;align-items:flex-start;" data-fragment-card="${f.id}">
           <span>${esc(f.text)}</span>
-          <div class="small" style="margin-top:4px;">
-            <span class="badge badge-neutral">${esc(bucketLabel)}</span>
-            ${linkedHospital ? `<span class="badge badge-good">${esc(linkedHospital.name)}</span>` : ''}
-          </div>
         </div>`;
     }
-    // 展開時：編集フォーム（Phase4仕様書3.2.4）
-    const hospitalOptions = state.pastHospitals.map(h=>
-      `<option value="${esc(h.hospitalId)}" ${f.linkedHospitalId===h.hospitalId?'selected':''}>${esc(h.name)}</option>`
-    ).join('');
+    // 展開時：編集フォーム。断片＝自作出来事カードという位置づけのため、出来事カードと同じく
+    // 「内容（text）」のみを編集対象とする（時期・状況の補足・病院リンクは持たせない。
+    // 時期の管理はch5_place（出来事の配置を直す）に一本化されている）。
     return `
       <div class="card" style="margin:10px 0;padding:14px;" data-fragment-card="${f.id}">
         <label class="field-label">内容</label>
         <textarea data-field="text" data-id="${f.id}">${esc(f.text)}</textarea>
-        <label class="field-label">時期</label>
-        <div class="chip-group" data-bucket-group="${f.id}"></div>
-        <label class="field-label">時期の補足（任意）</label>
-        <input type="text" data-field="timeDetail" data-id="${f.id}" value="${esc(f.timeDetail||'')}" placeholder="例：中学2年くらい" />
-        <label class="field-label">状況の補足（任意）</label>
-        <textarea data-field="memo" data-id="${f.id}" placeholder="状況や詳しい事情があれば">${esc(f.memo||'')}</textarea>
-        <label class="field-label">病院とのリンク（任意）</label>
-        <select data-field="linkedHospitalId" data-id="${f.id}">
-          <option value="">リンクしない</option>
-          ${hospitalOptions}
-        </select>
         <div style="display:flex;gap:8px;margin-top:12px;">
           <button type="button" data-save-fragment="${f.id}" style="flex:1;padding:10px;border-radius:8px;border:none;background:var(--accent-strong);color:#fff;cursor:pointer;">編集を保存</button>
           <button type="button" data-delete-fragment="${f.id}" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--danger);background:var(--danger-soft);color:var(--danger);cursor:pointer;">削除</button>
@@ -3784,26 +3846,6 @@ function renderPastFragmentList(){
         <button type="button" class="link-btn" data-collapse-fragment="${f.id}" style="margin-top:8px;">閉じる</button>
       </div>`;
   }).join('');
-
-  // 展開カードのbucketチップ・イベントをバインド
-  sorted.forEach(f=>{
-    if(state.editingPastFragmentId !== f.id) return;
-    const groupId = `[data-bucket-group="${f.id}"]`;
-    const groupEl = listEl.querySelector(groupId);
-    if(groupEl){
-      TIME_BUCKETS.forEach(b=>{
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'chip' + (f.timeBucket===b ? ' chip-selected' : '');
-        btn.textContent = TIME_BUCKET_LABELS[b];
-        btn.onclick = ()=>{
-          updatePastFragment(f.id, {timeBucket:b});
-          renderPastFragmentList();
-        };
-        groupEl.appendChild(btn);
-      });
-    }
-  });
 
   // カード本体クリックで展開（編集中でないカードのみ）
   listEl.querySelectorAll('[data-fragment-card]').forEach(card=>{
@@ -3817,10 +3859,7 @@ function renderPastFragmentList(){
   });
 
   // 展開フォーム内の各フィールド
-  listEl.querySelectorAll('[data-field="text"], [data-field="timeDetail"], [data-field="memo"]').forEach(el=>{
-    el.onclick = e=>e.stopPropagation();
-  });
-  listEl.querySelectorAll('[data-field="linkedHospitalId"]').forEach(el=>{
+  listEl.querySelectorAll('[data-field="text"]').forEach(el=>{
     el.onclick = e=>e.stopPropagation();
   });
   listEl.querySelectorAll('[data-save-fragment]').forEach(btn=>{
@@ -3829,10 +3868,7 @@ function renderPastFragmentList(){
       const id = btn.getAttribute('data-save-fragment');
       const card = listEl.querySelector(`[data-fragment-card="${id}"]`);
       const text = card.querySelector('[data-field="text"]').value;
-      const timeDetail = card.querySelector('[data-field="timeDetail"]').value;
-      const memo = card.querySelector('[data-field="memo"]').value;
-      const linkedHospitalId = card.querySelector('[data-field="linkedHospitalId"]').value || undefined;
-      const ok = updatePastFragment(id, {text, timeDetail: timeDetail||undefined, memo: memo||undefined, linkedHospitalId});
+      const ok = updatePastFragment(id, {text});
       if(ok){
         state.editingPastFragmentId = null;
         saveStateToStorage();
@@ -3848,6 +3884,8 @@ function renderPastFragmentList(){
       const ok = confirm('この断片を削除します。よろしいですか？');
       if(!ok) return;
       deletePastFragment(id);
+      // 配置情報も削除しておく（存在しない断片の配置が残らないように。出来事カード削除時と同じ対応）
+      delete state.eventPlacements[id];
       if(state.editingPastFragmentId === id) state.editingPastFragmentId = null;
       saveStateToStorage();
       renderPastFragmentList();
@@ -3865,13 +3903,11 @@ function renderPastFragmentList(){
 function stepCh7FragmentBoard(){
   document.getElementById('screen').innerHTML = `
     <div class="card">
-      <h2>思い出したことを置く場所</h2>
-      <p class="lead">短い言葉でも構いません。1つ置けたら、それで十分です。</p>
+      <h2>自作出来事カード置き場</h2>
+      <p class="lead">短い言葉でも構いません。1枚置けたら、それで十分です。いつのことかは、あとで「出来事の配置を直す」から年表に置くと整理できます。</p>
       <label class="field-label">思い出したこと</label>
       <textarea id="newFragmentText" placeholder="例：高校生のころ、よく休んでいた"></textarea>
       <p class="small" id="newFragmentError" style="color:var(--danger);margin:4px 0 0;display:none;">内容を入れてから「置く」を押してください。</p>
-      <label class="field-label">時期（わからなければそのままでOK）</label>
-      <div class="chip-group" id="newFragmentBucket"></div>
       <button type="button" id="addFragmentBtn" style="width:100%;padding:12px;border-radius:8px;border:none;background:var(--accent-strong);color:#fff;font-size:15px;cursor:pointer;margin-top:10px;">置く</button>
 
       <div class="edit-section" style="margin-top:18px;">
@@ -3880,32 +3916,11 @@ function stepCh7FragmentBoard(){
       </div>
 
       <div class="edit-section">
-        <button type="button" id="goToPastHospitalBtn" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--accent-strong);background:#fff;color:var(--accent-strong);font-size:15px;cursor:pointer;">病院を追加する</button>
+        <p class="small">通院していた病院の記録は「通院の記録」（第4章）から追加・修正できます。</p>
       </div>
     </div>`;
 
-  let newBucket = 'unknown';
-  const bucketGroup = document.getElementById('newFragmentBucket');
-  TIME_BUCKETS.forEach(b=>{
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'chip' + (b==='unknown' ? ' chip-selected' : '');
-    btn.textContent = TIME_BUCKET_LABELS[b];
-    btn.onclick = ()=>{
-      newBucket = b;
-      bucketGroup.querySelectorAll('.chip').forEach(c=>c.classList.remove('chip-selected'));
-      btn.classList.add('chip-selected');
-    };
-    bucketGroup.appendChild(btn);
-  });
-
   renderPastFragmentList();
-  // ch8_past_reviewから「詳細編集する」で来た場合、対象カードが展開済みで描画される。
-  // 一覧の上の方に隠れている可能性があるため、該当カードへスクロールする。
-  if(state.editingPastFragmentId){
-    const targetCard = document.querySelector(`[data-fragment-card="${state.editingPastFragmentId}"]`);
-    if(targetCard && typeof targetCard.scrollIntoView === 'function') targetCard.scrollIntoView({block:'center'});
-  }
 
   const textEl = document.getElementById('newFragmentText');
   const errorEl = document.getElementById('newFragmentError');
@@ -3916,379 +3931,34 @@ function stepCh7FragmentBoard(){
       errorEl.style.display = ''; // Phase4仕様書3.2.3：ボタン無効化ではなく軽いインライン警告
       return;
     }
-    addPastFragment({text, timeBucket:newBucket});
+    addPastFragment({text});
     saveStateToStorage();
     textEl.value = '';
     errorEl.style.display = 'none';
-    newBucket = 'unknown';
-    bucketGroup.querySelectorAll('.chip').forEach(c=>c.classList.remove('chip-selected'));
-    bucketGroup.firstChild.classList.add('chip-selected');
     renderPastFragmentList();
   };
-  document.getElementById('goToPastHospitalBtn').onclick = ()=>goTo('ch7_hospital_add');
 
-  setFooter({
-    secondaryLabel:'戻る',
+  setFooter({secondaryLabel:'戻る',
     secondaryFn:goBack,
     primaryLabel:'今日はここまでにする',
     primaryEnabled:true,
     primaryFn:()=>{
-      // バリデーションなしで進める（Phase4仕様書3.2.8）。断片0件ならch5_done等へ戻る。
-      if(state.pastFragments.length===0 && state.pastHospitals.length===0){
-        const dest = state.returnTo || 'ch5_done';
-        state.returnTo = null;
-        goTo(dest);
-      } else {
-        goTo('ch8_past_review');
-      }
-    }
-  });
-}
-
-// ---- ch7_hospital_add：過去病院カードの追加・編集・削除（Phase4仕様書3.3） ----
-function renderPastHospitalList(){
-  const listEl = document.getElementById('pastHospitalList');
-  if(!listEl) return;
-  if(state.pastHospitals.length===0){
-    listEl.innerHTML = '<p class="small">まだ登録されていません。</p>';
-    return;
-  }
-  listEl.innerHTML = state.pastHospitals.map(h=>{
-    const isExpanded = state.editingPastHospitalId === h.hospitalId;
-    if(!isExpanded){
-      const fromLabel = h.from || '時期不明';
-      const toLabel = h.ongoing ? '現在' : (h.to || '時期不明');
-      return `
-        <div class="timeline-row" data-hospital-card="${h.hospitalId}" style="cursor:pointer;">
-          <span>${fromLabel}〜${toLabel}　${esc(h.name)}</span>
-          ${badgeForPastConfidence(h.confidence)}
-        </div>`;
-    }
-    return `
-      <div class="card" style="margin:10px 0;padding:14px;" data-hospital-card="${h.hospitalId}">
-        <label class="field-label">病院名</label>
-        <input type="text" data-field="name" data-id="${h.hospitalId}" value="${esc(h.name)}" />
-        <label class="field-label">いつから（任意・例：2015 または 2015-04）</label>
-        <input type="text" data-field="from" data-id="${h.hospitalId}" value="${esc(h.from||'')}" placeholder="例：2015 または 2015-04" />
-        <label class="field-label">いつまで（任意・例：2016 または 2016-03）</label>
-        <input type="text" data-field="to" data-id="${h.hospitalId}" value="${esc(h.to||'')}" placeholder="例：2016 または 2016-03" ${h.ongoing?'disabled':''} />
-        <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
-          <input type="checkbox" data-field="ongoing" data-id="${h.hospitalId}" ${h.ongoing?'checked':''} style="width:18px;height:18px;" />
-          <label class="small">今も通院している</label>
-        </div>
-        <label class="field-label">どのくらい確かですか</label>
-        <div class="chip-group" data-conf-group="${h.hospitalId}"></div>
-        <label class="field-label">状況の補足（任意）</label>
-        <textarea data-field="memo" data-id="${h.hospitalId}" placeholder="転院した理由、診断のこと、通院の頻度など">${esc(h.memo||'')}</textarea>
-        <div style="display:flex;gap:8px;margin-top:12px;">
-          <button type="button" data-save-hospital="${h.hospitalId}" style="flex:1;padding:10px;border-radius:8px;border:none;background:var(--accent-strong);color:#fff;cursor:pointer;">更新する</button>
-          <button type="button" data-delete-hospital="${h.hospitalId}" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--danger);background:var(--danger-soft);color:var(--danger);cursor:pointer;">削除する</button>
-        </div>
-        <button type="button" class="link-btn" data-collapse-hospital="${h.hospitalId}" style="margin-top:8px;">閉じる</button>
-      </div>`;
-  }).join('');
-
-  state.pastHospitals.forEach(h=>{
-    if(state.editingPastHospitalId !== h.hospitalId) return;
-    const groupEl = listEl.querySelector(`[data-conf-group="${h.hospitalId}"]`);
-    if(groupEl){
-      PAST_HOSPITAL_CONFIDENCE.forEach(([key,label])=>{
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'chip' + (h.confidence===key ? ' chip-selected' : '');
-        btn.textContent = label;
-        btn.onclick = ()=>{
-          groupEl.querySelectorAll('.chip').forEach(c=>c.classList.remove('chip-selected'));
-          btn.classList.add('chip-selected');
-          groupEl.setAttribute('data-selected-confidence', key);
-        };
-        groupEl.appendChild(btn);
-      });
-      groupEl.setAttribute('data-selected-confidence', h.confidence);
-    }
-    const ongoingEl = listEl.querySelector(`[data-hospital-card="${h.hospitalId}"] [data-field="ongoing"]`);
-    const toEl = listEl.querySelector(`[data-hospital-card="${h.hospitalId}"] [data-field="to"]`);
-    if(ongoingEl && toEl){
-      ongoingEl.onchange = e=>{ toEl.disabled = e.target.checked; };
-    }
-  });
-
-  listEl.querySelectorAll('[data-hospital-card]').forEach(card=>{
-    const id = card.getAttribute('data-hospital-card');
-    if(state.editingPastHospitalId === id) return;
-    card.onclick = ()=>{
-      state.editingPastHospitalId = id;
-      renderPastHospitalList();
-    };
-  });
-  listEl.querySelectorAll('input, textarea').forEach(el=>{ el.onclick = e=>e.stopPropagation(); });
-
-  listEl.querySelectorAll('[data-save-hospital]').forEach(btn=>{
-    btn.onclick = e=>{
-      e.stopPropagation();
-      const id = btn.getAttribute('data-save-hospital');
-      const card = listEl.querySelector(`[data-hospital-card="${id}"]`);
-      const name = card.querySelector('[data-field="name"]').value;
-      const from = card.querySelector('[data-field="from"]').value;
-      const to = card.querySelector('[data-field="to"]').value;
-      const ongoing = card.querySelector('[data-field="ongoing"]').checked;
-      const memo = card.querySelector('[data-field="memo"]').value;
-      const confidence = card.querySelector('[data-conf-group]').getAttribute('data-selected-confidence');
-      const ok = updatePastHospital(id, {
-        name, from: from||undefined, to: ongoing?undefined:(to||undefined), ongoing, memo: memo||undefined, confidence
-      });
-      if(ok){
-        state.editingPastHospitalId = null;
-        saveStateToStorage();
-        renderPastHospitalList();
-        // 注：ch7_fragment_board側の断片一覧（リンク先病院名表示）は、
-        // この画面のDOM上には存在しないため、ここでは更新できない。
-        // ch7_fragment_boardへ戻った際にstepCh7FragmentBoard()が再実行され、
-        // renderPastFragmentList()が呼ばれるため、戻った時点で最新の病院名が反映される。
-      }
-    };
-  });
-  listEl.querySelectorAll('[data-delete-hospital]').forEach(btn=>{
-    btn.onclick = e=>{
-      e.stopPropagation();
-      const id = btn.getAttribute('data-delete-hospital');
-      // confirmあり（GPT方針：過去病院削除もconfirmで揃える）
-      const ok = confirm('この病院の記録を削除します。リンクしている断片のリンクも外れます。よろしいですか？');
-      if(!ok) return;
-      deletePastHospital(id);
-      if(state.editingPastHospitalId === id) state.editingPastHospitalId = null;
-      saveStateToStorage();
-      renderPastHospitalList();
-    };
-  });
-  listEl.querySelectorAll('[data-collapse-hospital]').forEach(btn=>{
-    btn.onclick = e=>{
-      e.stopPropagation();
-      state.editingPastHospitalId = null;
-      renderPastHospitalList();
-    };
-  });
-}
-
-function stepCh7HospitalAdd(){
-  document.getElementById('screen').innerHTML = `
-    <div class="card">
-      <h2>通っていた病院（過去）</h2>
-      <p class="lead">名前や期間がはっきりしなくても、わかる範囲で大丈夫です。</p>
-      <label class="field-label">病院名</label>
-      <input type="text" id="newHospitalName" placeholder="病院名" />
-      <p class="small" id="newHospitalNameError" style="color:var(--danger);margin:4px 0 0;display:none;">病院名を入れてから「登録する」を押してください。</p>
-      <label class="field-label">いつから（任意・例：2015 または 2015-04）</label>
-      <input type="text" id="newHospitalFrom" placeholder="例：2015 または 2015-04" />
-      <label class="field-label">いつまで（任意・例：2016 または 2016-03）</label>
-      <input type="text" id="newHospitalTo" placeholder="例：2016 または 2016-03" />
-      <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
-        <input type="checkbox" id="newHospitalOngoing" style="width:18px;height:18px;" />
-        <label class="small">今も通院している</label>
-      </div>
-      <label class="field-label">どのくらい確かですか</label>
-      <div class="chip-group" id="newHospitalConfidence"></div>
-      <label class="field-label">状況の補足（任意）</label>
-      <textarea id="newHospitalMemo" placeholder="転院した理由、診断のこと、通院の頻度など"></textarea>
-      <button type="button" id="addHospitalPastBtn" style="width:100%;padding:12px;border-radius:8px;border:none;background:var(--accent-strong);color:#fff;font-size:15px;cursor:pointer;margin-top:10px;">登録する</button>
-
-      <div class="edit-section" style="margin-top:18px;">
-        <p class="edit-section-label">これまでに登録した病院</p>
-        <div id="pastHospitalList"></div>
-      </div>
-    </div>`;
-
-  let newConfidence = 'approximate';
-  const confGroup = document.getElementById('newHospitalConfidence');
-  PAST_HOSPITAL_CONFIDENCE.forEach(([key,label])=>{
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'chip' + (key==='approximate' ? ' chip-selected' : '');
-    btn.textContent = label;
-    btn.onclick = ()=>{
-      newConfidence = key;
-      confGroup.querySelectorAll('.chip').forEach(c=>c.classList.remove('chip-selected'));
-      btn.classList.add('chip-selected');
-    };
-    confGroup.appendChild(btn);
-  });
-
-  const ongoingEl = document.getElementById('newHospitalOngoing');
-  const toEl = document.getElementById('newHospitalTo');
-  ongoingEl.onchange = e=>{ toEl.disabled = e.target.checked; };
-
-  renderPastHospitalList();
-
-  const nameEl = document.getElementById('newHospitalName');
-  const nameErrorEl = document.getElementById('newHospitalNameError');
-  nameEl.oninput = ()=>{ nameErrorEl.style.display = 'none'; };
-  document.getElementById('addHospitalPastBtn').onclick = ()=>{
-    const name = nameEl.value;
-    if(!name || !name.trim()){
-      nameErrorEl.style.display = ''; // 必須項目（Phase4仕様書3.3.5）。インライン警告で示す
-      return;
-    }
-    const from = document.getElementById('newHospitalFrom').value;
-    const to = document.getElementById('newHospitalTo').value;
-    const ongoing = ongoingEl.checked;
-    const memo = document.getElementById('newHospitalMemo').value;
-    const added = addPastHospital({
-      name, from: from||undefined, to: ongoing?undefined:(to||undefined), ongoing, confidence:newConfidence, memo: memo||undefined
-    });
-    if(added){
-      saveStateToStorage();
-      nameEl.value = '';
-      nameErrorEl.style.display = 'none';
-      document.getElementById('newHospitalFrom').value = '';
-      document.getElementById('newHospitalTo').value = '';
-      ongoingEl.checked = false;
-      toEl.disabled = false;
-      document.getElementById('newHospitalMemo').value = '';
-      renderPastHospitalList();
-    }
-  };
-
-  setFooter({secondaryLabel:'断片に戻る', secondaryFn:()=>goTo('ch7_fragment_board')});
-}
-
-// ---- ch8_past_review：断片・病院の見返し（Phase4仕様書3.4） ----
-function renderPastReviewByBucket(){
-  const containerEl = document.getElementById('pastReviewByBucket');
-  if(!containerEl) return;
-  containerEl.innerHTML = TIME_BUCKETS.map(bucket=>{
-    const items = state.pastFragments.filter(f=>f.timeBucket===bucket);
-    const label = TIME_BUCKET_LABELS[bucket];
-    const itemsHtml = items.length
-      ? items.map(f=>{
-          const isExpanded = state.editingPastFragmentId === f.id;
-          if(!isExpanded){
-            return `<div class="timeline-row" data-review-fragment="${f.id}" style="cursor:pointer;"><span>${esc(f.text)}</span></div>`;
-          }
-          const hospitalOptions = state.pastHospitals.map(h=>
-            `<option value="${esc(h.hospitalId)}" ${f.linkedHospitalId===h.hospitalId?'selected':''}>${esc(h.name)}</option>`
-          ).join('');
-          return `
-            <div class="card" style="margin:8px 0;padding:12px;" data-review-fragment="${f.id}">
-              <textarea data-field="text" data-id="${f.id}">${esc(f.text)}</textarea>
-              <div class="chip-group" data-bucket-group="${f.id}" style="margin-top:6px;"></div>
-              <select data-field="linkedHospitalId" data-id="${f.id}" style="margin-top:6px;">
-                <option value="">リンクしない</option>
-                ${hospitalOptions}
-              </select>
-              <div style="display:flex;gap:8px;margin-top:8px;">
-                <button type="button" data-save-review-fragment="${f.id}" style="flex:1;padding:8px;border-radius:8px;border:none;background:var(--accent-strong);color:#fff;cursor:pointer;">保存</button>
-                <button type="button" data-collapse-review-fragment="${f.id}" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--ink-soft);background:#fff;cursor:pointer;">閉じる</button>
-              </div>
-              <button type="button" class="link-btn" data-edit-detail-fragment="${f.id}" style="margin-top:6px;">時期の補足・状況のメモを編集する →</button>
-            </div>`;
-        }).join('')
-      : '<p class="small" style="margin:4px 0 0;">まだありません</p>';
-    return `<p class="edit-section-label" style="margin-top:14px;">${esc(label)}</p>${itemsHtml}`;
-  }).join('');
-
-  // bucketチップのバインド（展開中のカードのみ）
-  state.pastFragments.forEach(f=>{
-    if(state.editingPastFragmentId !== f.id) return;
-    const groupEl = containerEl.querySelector(`[data-bucket-group="${f.id}"]`);
-    if(groupEl){
-      TIME_BUCKETS.forEach(b=>{
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'chip' + (f.timeBucket===b ? ' chip-selected' : '');
-        btn.textContent = TIME_BUCKET_LABELS[b];
-        btn.onclick = ()=>{
-          updatePastFragment(f.id, {timeBucket:b});
-          saveStateToStorage();
-          renderPastReviewByBucket();
-        };
-        groupEl.appendChild(btn);
-      });
-    }
-  });
-
-  containerEl.querySelectorAll('[data-review-fragment]').forEach(card=>{
-    const id = card.getAttribute('data-review-fragment');
-    if(state.editingPastFragmentId === id) return;
-    card.onclick = ()=>{
-      state.editingPastFragmentId = id;
-      renderPastReviewByBucket();
-    };
-  });
-  containerEl.querySelectorAll('textarea, select').forEach(el=>{ el.onclick = e=>e.stopPropagation(); });
-  containerEl.querySelectorAll('[data-save-review-fragment]').forEach(btn=>{
-    btn.onclick = e=>{
-      e.stopPropagation();
-      const id = btn.getAttribute('data-save-review-fragment');
-      const card = containerEl.querySelector(`[data-review-fragment="${id}"]`);
-      const text = card.querySelector('[data-field="text"]').value;
-      const linkedHospitalId = card.querySelector('[data-field="linkedHospitalId"]').value || undefined;
-      const ok = updatePastFragment(id, {text, linkedHospitalId});
-      if(ok){
-        state.editingPastFragmentId = null;
-        saveStateToStorage();
-        renderPastReviewByBucket();
-      }
-    };
-  });
-  containerEl.querySelectorAll('[data-collapse-review-fragment]').forEach(btn=>{
-    btn.onclick = e=>{
-      e.stopPropagation();
-      state.editingPastFragmentId = null;
-      renderPastReviewByBucket();
-    };
-  });
-  // 「時期の補足・状況のメモを編集する」：ch7_fragment_boardへ遷移し、対象断片を自動展開する。
-  // ch8_past_reviewの責務はtimeBucket/リンク調整に留め、text/memo/timeDetailの詳細編集は
-  // ch7_fragment_board側のフォームに一本化する（Phase4仕様書2.3：reviewは新規追加・詳細編集の主窓口にしない）。
-  containerEl.querySelectorAll('[data-edit-detail-fragment]').forEach(btn=>{
-    btn.onclick = e=>{
-      e.stopPropagation();
-      const id = btn.getAttribute('data-edit-detail-fragment');
-      state.editingPastFragmentId = id;
-      // goTo()は履歴スタックに積むため、ch7側の「戻る」(goBack)で自然にここへ戻れる
-      goTo('ch7_fragment_board');
-    };
-  });
-}
-
-function stepCh8PastReview(){
-  document.getElementById('screen').innerHTML = `
-    <div class="card">
-      <h2>整理してみる</h2>
-      <p class="lead">置いた断片を、時期ごとに見返せます。直さなくても、そのままで大丈夫です。</p>
-      <div id="pastReviewByBucket"></div>
-
-      <div class="edit-section" style="margin-top:18px;">
-        <p class="edit-section-label">登録した病院</p>
-        <div id="pastReviewHospitalList"></div>
-      </div>
-    </div>`;
-  renderPastReviewByBucket();
-
-  // 病院一覧はここでは閲覧のみ（編集はch7_hospital_addへ誘導。Phase4仕様書3.4.1）
-  const hospListEl = document.getElementById('pastReviewHospitalList');
-  hospListEl.innerHTML = state.pastHospitals.length
-    ? state.pastHospitals.map(h=>{
-        const fromLabel = h.from || '時期不明';
-        const toLabel = h.ongoing ? '現在' : (h.to || '時期不明');
-        return `<div class="timeline-row"><span>${fromLabel}〜${toLabel}　${esc(h.name)}</span>${badgeForPastConfidence(h.confidence)}</div>`;
-      }).join('')
-    : '<p class="small">まだ登録されていません。</p>';
-
-  setFooter({
-    secondaryLabel:'戻る',
-    secondaryFn:goBack,
-    primaryLabel:'次へ',
-    primaryEnabled:true,
-    // Step2時点ではch9/ch10が未実装のため、いったん入口（ch5_done等）へ戻す暫定動作。
-    // TODO(Step4以降): ch9_before_output_hint実装後はここをgoTo('ch9_before_output_hint')に差し替える。
-    primaryFn:()=>{
+      // ch8_past_review（整理してみる画面）は廃止された。断片は既にこの画面の下部に
+      // 一覧表示されているため、別画面で整理し直す必要がない。時期の調整・整理は
+      // 「出来事の配置を直す」（ch5_place）でまとめて行う設計に一本化した。
       const dest = state.returnTo || 'ch5_done';
       state.returnTo = null;
       goTo(dest);
     }
   });
 }
+
+
+
+// 注：ch8_past_review（「整理してみる」画面）は廃止された。断片は既にch7_fragment_boardの
+// 一覧に表示されており、bucket別に整理し直す画面を別に設ける必要がなくなったため
+// （時期の管理はch5_place「出来事の配置を直す」に一本化されている）。
+// 「今日はここまでにする」からはch5_doneへ直結する（stepCh7FragmentBoard内）。
 
 // 注：旧stepCh5Edit()（「出来事の配置を直す」チップ選択式編集画面）は、ch5_place再設計により
 // 廃止された（ch5_place_再設計_画面仕様書.md 12.2節）。新しいch5_place自体が「配置しながら
@@ -4781,11 +4451,10 @@ const STEPS = {
   ch2_notwork_reason: stepCh2NotworkReason,
   ch2_adl: stepCh2Adl,
   ch2_other: stepCh2Other,
-  // 過去編（続紙対応）。Step2でUI骨格・CRUDまで実装。
+  // 過去編（続紙対応）。ch7_hospital_add（過去病院追加画面）は病院データ一本化に伴い廃止済み。
+  // ch8_past_review（整理してみる画面）も廃止済み（断片は既にch7_fragment_boardの一覧に表示）。
   ch6_past_intro: stepCh6PastIntro,
-  ch7_fragment_board: stepCh7FragmentBoard,
-  ch7_hospital_add: stepCh7HospitalAdd,
-  ch8_past_review: stepCh8PastReview
+  ch7_fragment_board: stepCh7FragmentBoard
 };
 
 function showScreen(){
