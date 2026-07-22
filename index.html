@@ -21,6 +21,8 @@
   --good:#3E7D4C;
   --good-soft:#E3F0E3;
   --neutral-soft:#EFEBE2;
+  --border:var(--line);
+  --surface-raised:var(--neutral-soft);
 }
 *{box-sizing:border-box;}
 body{
@@ -106,6 +108,12 @@ button:focus-visible, .option:focus-visible, .chip:focus-visible, [role="button"
 .preview-status-list{display:flex;flex-wrap:wrap;gap:8px;font-size:12px;border-top:1px solid var(--border);padding-top:10px;margin-bottom:8px;}
 .preview-status-list button{background:none;border:none;padding:0;font-size:12px;cursor:pointer;color:var(--ink);}
 .preview-status-excluded{font-size:11px;color:var(--ink-soft);border-top:1px solid var(--border);padding-top:8px;}
+/* ---- outputMode切替スイッチ（作業3-3。決定#12〜#17） ---- */
+.mode-switch-block{margin-bottom:14px;}
+.mode-switch-caption{font-size:12px;color:var(--ink-soft);margin:0 0 6px;}
+.mode-switch{display:flex;gap:6px;}
+.mode-switch-option{flex:1;border:1px solid var(--line);border-radius:999px;padding:10px 10px;font-size:13px;text-align:center;cursor:pointer;background:var(--neutral-soft);color:var(--ink-soft);}
+.mode-switch-option.mode-switch-selected{background:var(--accent);border-color:var(--accent);color:#fff;}
 
 /* ---- ch5_preview v4：紙そのもの（02.xlsx様式の升目構造再現、仕様書2章） ---- */
 .preview-paper{background:#fff;color:#1a1a1a;border:1px solid #888;font-size:12px;line-height:1.5;}
@@ -257,6 +265,8 @@ button:focus-visible, .option:focus-visible, .chip:focus-visible, [role="button"
   padding:8px;pointer-events:none;
   font-size:20px;line-height:1.4;font-weight:700;color:var(--ink-soft);opacity:0.5;
 }
+
+
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 </head>
@@ -282,6 +292,30 @@ function yearToWareki(year){
   if(year >= 1989) return ['平成', year - 1988];
   if(year >= 1926) return ['昭和', year - 1925];
   return [null, null];
+}
+
+// ---- 年齢帯（buildAgeBands()の1件）のラベルを、西暦⇄元号切替（state.eraDisplayMode、4.6節）
+// に応じて組み立てる。「出来事を年表に置いてみましょう」画面（stepCh5Place）と「年表ができました」
+// 画面（stepCh5Done）の両方で使う共通部品（2026-07-18セッション。2.4節の共通部品化課題に対応）。
+function formatAgeBandLabel(band, isWareki){
+  if(!isWareki) return band.label;
+  const [g1, y1] = yearToWareki(band.startYear);
+  if(band.isLast){
+    return g1 ? `${g1}${y1}年〜現在（${band.startAge}歳〜現在）` : band.label;
+  }
+  const [g2, y2] = yearToWareki(band.endYear);
+  return (g1 && g2) ? `${g1}${y1}〜${g2===g1?'':g2}${y2}年（${band.startAge}〜${band.endAge}歳ごろ）` : band.label;
+}
+
+// ---- computeGaps()のfromLabel/toLabel（例："2015年頃"「2018年4頃"）の先頭の「YYYY年」部分だけを
+// 西暦⇄元号切替に応じて置き換える。それ以外の部分（月・「頃」等）はそのまま保つ。
+function formatGapDateLabel(labelStr, isWareki){
+  if(!isWareki) return labelStr;
+  const m = (labelStr || '').match(/^(\d+)年/);
+  if(!m) return labelStr;
+  const [g, y] = yearToWareki(parseInt(m[1]));
+  if(!g) return labelStr;
+  return labelStr.replace(/^\d+年/, `${g}${y}年`);
 }
 
 // ---- 通勤時間の選択肢→時間/分への変換 ----
@@ -332,6 +366,12 @@ function getFormFillDate(){
 function buildEventYearRanges(){
   const bands = buildAgeBands();
   const ranges = [];
+  // 【不具合修正・2026年7月】バンドは隣同士で境界年を共有する（band[i].endYear === band[i+1].startYear）。
+  // 出来事の一致判定を両端含む(<=)のままにすると、通院period/gapのチャンク境界がたまたま
+  // このバンド境界と同じ年に来たとき、隣り合う2行の両方に同じ出来事が重複して出てしまう
+  // （前後の行どちらの「この頃の出来事」にも同じカードが載ってしまう不具合）。
+  // 対策として、endYearをその年自体は「次のバンドの持ち物」とみなす半開区間（[startYear, endYear)）
+  // にする。ただし最後のバンド（isLast:true）だけはendYearが「現在」を表すため、そのまま含める。
   state.selectedEvents.forEach(ev=>{
     const placement = state.eventPlacements[ev.id];
     // 未配置（手札に残っている）出来事は範囲を持たないため除外する。
@@ -339,7 +379,7 @@ function buildEventYearRanges(){
     if(!placement) return;
     const band = bands[placement.bandIndex];
     if(!band) return;
-    ranges.push({startYear:band.startYear, endYear:band.endYear, label:ev.label});
+    ranges.push({startYear:band.startYear, endYear:band.endYear, isLast:!!band.isLast, label:ev.label});
   });
   // 断片（pastFragments）＝自作出来事カードとして、出来事カードと完全に同じ扱いで合流する。
   // ch5_placeで配置された（eventPlacementsにエントリがある）断片のみ対象で、手札に残っている
@@ -353,72 +393,328 @@ function buildEventYearRanges(){
     if(!placement) return;
     const band = bands[placement.bandIndex];
     if(!band) return;
-    ranges.push({startYear:band.startYear, endYear:band.endYear, label:f.text});
+    ranges.push({startYear:band.startYear, endYear:band.endYear, isLast:!!band.isLast, label:f.text});
   });
   return ranges;
 }
 
-// ---- 通院記録＋通院空白を様式の「期間」配列に変換（最大5件、6件目以降は今回未対応） ----
-function buildPeriodsForForm(){
-  const eventRanges = buildEventYearRanges();
-  const periods = [];
-
-  state.hospitals.forEach(h=>{
-    const fromY = parseInt(h.fromYear) || null;
-    const fromM = parseInt(h.fromMonth) || null;
-    let toY, toM, toIsNow = false;
-    if(h.ongoing){
-      const fillDate = getFormFillDate();
-      toY = fillDate.year; toM = fillDate.month; toIsNow = true;
-    } else {
-      toY = parseInt(h.toYear) || null;
-      toM = parseInt(h.toMonth) || null;
-    }
-    const related = eventRanges.filter(r => fromY && r.startYear <= fromY && fromY <= r.endYear).map(r=>r.label);
-    const hospitalName = h.nameUnknown ? '' : (h.name || '');
-    const noteParts = [];
-    noteParts.push(`${h.hospitalType || ''}${hospitalName || '（病院名不明）'}に通院。`);
-    if(toIsNow) noteParts.push('現在も通院中。');
-    if(related.length) noteParts.push('この頃の出来事：' + related.join('・') + '。');
-    // 【病院データ一本化】以前は過去編側（buildPastPeriodGroups→buildHospitalGroupNote）が
-    // 病院のmemoや、この病院にリンクされた断片（pastFragments）のテキストをnoteに合流させていた。
-    // 病院データがstate.hospitals（第4章）に一本化されたことで、過去編は病院の行自体を
-    // 生成しなくなったため（重複防止）、その合流処理はここに移した。
-    if(h.memo && h.memo.trim()) noteParts.push(h.memo.trim());
-    const linkedFragments = state.pastFragments.filter(f=>f.linkedHospitalId===h.hospitalId);
-    linkedFragments.forEach(f=>{
-      const text = pickFragmentText(f);
-      if(text && text.trim()) noteParts.push(text.trim());
+// ---- 決定#36：出来事の帯が複数のchunk（行）にまたがる場合の割り振り（不具合Bの修正） ----
+// 出来事（eventRanges）は年単位の粗い帯（3〜5年幅）でしか記録されないのに対し、実際の
+// chunkは通院記録の実データを基準にもっと細かく区切られる。そのため1つの帯の中に複数の
+// chunkの区切りが入ってしまうと、以前の点判定（旧eventRangeMatchesYear。chunk.fromYが
+// 帯の中に入っているかどうかだけを見る）では、帯の中に入るchunkすべてに同じ出来事が
+// 重複して載ってしまっていた。
+// 「どちらの行が正しいか」を利用者に選ばせるのは、判断や決断そのものが負担になりうる
+// 利用者への配慮というこのアプリ全体の方針に反するため、機械的に「帯との重なりが一番
+// 大きいchunk」にだけ出来事を残す。重なりが同じ場合は時期が早いchunkを採用する（挙動を
+// 決定的にするため）。buildPeriodsForForm()の第1パス（chunks確定後）で1回だけ計算し、
+// 結果（出来事レンジのindex→勝ったchunk）を第2パスのnote生成で参照する。
+// 【決定#41】決定#36の時点では「フェーズ1側（buildPhase1SegmentNote()）は決定#25で
+// 範囲重なり判定（eventRangeOverlapsSegment()）に対応済みだから対象外」としていたが、これは
+// 誤りだった。決定#25が直したのは「区分が出来事を正しく検出できるか（取りこぼし＝偽陰性）」
+// で、決定#36が直したかったのは「複数の候補が同じ出来事を正しく検出した結果、両方に
+// 表示されてしまう（重複）」という別の問題。決定#25は決定#36の問題を解消しない、
+// どころかフェーズ1側の検出精度を上げた分だけ重複が起きやすくなっていた（実利用者の
+// シミュレーションで発覚、2026-07-21対応）。フェーズ1・先頭側gapのchunkも他のcandidateの
+// chunkとまったく同じ土俵で勝者判定できるよう、引数をcandidatesではなく平坦なchunks配列
+// （呼び出し側で好きな種類のchunkを混ぜて渡せる）に変更した。
+function resolveEventChunkWinners(allChunks, eventRanges){
+  const winners = new Map();
+  eventRanges.forEach((r, i)=>{
+    const rangeEndExclusive = r.isLast ? r.endYear + 1 : r.endYear;
+    let bestChunk = null, bestOverlap = 0;
+    allChunks.forEach(chunk=>{
+      if(!(chunk.fromY && chunk.toY)) return;
+      const overlap = Math.min(chunk.toY, rangeEndExclusive) - Math.max(chunk.fromY, r.startYear);
+      if(overlap <= 0) return;
+      if(overlap > bestOverlap || (overlap === bestOverlap && chunk.fromY < bestChunk.fromY)){
+        bestOverlap = overlap;
+        bestChunk = chunk;
+      }
     });
-    periods.push({
-      sortKey: fromY || 0,
-      fromY, fromM, toY, toM, toIsNow,
-      visited: true,
-      hospitalName,
-      note: noteParts.join('')
+    if(bestChunk) winners.set(i, bestChunk);
+  });
+  return winners;
+}
+
+// ---- フェーズ1区分の範囲[segStartYear, segEndYear)と、出来事レンジ（年齢帯）の範囲が
+// 半開区間で重なるかどうかを判定する（決定#25）。eventRangeMatchesYear()は「1つの年」対
+// 「年齢帯の範囲」の点判定だが、フェーズ1の区分（最大6年幅）の開始年だけをそこに渡すと、
+// 区分内の他の年にかかる出来事を取りこぼす（bandSize=5時に67%取りこぼすことをシミュレーションで
+// 確認済み）。10章で確立した半開区間の考え方（isLastのときだけ上限を含む）を、点ではなく
+// 範囲同士の重なり判定に拡張したもの。buildPhase1SegmentNote()（作業1-3）からのみ呼び出す。
+function eventRangeOverlapsSegment(range, segStartYear, segEndYear){
+  const rangeEndExclusive = range.isLast ? range.endYear + 1 : range.endYear;
+  return range.startYear < segEndYear && segStartYear < rangeEndExclusive;
+}
+
+// ---- 通院記録＋通院空白を様式の「期間」配列に変換（最大5件、6件目以降は今回未対応） ----
+// 【developmental mode】state.outputModeは作業3まで実装されないため、modeOverride引数を
+// 一時的な発動手段とする（設計方針3節「新たな疑問」）。作業3実装後もstate.outputModeを見る
+// フォールバックはそのまま使えるため、この仕組み自体を後から置き換える必要はない想定。
+function buildPeriodsForForm(modeOverride){
+  const eventRanges = buildEventYearRanges();
+
+  // 【病院期間分割】state.hospitals.forEachをflatMap相当（各病院のperiods[]を展開）に変更
+  // （病院期間分割_設計案.md 5章）。linkedHospitalId由来のnote（過去編仕様書5.3節）は
+  // 最後のperiodにのみ合流させる（発生しても表示上の差に留まり実害がないため）。
+  // 【方針転換・2026年7月】病院の通院期間についても「区切る」操作をユーザーに求めるのをやめ、
+  // gapとまったく同じ理由（02.xlsx様式が3〜5年ごとの記入を求めている）で、bandSize超の期間を
+  // 自動的に複数行へ分割する（splitGapIntoChunksを流用）。以前は「分割」ボタンで年月を
+  // 自分で決めてもらう設計だったが、判断や決断そのものが負担になりうる利用者（うつ状態等）に
+  // 配慮し、gapの自動分割（8章）と歩調を揃えた。periods[]のデータ構造自体は残すが（分割UIが
+  // 無くなった今、実質的に1病院＝1period固定になる）、buildPeriodsForForm()側で自動的に
+  // 複数行へ展開するだけで済むようにした。
+  //
+  // 【9章：枠の空き状況に応じた端数吸収】病院period・gapのどちらも「候補」としてまず集め、
+  // 実際の行（note込み）を作るのは全候補の枠取り合いが決まった後の第2パスにする。
+  // 第1パス：まず「枠に空きがある」前提（ボーダーライン端数=7〜11ヶ月も独立ブロックのまま）で
+  // 全候補のchunk数を数える。様式の総枠（02.xlsx 5行＋04.xlsx 11行＝16行）に収まっていれば、
+  // その通りに確定する。収まらない場合だけ、ボーダーライン端数を持つ候補を「端数が小さいもの
+  // （吸収しても目立ちにくいもの）」から順に吸収し、枠に収まるまで行数を減らす。
+  // それでもなお枠を超える場合は、これまで通り後段（allocateRowsToMainAndContinuation）の
+  // 上限処理（超過分は書き込まれず警告）に委ねる。
+  const birth = parseInt(state.profile.birthYear) || null;
+  const mode = modeOverride || state.outputMode || 'standard';
+  const useDevelopmental = mode === 'developmental' && !!birth;
+  // 決定#23：0〜15歳（birth+15）を境目とする（月は使わない年単位）。それより前は完全に
+  // フェーズ1側（本関数末尾のphase1Rows）に委ね、通常の候補生成からは除外する。境界をまたぐ
+  // 記録は、birth+15を実質的な開始年としてクリップしたうえで通常の候補に含める（既存の
+  // splitGapIntoChunks()にそのまま3〜5年ごとの分割を処理させるため）。
+  const phase1EndYear = useDevelopmental ? birth + 15 : null;
+
+  const candidates = [];
+  state.hospitals.forEach(h=>{
+    const periodsArr = h.periods || [];
+    periodsArr.forEach((p, idx)=>{
+      const fromY = parseInt(p.fromYear) || null;
+      if(!fromY) return; // 決定#24：fromYear不明の通院記録はモードを問わず候補から除外する
+      const fromM = parseInt(p.fromMonth) || null;
+      let toY, toM, toIsNow = false;
+      if(p.ongoing){
+        const fillDate = getFormFillDate();
+        toY = fillDate.year; toM = fillDate.month; toIsNow = true;
+      } else {
+        toY = parseInt(p.toYear) || null;
+        toM = parseInt(p.toMonth) || null;
+      }
+      let effFromY = fromY, effFromM = fromM;
+      if(useDevelopmental){
+        if(toY && toY <= phase1EndYear) return; // 0〜15歳に完全に収まる → フェーズ1側の行に委ねる
+        if(fromY < phase1EndYear){ effFromY = phase1EndYear; effFromM = null; } // 境界をまたぐ分だけ計上
+      }
+      candidates.push({ type:'hospital', h, p, isLastPeriod: idx === periodsArr.length-1, fromY:effFromY, fromM:effFromM, toY, toM, toIsNow });
     });
   });
-
   computeGaps().forEach(g=>{
     const fm = (g.fromLabel||'').match(/(\d+)年(\d+)?/);
     const tm = (g.toLabel||'').match(/(\d+)年(\d+)?/);
     const fromY = fm ? parseInt(fm[1]) : null;
-    const related = eventRanges.filter(r => fromY && r.startYear <= fromY && fromY <= r.endYear).map(r=>r.label);
-    const noteParts = ['通院せず。理由：' + toLabelStrings(g.reasons).join('・') + '。'];
-    if(related.length) noteParts.push('この頃の出来事：' + related.join('・') + '。');
-    periods.push({
-      sortKey: fromY || 0,
-      fromY, fromM: fm && fm[2] ? parseInt(fm[2]) : null,
-      toY: tm ? parseInt(tm[1]) : null, toM: tm && tm[2] ? parseInt(tm[2]) : null,
-      toIsNow: false,
-      visited: false,
-      hospitalName: '',
-      note: noteParts.join('')
-    });
+    const fromM = fm && fm[2] ? parseInt(fm[2]) : null;
+    const toY = tm ? parseInt(tm[1]) : null;
+    const toM = tm && tm[2] ? parseInt(tm[2]) : null;
+    let effFromY = fromY, effFromM = fromM;
+    if(useDevelopmental && fromY){
+      // 通院記録（決定#23）と同じ考え方を、通院空白（gap）にも一貫して適用する。
+      // 作業1-1は「0〜15歳の範囲を通常の候補生成から除外する」という一般的な範囲指定であり、
+      // gapを除外しないままだとフェーズ1の行と重複する「通院せず」行が0〜15歳の範囲にも
+      // 残ってしまうため。
+      if(toY && toY <= phase1EndYear) return;
+      if(fromY < phase1EndYear){ effFromY = phase1EndYear; effFromM = null; }
+    }
+    candidates.push({ type:'gap', g, fromY:effFromY, fromM:effFromM, toY, toM });
+  });
+
+  candidates.forEach(c=>{
+    c.generousChunks = splitGapIntoChunks(c.fromY, c.fromM, c.toY, c.toM, {absorbBorderline:false});
+    c.reducedChunks = splitGapIntoChunks(c.fromY, c.fromM, c.toY, c.toM, {absorbBorderline:true});
+    c.canReduce = c.reducedChunks.length < c.generousChunks.length; // 差があれば「ボーダーライン端数を持つ」候補
+    if(c.canReduce){
+      const last = c.generousChunks[c.generousChunks.length-1];
+      c.remainderMonths = (last.toY*12 + ((last.toM||1)-1)) - (last.fromY*12 + ((last.fromM||1)-1));
+    }
+    c.chunks = c.generousChunks; // 既定値。枠が足りない場合のみ、下で差し替える
+  });
+
+  const totalCapacity = MAIN_SHEET_ROW_STARTS.length + CONTINUATION_CAPACITY; // 02.xlsx+04.xlsxの総枠（5+11=16行）
+  let totalRows = candidates.reduce((sum,c)=>sum + c.chunks.length, 0);
+  if(totalRows > totalCapacity){
+    const reducible = candidates.filter(c=>c.canReduce).sort((a,b)=>a.remainderMonths - b.remainderMonths);
+    for(const c of reducible){
+      if(totalRows <= totalCapacity) break;
+      totalRows -= 1; // absorbBorderlineは境界1箇所だけを吸収する仕組みなので、必ずちょうど1行分減る
+      c.chunks = c.reducedChunks;
+    }
+  }
+
+  // 決定#36：全候補のchunksが確定した直後、出来事ごとに「重なりが一番大きいchunk」を
+  // 1回だけ決めておく（第2パスのnote生成で、chunkごとにこれを参照するだけで済むようにする）。
+  // 【決定#41】developmental modeの0〜15歳の区分（phase1Chunks）も、他のcandidateのchunkと
+  // まったく同じ土俵で勝者判定に参加させる。以前はここに含まれておらず、フェーズ1側
+  // （buildPhase1SegmentNote()・buildDevelopmentalGapNote()）が独自に重なり判定をやり直して
+  // いたため、同じ出来事がフェーズ1側の行と、その直後の実際の通院記録の行の両方に重複して
+  // 表示されてしまっていた（実利用者のシミュレーションで発覚）。
+  const phase1Segs = useDevelopmental ? buildCompulsoryEducationSegments() : [];
+  const phase1Chunks = phase1Segs.map(seg => ({ fromY: birth + seg.startAge, toY: birth + seg.endAge }));
+  const candidateChunks = [];
+  candidates.forEach(c=>{
+    c.chunks.forEach(chunk=>{ if(chunk.fromY && chunk.toY) candidateChunks.push(chunk); });
+  });
+  const eventWinnerChunk = resolveEventChunkWinners([...candidateChunks, ...phase1Chunks], eventRanges);
+
+  // ---- 第2パス：確定したchunksから実際の行（note込み）を作る ----
+  const periods = [];
+  candidates.forEach(c=>{
+    if(c.type === 'hospital'){
+      const { h, p, isLastPeriod, toIsNow } = c;
+      const hospitalName = h.nameUnknown ? '' : (h.name || '');
+      c.chunks.forEach((chunk, ci)=>{
+        const isLastChunk = ci === c.chunks.length - 1;
+        const related = eventRanges.filter((r,i) => eventWinnerChunk.get(i) === chunk).map(r=>r.label);
+        const noteParts = [];
+        noteParts.push(`${h.hospitalType || ''}${hospitalName || '（病院名不明）'}に通院。`);
+        // 「現在も通院中」は、実際に現在まで続いている最後の行（最後のperiodの最後のchunk）にのみ付ける
+        if(toIsNow && isLastChunk) noteParts.push('現在も通院中。');
+        if(related.length) noteParts.push('この頃の出来事：' + related.join('・') + '。');
+        // 【病院データ一本化】以前は過去編側（buildPastPeriodGroups→buildHospitalGroupNote）が
+        // 病院のmemoや、この病院にリンクされた断片（pastFragments）のテキストをnoteに合流させていた。
+        // 病院データがstate.hospitals（第4章）に一本化されたことで、過去編は病院の行自体を
+        // 生成しなくなったため（重複防止）、その合流処理はここに移した。
+        // 【病院期間分割】memoはperiodごとに持つフィールドになったため、期間ごとのmemoをそのまま使う。
+        // 自動分割で複数行になった場合も、gapの理由と同じ考え方で全chunkに同じmemoを繰り返す。
+        if(p.memo && p.memo.trim()) noteParts.push(p.memo.trim());
+        if(isLastPeriod && isLastChunk){
+          const linkedFragments = state.pastFragments.filter(f=>f.linkedHospitalId===h.hospitalId);
+          linkedFragments.forEach(f=>{
+            const text = pickFragmentText(f);
+            if(text && text.trim()) noteParts.push(text.trim());
+          });
+        }
+        periods.push({
+          sortKey: chunk.fromY || 0,
+          fromY: chunk.fromY, fromM: chunk.fromM, toY: chunk.toY, toM: chunk.toM,
+          toIsNow: toIsNow && isLastChunk,
+          visited: true,
+          hospitalName,
+          note: noteParts.join('')
+        });
+      });
+    } else {
+      const { g } = c;
+      // 決定#33：developmental modeの先頭側gapは、通常gapと違いGAP_REASONS由来の
+      // 「理由：」を使わず、buildDevelopmentalGapNote()（出来事カード/断片ベース）でnoteを作る。
+      const isLeadingGap = isDevelopmentalLeadingGapKey(g.key);
+      const reasonNote = '通院せず。理由：' + toLabelStrings(g.reasons).join('・') + '。';
+      c.chunks.forEach(chunk=>{
+        let note;
+        if(isLeadingGap){
+          const related = eventRanges.filter((r,i) => eventWinnerChunk.get(i) === chunk).map(r=>r.label);
+          note = buildDevelopmentalGapNote({ fromY: chunk.fromY, toY: chunk.toY }, related);
+        } else {
+          const related = eventRanges.filter((r,i) => eventWinnerChunk.get(i) === chunk).map(r=>r.label);
+          const noteParts = [reasonNote];
+          if(related.length) noteParts.push('この頃の出来事：' + related.join('・') + '。');
+          note = noteParts.join('');
+        }
+        periods.push({
+          sortKey: chunk.fromY || 0,
+          fromY: chunk.fromY, fromM: chunk.fromM,
+          toY: chunk.toY, toM: chunk.toM,
+          toIsNow: false,
+          visited: false,
+          hospitalName: '',
+          note
+        });
+      });
+    }
   });
 
   periods.sort((a,b)=>a.sortKey - b.sortKey);
+
+  // ---- developmental mode：0〜15歳ぶんのフェーズ1固定行を先頭に結合する（決定#26） ----
+  // 16行の総枠チェック・端数吸収パスとの整合は決定#27の通り、特別な除外処理は不要
+  // （フェーズ1の固定行は上のcandidates/chunksパスを一切通らないため、呼び出し元の
+  // 既存の16行超過チェックにそのまま乗る）。
+  if(useDevelopmental){
+    const phase1Rows = phase1Segs.map((seg, i)=>{
+      const chunk = phase1Chunks[i];
+      const related = eventRanges.filter((r,ri) => eventWinnerChunk.get(ri) === chunk).map(r=>r.label);
+      const { hospitalName, note } = buildPhase1SegmentNote(seg, birth, related);
+      return {
+        sortKey: birth + seg.startAge,
+        fromY: birth + seg.startAge, fromM: null,
+        toY: birth + seg.endAge, toM: null,
+        toIsNow: false,
+        visited: !!hospitalName,
+        hospitalName,
+        note
+      };
+    });
+    return phase1Rows.concat(periods);
+  }
+
   return periods; // Step5：.slice(0,5)はここでは行わない。絞り込みは呼び出し元の責務に一元化する
+}
+
+// ---- 【新機能】gapの3〜5年自動分割（病院期間分割_設計案.md 8章）----
+// 選択中のstate.profile.bandSize（3年 or 5年）の固定サイズで先頭から区切っていく。
+// 均等分割は採用しない（境界が予測しにくくなるため）。
+// 端数（最後のchunk）が7ヶ月未満なら独立した行にせず直前のchunkに吸収し、7ヶ月以上ならそのまま
+// 独立した行にする。fromY/toYが無い（年不明）場合は分割できないため、そのまま1件で返す。
+// 【9章：枠の空き状況に応じた端数吸収】7〜11ヶ月は「ボーダーライン」の端数で、様式の枠（行）に
+// 空きがあるかどうかで扱いが変わる（buildPeriodsForForm()側で制御）。options.absorbBorderlineを
+// trueにすると、7〜11ヶ月の端数も（12ヶ月未満と同じ扱いで）直前のchunkへ強制的に吸収する。
+// 既定（false）では従来通り7ヶ月以上ならすべて独立した行のままになる。
+function splitGapIntoChunks(fromY, fromM, toY, toM, options){
+  const absorbBorderline = !!(options && options.absorbBorderline);
+  const whole = {fromY, fromM, toY, toM};
+  if(!fromY || !toY) return [whole];
+
+  const fromTotal = fromY*12 + ((fromM||1) - 1);
+  const toTotal = toY*12 + ((toM||1) - 1);
+  const spanMonths = toTotal - fromTotal;
+  const chunkMonths = (state.profile.bandSize || 5) * 12;
+  // 【2026-07-16修正】以前はここで固定「60ヶ月（5年）以下ならそのまま1件」を判定していたが、
+  // これはbandSize=5を前提にした値がそのまま残っていたもので、bandSize=3を選んでいる場合でも
+  // 3〜5年（37〜60ヶ月）の記録が分割されずに1件のまま出てしまうバグがあった（ユーザー報告：
+  // bandSize=3で年表は3年区切りなのに、プレビューの一部の行だけ5年になっていた）。選択中の
+  // bandSizeに連動したchunkMonths自体をこの時点で「そもそも分割が要るか」の判定にも使うことで、
+  // 年齢帯の表示（buildAgeBands()、常にbandSize刻み）と行の分割が食い違わないようにする。
+  if(spanMonths <= chunkMonths) return [whole]; // 選択中のbandSize以下はそのまま1件
+
+  const boundaries = [fromTotal];
+  let cursor = fromTotal;
+  while(toTotal - cursor > chunkMonths){
+    cursor += chunkMonths;
+    boundaries.push(cursor);
+  }
+  if(boundaries[boundaries.length-1] !== toTotal){
+    boundaries.push(toTotal);
+  }
+
+  // 端数の吸収：最後の区間が7ヶ月未満なら常に吸収。7〜11ヶ月は、absorbBorderline指定時のみ吸収する（9章）
+  if(boundaries.length >= 3){
+    const lastSpan = boundaries[boundaries.length-1] - boundaries[boundaries.length-2];
+    const shouldAbsorb = lastSpan < 7 || (absorbBorderline && lastSpan < 12);
+    if(shouldAbsorb){
+      boundaries.splice(boundaries.length-2, 1);
+    }
+  }
+
+  const chunks = [];
+  for(let i=0;i<boundaries.length-1;i++){
+    const startTotal = boundaries[i];
+    const endTotal = boundaries[i+1];
+    const isFirst = i===0;
+    const isLast = i===boundaries.length-2;
+    chunks.push({
+      fromY: Math.floor(startTotal/12),
+      fromM: isFirst ? fromM : (startTotal%12)+1,
+      toY: Math.floor(endTotal/12),
+      toM: isLast ? toM : (endTotal%12)+1
+    });
+  }
+  return chunks;
 }
 
 // ---- 保険：文字列配列であるべき項目に古いオブジェクト配列データが残っていた場合の正規化 ----
@@ -459,11 +755,27 @@ function downloadXlsxBuffer(buffer, filename){
   URL.revokeObjectURL(url);
 }
 
+// ---- userFacingError()：利用者にそのまま見せてよい、対処方法込みのエラーを作る ----
+// 【不具合修正・2026-07-22】以前はexportToOfficialForm()が投げる具体的なエラーメッセージ
+// （16行超過時の対処方法など）が、呼び出し元（previewExportFormBtnのクリックハンドラ）の
+// catchで握りつぶされ、利用者には常に汎用文言「作成に失敗しました。もう一度お試しください。」
+// しか表示されていなかった。特に16行超過のような「再試行しても直らない」確定的なエラーで
+// 「もう一度お試しください」とだけ表示するのは実態と合わない。
+// ここでthrowするErrorに目印（userFacing:true）を付け、呼び出し元がその目印を見て
+// 「安全に画面へそのまま出してよい、対処方法込みのメッセージ」かどうかを判定できるようにする。
+// ExcelJS内部のエラーなど、想定外の技術的なエラー（目印なし）は従来通り汎用文言のままにし、
+// 利用者に生の技術的なエラー文言を見せないようにする（console.errorでの記録は従来通り残す）。
+function userFacingError(message){
+  const err = new Error(message);
+  err.userFacing = true;
+  return err;
+}
+
 async function exportToOfficialForm(){
   if(typeof ExcelJS === 'undefined'){
     // ここでalertして握りつぶすと、呼び出し元（stepCh5Done）が「成功」とみなしてしまう。
     // 失敗として呼び出し元のcatchに伝え、ボタン側で失敗メッセージ・再試行可能な状態に戻す。
-    throw new Error('ExcelJSライブラリの読み込みが完了していません。もう一度お試しください。');
+    throw userFacingError('ExcelJSライブラリの読み込みが完了していません。もう一度お試しください。');
   }
 
   const buffer = base64ToArrayBuffer(TEMPLATE_02_XLSX_BASE64);
@@ -496,15 +808,24 @@ async function exportToOfficialForm(){
   const currentRows = buildCurrentPeriodRows();
   // 02(5行)+04(11行)=16行が全体の枠。currentRowsが多い場合はその分過去編の使える枠が減る。
   const availableSlotsForPast = Math.max(0, 16 - currentRows.length);
-  const compressed = compressPastRowsIfNeeded(state.pastFragments, state.pastHospitals, availableSlotsForPast);
+  const compressed = compressPastRowsIfNeeded(availableSlotsForPast);
   if(compressed && compressed.error){
     // compressPastRowsIfNeeded()は明示エラーオブジェクトを返す方式（pure function方針）。
     // exportToOfficialForm()自体は既存throw方式（呼び出し元stepCh5Doneでcatchする設計）のため、
     // ここでthrowに変換して既存のエラーハンドリング経路に乗せる。
-    throw new Error(compressed.message);
+    throw userFacingError(compressed.message);
   }
   const pastRows = compressed;
   const { mainRows, continuationRows } = allocateRowsToMainAndContinuation(currentRows, pastRows);
+
+  // 【4.4対応】compressPastRowsIfNeeded()は過去編（旧timeBucketデータ）しか圧縮対象にしないため、
+  // 現状編（state.hospitals）由来の件数だけで16行の枠を超えるケースを検知できない。
+  // 従来はこのままwriteRowsToContinuationSheet()まで進み、11件を超えた分がconsole.warnのみで
+  // 無言で書き込まれずに終わっていた（利用者は気づけない）。ここで明示エラーにして、
+  // 呼び出し元（previewExportFormBtn）のcatchでちゃんと利用者に伝わるようにする。
+  if(continuationRows.length > CONTINUATION_CAPACITY){
+    throw userFacingError(`通院記録・通院していない期間の件数が多く、書式の枠（16件）に${continuationRows.length - CONTINUATION_CAPACITY}件収まりません。記録の一部をまとめるか、通院していない期間の理由を調整してから、もう一度お試しください。`);
+  }
 
   writeRowsToMainSheet(front, mainRows);
 
@@ -573,10 +894,15 @@ async function exportToOfficialForm(){
   const outBuffer = await wb.xlsx.writeBuffer();
   downloadXlsxBuffer(outBuffer, '病歴・就労状況等申立書.xlsx');
   if(outBuffer04){
+    // 【developmental mode対応時に発覚】a.click()による連続ダウンロードを間隔なしで2回発火すると、
+    // ブラウザ（特にChrome）が「複数ファイルの自動ダウンロード」とみなして2件目をブロックすることが
+    // あるため、1件目の処理が確実に始まってから2件目を発火するよう少し間隔を空ける。
+    // developmental modeでフェーズ1の固定行が加わり、02+04の2ファイル出力（=continuationRowsが
+    // 1件以上）が従来より起きやすくなったことで顕在化した。
+    await new Promise(resolve => setTimeout(resolve, 300));
     downloadXlsxBuffer(outBuffer04, '病歴・就労状況等申立書(続紙).xlsx');
   }
 }
-
 
 const CH_LABELS = ["就労状況","今の生活の詳細","出来事カード収集","通院の記録","出来事カード配置"];
 
@@ -810,14 +1136,18 @@ const TIME_BUCKET_LABELS = {child:'子供のころ', student:'学生時代', wor
 // 02裏面「障害認定日頃の状況」「障害者手帳」オプション入力（recognitionSnapshot/disabilityNotebook）
 // に対応したのが version 3。
 // 不就労理由「オ：その他」専用の自由記述欄（notWorkReasonOther）追加に対応したのが version 4。
+// 病院データの「期間分割」対応（state.hospitals[]を{hospitalId,name,...,periods:[...]}という
+// 2階層構造に変更）に対応したのが version 7（2026年7月、病院期間分割_設計案.md 3.2節）。
 // version自体を持たない保存データ（過去編実装より前のもの）は version 1 とみなす。
-const CURRENT_STATE_VERSION = 6;
+// state.outputMode（developmental mode切替、決定#12）追加に対応したのが version 8（2026年7月、作業3）。
+const CURRENT_STATE_VERSION = 8;
 
 let state, historyStack, current;
 
 function resetState(){
   state = {
     profile:{birthYear:'', bandSize:null},
+    outputMode:'standard', // 'standard'（初診からの形式）| 'developmental'（生年からの形式）。決定#12
     work:{status:null, jobType:'', commute:[], commuteTime:null, workDays:'', condition:[]},
     notWorkReasons:[],
     notWorkReasonOther:'', // 「仕事をしていない理由」でオ（その他）を選んだ場合の自由記述。02裏面row44「その他(理由　)」に対応
@@ -831,7 +1161,12 @@ function resetState(){
     tempGapReasons:[],       // 一時UI状態：今入力中のギャップの理由
     afterGapReviewAction:null, // 一時UI状態：gap確認をすべて終えた後の追加動作。'go_ch5'なら第5章へ進む。nullならch4_summaryに戻るだけ
     nextHospitalId:1,        // 病院の永続ID発行用カウンタ
+    nextPeriodId:1,          // 【病院期間分割】periodの永続ID発行用カウンタ。pastIdCountersには入れない
+                              // （3.3節：pastIdCountersは過去編専用のため。state.nextHospitalIdと同じ並びの
+                              // 独立したトップレベルカウンタとする）
     editingHospitalId:null,  // 配列indexではなく永続IDで修正対象を管理（配列順が変わっても破綻しない）
+    editingPeriodId:null,    // 【病院期間分割】修正対象のperiodId（分割UIは撤去したが、periods[0]の
+                              // periodIdを保持する形でstepCh4Confidence()の保存ロジックはそのまま使う）
     returnTo:null,
     workStatusAtCh2Entry:null,
     workStatusJustChanged:false,
@@ -1024,6 +1359,44 @@ function migrateAppState(raw){
     }
   }
 
+  if(currentVersion < 7){
+    // 【病院期間分割】state.hospitals[]をフラット構造から{..., periods:[...]}の2階層構造へ移行する
+    // （病院期間分割_設計案.md 3.2節）。既存データは「1病院＝1期間」として自動的にラップされるだけで、
+    // 見た目上の変化は起きない。periodIdはグローバル連番（fragmentIdと同じ命名規則）とし、
+    // 格納場所はpastIdCountersではなく新規のstate.nextPeriodId（3.3節）とする。
+    if(typeof s.nextPeriodId !== 'number') s.nextPeriodId = 1;
+    if(Array.isArray(s.hospitals)){
+      s.hospitals = s.hospitals.map(h=>{
+        if(Array.isArray(h.periods)) return h; // 既に新構造なら触らない（保険）
+        return {
+          hospitalId: h.hospitalId,
+          name: h.name,
+          nameUnknown: h.nameUnknown,
+          hospitalType: h.hospitalType, // 引き継ぎ漏れ厳禁（note生成・ch4_summary表示で使用。3.2節の修正点）
+          relatedEvents: h.relatedEvents,
+          periods: [{
+            periodId: `pd_${s.nextPeriodId++}`,
+            fromYear: h.fromYear, fromMonth: h.fromMonth,
+            toYear: h.toYear, toMonth: h.toMonth,
+            ongoing: h.ongoing,
+            confidence: h.confidence,
+            memo: h.memo
+          }]
+        };
+      });
+    }
+    if(typeof s.editingPeriodId === 'undefined') s.editingPeriodId = null;
+  }
+
+  if(currentVersion < 8){
+    // state.outputMode（developmental mode切替、決定#12）が無い場合のみ初期値で補う
+    // （既存データの上書きはしない）。旧データは通院起点の出力のみだったため、
+    // 安全側のデフォルトは常に'standard'（初診からの形式）。
+    if(s.outputMode !== 'standard' && s.outputMode !== 'developmental'){
+      s.outputMode = 'standard';
+    }
+  }
+
   // 不足キーの個別チェックとは独立して、バージョン番号自体は必ず最新へ更新する
   s.stateVersion = CURRENT_STATE_VERSION;
 
@@ -1103,8 +1476,14 @@ function deletePastFragment(id){
 function deleteCurrentHospital(hospitalId){
   const idx = state.hospitals.findIndex(h=>h.hospitalId===hospitalId);
   if(idx<0) return false;
+  const periodIds = (state.hospitals[idx].periods || []).map(p=>p.periodId);
   state.hospitals.splice(idx,1);
   Object.keys(state.gapReasonsByKey).forEach(key=>{
+    if(key.startsWith('period__')){
+      // 決定#37：病院内gap（periodId同士のキー）。この病院のperiodが片方でも絡んでいれば削除。
+      if(periodIds.some(pid=>key.includes(pid))) delete state.gapReasonsByKey[key];
+      return;
+    }
     const [id1, id2] = key.split('__').map(s=>parseInt(s));
     if(id1===hospitalId || id2===hospitalId){
       delete state.gapReasonsByKey[key];
@@ -1116,6 +1495,21 @@ function deleteCurrentHospital(hospitalId){
       f.linkedHospitalId = undefined;
     }
   });
+  return true;
+}
+
+// ---- 決定#37：period単位の削除（B対応）。1病院を1枚ずつ表示するようにしたことに伴い、
+// 削除も「その枚だけ」を対象にする。残り0枚になったら病院ごと削除する（既存の後始末を再利用）。
+function deleteHospitalPeriod(hospitalId, periodId){
+  const h = state.hospitals.find(h=>h.hospitalId===hospitalId);
+  if(!h) return false;
+  const pIdx = (h.periods||[]).findIndex(p=>p.periodId===periodId);
+  if(pIdx<0) return false;
+  h.periods.splice(pIdx,1);
+  Object.keys(state.gapReasonsByKey).forEach(key=>{
+    if(key.startsWith('period__') && key.includes(periodId)) delete state.gapReasonsByKey[key];
+  });
+  if(h.periods.length === 0) return deleteCurrentHospital(hospitalId);
   return true;
 }
 
@@ -1164,6 +1558,11 @@ function removeEventIdFromRelatedEvents(eventId){
 // 第4章の確信度は'unknown'（過去編側は'unsure'）なので、意味は同じだが表記だけ揃える。
 // nameUnknown:trueの場合はname自体をundefinedにし、formatPastDateLabel等の「時期不明」表示と
 // 同じ考え方でbuildHospitalGroupNote等が「病院名なし」を判定できるようにする。
+//
+// 【病院期間分割・2026年7月確認事項】この関数もgetLegacyPastHospitals()も、実際には
+// どこからも呼ばれていない死コード（病院期間分割_設計案.md 5章で確認済み）。
+// 呼び出し側が現れないまま残っているため、下記のh.fromYear等（第4章の旧フラット形式）は
+// 更新していない。呼び出し側を復活させる場合は、先にh.periods[]対応へ書き換えること。
 function toLegacyPastHospitalShape(h){
   const fromStr = h.fromYear ? (h.fromMonth ? `${h.fromYear}-${String(h.fromMonth).padStart(2,'0')}` : `${h.fromYear}`) : undefined;
   const toStr = (!h.ongoing && h.toYear) ? (h.toMonth ? `${h.toYear}-${String(h.toMonth).padStart(2,'0')}` : `${h.toYear}`) : undefined;
@@ -1189,61 +1588,6 @@ function buildFragmentMap(fragments){
   const map = new Map();
   list.forEach(f=>map.set(f.id, f));
   return map;
-}
-
-// 【病院データ一本化に伴う重複防止】以前はbuildPastPeriodGroups()内でHospitalGroup/GapGroupを
-// 生成するために、この2関数（sortPastHospitalsForTimeline/computePastGaps）を呼んでいた。
-// 病院データ一本化により、病院・空白期間の行は現状編（computeGaps()）が生成するようになった
-// ため、現在この2関数はどこからも呼ばれていない。ロジック自体は健全なため削除はせず残している
-// （将来、過去編側で改めて病院間の空白期間を扱う必要が生じた場合の参照実装として）。
-
-// ---- 補助：病院をfrom昇順でソート。from不明は末尾、内部順は登録順を保つ安定ソート（仕様書5.3章） ----
-function sortPastHospitalsForTimeline(hospitals){
-  const list = hospitals || getLegacyPastHospitals();
-  // from文字列を比較可能なキーに変換する。'YYYY-MM'形式を想定するが、年のみ('YYYY')も許容する。
-  // 不明（空・undefined）は最大値相当のキーを与えて末尾に送る。
-  const withIndex = list.map((h, idx)=>({h, idx}));
-  const keyOf = h => (h.from && h.from.trim()) ? h.from.trim() : null;
-  withIndex.sort((a,b)=>{
-    const ka = keyOf(a.h), kb = keyOf(b.h);
-    if(ka===null && kb===null) return a.idx - b.idx; // 両方不明：登録順を保つ（安定ソート）
-    if(ka===null) return 1;  // aが不明なら後ろへ
-    if(kb===null) return -1; // bが不明なら後ろへ
-    if(ka < kb) return -1;
-    if(ka > kb) return 1;
-    return a.idx - b.idx; // from同値なら登録順を保つ
-  });
-  return withIndex.map(x=>x.h);
-}
-
-// ---- computePastGaps()：病院間の未受診期間を算出（仕様書5.3章） ----
-// gapが「どの病院の後ろ・どの病院の前に入るか」を病院IDで明示する（値一致による曖昧さを避けるため）。
-function computePastGaps(hospitals){
-  const sorted = sortPastHospitalsForTimeline(hospitals);
-  // from不明の病院が末尾に集まっている可能性がある。
-  // from/toが両方確定している病院同士の間にのみgapを置く（時期不明区間にgapを置くと誤情報になるため）。
-  const withDates = sorted.filter(h=>h.from && h.from.trim());
-  const gaps = [];
-  for(let i=0; i<withDates.length-1; i++){
-    const cur = withDates[i];
-    const next = withDates[i+1];
-    // ongoing中の病院の直後にgapは生まれない（現在も通院中のため、次の病院との間に空白は無い）
-    if(cur.ongoing) continue;
-    const curEnd = cur.to && cur.to.trim();
-    const nextStart = next.from && next.from.trim();
-    if(!curEnd || !nextStart) continue; // どちらか不明ならgapを算出しない
-    if(curEnd < nextStart){
-      gaps.push({
-        type:'gap',
-        from: curEnd,
-        to: nextStart,
-        prevHospitalId: cur.hospitalId,
-        nextHospitalId: next.hospitalId
-      });
-    }
-    // curEnd >= nextStart（連続・重複）の場合はgapなし
-  }
-  return gaps;
 }
 
 // ---- student分割トリガー判定（仕様書B-3） ----
@@ -1348,53 +1692,6 @@ function pickFragmentText(fragment){
   return (fragment.memo && fragment.memo.trim()) ? fragment.memo.trim() : fragment.text;
 }
 
-// ---- buildHospitalGroupNote()：HospitalGroupのnote（仕様書B-6①） ----
-function buildHospitalGroupNote(group, fragmentMap, hospital){
-  const parts = [];
-  // 優先度1：病院カード自身のmemo（病院期間全体を説明する情報。最優先で全文残す）
-  if(hospital && hospital.memo && hospital.memo.trim()){
-    parts.push(hospital.memo.trim());
-  }
-  // 優先度2,3：linked fragmentのmemo優先、空ならtext
-  const linkedTexts = group.linkedFragmentIds
-    .map(id=>fragmentMap.get(id))
-    .filter(Boolean)
-    .map(f=>pickFragmentText(f))
-    .filter(t=>t && t.trim());
-
-  let combined = parts.concat(linkedTexts).join('／');
-  if(combined.length > PAST_NOTE_MAX_LENGTH){
-    // 長すぎる場合：①(hospital.memo)を最優先で全文残し、②③(linked fragment由来)を文字数に応じて間引く。
-    // 間引きは「短い断片を残す」簡易ルールで十分（仕様書5.4章備考）。
-    let hospitalMemoText = parts.join('／');
-    // B-5修正：hospital.memo単体がPAST_NOTE_MAX_LENGTHを超える場合、以前はここで切り詰めずに
-    // 全文をそのまま残していたため、上限が実質守られていなかった（remainingが負数になり、
-    // fragmentsが0件になるだけで、memo自体はサイレントに上限を超えたまま返っていた）。
-    // まずmemo自体を上限内に切り詰めてから、空いた残り文字数でfragmentsを追加する流れに修正する。
-    // 切り詰め記号「…」は既存コードに先例がないため新規に導入するが、途中で切れていることが
-    // 視覚的にわかるようにする（無言で切れるより安全）。
-    if(hospitalMemoText.length > PAST_NOTE_MAX_LENGTH){
-      hospitalMemoText = hospitalMemoText.slice(0, Math.max(0, PAST_NOTE_MAX_LENGTH - 1)) + '…';
-    }
-    let remaining = PAST_NOTE_MAX_LENGTH - hospitalMemoText.length;
-    const sortedByLength = [...linkedTexts].sort((a,b)=>a.length - b.length);
-    const kept = [];
-    for(const t of sortedByLength){
-      if(remaining <= 0) break;
-      // 結合時に追加される区切り文字「／」1字分もコストに含める。
-      // hospitalMemoTextが空文字（hospital.memoが無いケース）の場合、最初の要素には
-      // 区切り文字が付かないため、kept.length===0かつhospitalMemoTextが空の場合は0字とする
-      // （以前はこの区切り文字分を計算に入れておらず、結合後にPAST_NOTE_MAX_LENGTHを
-      // 1〜数字超えることがあった。memo自体の切り詰めと合わせてここで解消する）。
-      const separatorCost = (kept.length > 0 || hospitalMemoText) ? 1 : 0;
-      const cost = t.length + separatorCost;
-      if(cost <= remaining){ kept.push(t); remaining -= cost; }
-    }
-    combined = [hospitalMemoText, ...kept].filter(Boolean).join('／');
-  }
-  return combined;
-}
-
 // ---- buildPreClinicalBucketNote()：PreClinicalBucketGroupのnote（仕様書B-6②） ----
 function buildPreClinicalBucketNote(group, fragmentMap){
   const texts = group.fragmentIds
@@ -1496,39 +1793,12 @@ const PAST_BUCKET_FIXED_LABELS = { child:'子供のころ', student:'学生時�
 // 書き込み側がnote欄にラベルを残す）。
 function convertPastGroupsToFormRows(groups){
   const fragmentMap = buildFragmentMap(state.pastFragments);
-  const hospitalMap = new Map(getLegacyPastHospitals().map(h=>[h.hospitalId, h]));
 
   // 日付なしrow用の共通date parts（preClinicalBucket・unknownFallback・パース失敗時に使う）
   const NO_DATE_PARTS = { fromKind:'none', fromYear:undefined, fromMonth:undefined, toKind:'none', toYear:undefined, toMonth:undefined, toDay:undefined };
 
   return groups.map(group=>{
     try{
-      if(group.type==='hospital'){
-        const hospital = hospitalMap.get(group.hospitalId);
-        const note = buildHospitalGroupNote(group, fragmentMap, hospital);
-        const fromYM = parsePastYearMonth(group.from);
-        const toYM = group.ongoing ? null : parsePastYearMonth(group.to);
-        const fillDate = getFormFillDate();
-        return {
-          fromLabel: formatPastDateLabel(group.from),
-          toLabel: group.ongoing ? '現在' : formatPastDateLabel(group.to),
-          visited: true,
-          hospitalName: hospital ? hospital.name : undefined,
-          note,
-          sourceGroupType: 'hospital',
-          isUnknownFallback: false,
-          sourceHospitalId: group.hospitalId,
-          fromKind: yearMonthKind(fromYM),
-          fromYear: fromYM ? fromYM.year : undefined,
-          fromMonth: fromYM ? fromYM.month : undefined,
-          // ongoingの場合、元号/年/月も記入日から書く（toDayだけだと年月セルが空欄になり、
-          // 現状編buildCurrentPeriodRows()のtoIsNow処理と整合しなくなる。02出力時の挙動を統一する）。
-          toKind: group.ongoing ? 'now' : yearMonthKind(toYM),
-          toYear: group.ongoing ? fillDate.year : (toYM ? toYM.year : undefined),
-          toMonth: group.ongoing ? fillDate.month : (toYM ? toYM.month : undefined),
-          toDay: group.ongoing ? fillDate.day : undefined
-        };
-      }
       if(group.type==='gap'){
         const fromYM = parsePastYearMonth(group.from);
         const toYM = parsePastYearMonth(group.to);
@@ -1669,7 +1939,7 @@ function mergeAllPeriodRows(currentRows, pastRows){
 // ---- compressPastRowsIfNeeded()：必要に応じてgroup段階から再構成するオーケストレータ（仕様書5.5章A案） ----
 // row配列を直接splice・並べ替えしない。buildPastPeriodGroups()のオプションを変えて呼び直すだけ。
 // 順序の決定権は常にbuildPastPeriodGroups()にあり、この関数は順序を変更しない（GPT確認2の前提）。
-function compressPastRowsIfNeeded(pastFragments, pastHospitals, availableSlots, options){
+function compressPastRowsIfNeeded(availableSlots, options){
   // ===== この関数の3段階の役割（誤解しやすいので明記） =====
   // 第1段階・第2段階：実際に行数を減らす（student分割の解除によりgroupの数自体が減る）。
   // 第3段階：行数は削減しない。unknownFallback行1件分のnoteの文字数を短縮するだけの処理。
@@ -1679,10 +1949,10 @@ function compressPastRowsIfNeeded(pastFragments, pastHospitals, availableSlots, 
   //   必ずエラーになる（このことはB-4で確認済み。今回はコメント整理のみで、行数削減化などの
   //   ロジック変更は行わない）。
   //
-  // 注：pastFragments/pastHospitalsは引数で受け取るが、現在のbuildPastPeriodGroups()実装は
-  // 常にstate.pastFragments/state.pastHospitalsを直接参照する設計になっている（Step4実装）。
-  // Step5時点ではstateと引数が常に一致する前提で進める（呼び出し元は必ずstateの値をそのまま渡す）。
-  // 将来、引数を直接使う形に拡張する場合はbuildPastPeriodGroups()側の改修が必要（TODOとして明記）。
+  // 【2026年7月セッションで整理】以前はpastFragments/pastHospitalsを引数で受け取っていたが、
+  // 関数内部は常にstate.pastFragments（buildPastPeriodGroups()経由）を直接参照する設計のため、
+  // 実際には一度も使われていなかった（仕様書9章 技術的負債#5）。呼び出し側は必ずstateの値を
+  // そのまま渡していたため実害は無かったが、シグネチャを実態に合わせて整理した。
 
   // 第1段階：通常設定（student分割あり）でgroup→row生成
   let groups = buildPastPeriodGroups({ allowStudentSplit: true });
@@ -1723,7 +1993,12 @@ function compressPastRowsIfNeeded(pastFragments, pastHospitals, availableSlots, 
   return {
     error: true,
     code: 'PAST_ROWS_OVERFLOW',
-    message: `過去編の件数(${rows.length}件)が利用可能な枠(${availableSlots}件)を超えており、圧縮しても収まりません。`,
+    // 【2026-07-22修正】以前は「通院の記録・通院していない期間の理由を調整してから、
+    // もう一度お試しください」という対処法を添えていたが、この圧縮ロジック（過去編＝旧データ
+    // 移行専用の自動圧縮）に対して利用者がUI上でどう手を加えれば収まるのかは、まだ検討・
+    // 実装していない。存在しない対処法を書くと解決策があるかのように誤解させるため、
+    // 「収まらない」という事実（件数・枠）だけを明確に伝える文言に変更した。
+    message: `過去の記録（${rows.length}件）が、病歴・就労状況等申立書と続紙に入る件数（${availableSlots}件）を超えているため、Excelを作成できません。`,
     rows // 参考情報として、収まらなかった現在のrowsも返す
   };
 }
@@ -1860,10 +2135,17 @@ function writeRowsToMainSheet(front, mainRows){
 // （仕様書5.4章の方針：個々のエラーで処理全体を止めない。書き込み漏れが起きたことは検知可能にする）。
 const CONTINUATION_FRONT_ROW_STARTS = [16,21,26,31,36];   // 04.xlsx「表」5ブロック
 const CONTINUATION_BACK_ROW_STARTS  = [1,6,11,16,21,26];  // 04.xlsx「裏」6ブロック
+// 続紙の総枠数（表5＋裏6＝11）。writeRowsToContinuationSheet()以外からも参照するため
+// 名前付き定数として切り出す（4.4対応：呼び出し元で事前に超過検知するため）。
+const CONTINUATION_CAPACITY = CONTINUATION_FRONT_ROW_STARTS.length + CONTINUATION_BACK_ROW_STARTS.length;
 function writeRowsToContinuationSheet(front04, back04, continuationRows){
   const rows = continuationRows || [];
-  const capacity = CONTINUATION_FRONT_ROW_STARTS.length + CONTINUATION_BACK_ROW_STARTS.length; // 11
+  const capacity = CONTINUATION_CAPACITY;
   if(rows.length > capacity){
+    // 【4.4対応】本来ここに到達する前に、呼び出し元（exportToOfficialForm()）が
+    // 明示エラーとしてthrowする設計に変更した。この分岐は「呼び出し元の前提が
+    // 崩れた場合の最後の砦」として残す（呼び出し元のチェックが変更で漏れても、
+    // 無言でズレたデータを書き込むよりは、少なくともここで検知できるようにする）。
     console.warn(`continuationRowsが04.xlsxの枠（${capacity}件）を超えています（${rows.length}件）。超過分は書き込まれません。`);
   }
   rows.slice(0, CONTINUATION_FRONT_ROW_STARTS.length).forEach((row, i)=>{
@@ -2097,11 +2379,16 @@ function buildAgeBands(){
 
 // 通院カード（年月）が、与えられた年齢帯と重なっているかを判定する。
 // 表示用の手がかりとして使うだけで、空白検出には使わない。
+// 【病院期間分割】病院がperiods[]のどれか1つでも帯と重なれば真、という判定にする
+// （病院期間分割_設計案.md 5章）。
 function hospitalOverlapsBand(hospital, band){
-  const fromYear = parseInt(hospital.fromYear);
-  if(!fromYear) return false;
-  const toYear = hospital.ongoing ? getCurrentYear() : (parseInt(hospital.toYear) || fromYear);
-  return fromYear <= band.endYear && toYear >= band.startYear;
+  const periodsArr = hospital.periods || [];
+  return periodsArr.some(p=>{
+    const fromYear = parseInt(p.fromYear);
+    if(!fromYear) return false;
+    const toYear = p.ongoing ? getCurrentYear() : (parseInt(p.toYear) || fromYear);
+    return fromYear <= band.endYear && toYear >= band.startYear;
+  });
 }
 
 // 与えられた年齢帯に重なる通院カードの一覧を返す（手がかり表示用）。
@@ -2122,7 +2409,21 @@ function buildCompulsoryEducationSegments(){
   // 年齢帯はbuildAgeBands()同様「誕生年からの経過年数」で管理しているため、
   // 「小学校入学＝6歳」「小学校卒業＝12歳（6年間）」「中学校卒業＝15歳（3年間）」を
   // startAge/endAgeとしてそのまま使う。
+  // 区分数はstate.profile.bandSizeの二択で確定し切る（2026-07セッション決定#8）。
+  // bandSizeの他箇所のフォールバック規則（`|| 5`）に合わせ、3以外（5・null含む）は3区分側とする。
+  if(state.profile.bandSize === 3){
+    // 「若い頃を細かく」＝5区分：既存区分（就学前・小学校）の内部をさらに分割する
+    return [
+      { key:'preschool_early', label:'乳幼児期', startAge:0, endAge:3 },
+      { key:'preschool_late', label:'幼稚園・保育園', startAge:3, endAge:6 },
+      { key:'elementary_lo', label:'小学校低学年', startAge:6, endAge:9 },
+      { key:'elementary_hi', label:'小学校高学年', startAge:9, endAge:12 },
+      { key:'junior_high', label:'中学校', startAge:12, endAge:15 }
+    ];
+  }
+  // 「大まかに」＝3区分：就学前／小学校／中学校
   return [
+    { key:'preschool', label:'就学前', startAge:0, endAge:6 },
     { key:'elementary', label:'小学校', startAge:6, endAge:12 },
     { key:'junior_high', label:'中学校', startAge:12, endAge:15 }
   ];
@@ -2133,6 +2434,101 @@ function compulsoryEducationSegmentsInBand(band){
   return buildCompulsoryEducationSegments().filter(seg=>
     seg.startAge < band.endAge && seg.endAge > band.startAge
   );
+}
+
+// ---- hospitalsOverlappingSegment()：フェーズ1の1区分（学齢期区分）に重なる通院期間を集める ----
+// 決定#22（区分内に医療機関が複数ある場合はA案）・決定#24（fromYear不明は候補から除外）を実装する。
+// 区分の範囲[segStartYear, segEndYear)と通院期間[fromY, toY)を半開区間で重なり判定する
+// （10章の重複バグ修正・決定#25と同じ考え方）。返り値は開始年の昇順（古い順）。
+// 医療機関名欄には最初の1件（区分内で一番古い＝その区分内で最初に受診した医療機関）を使う
+// （決定#22改訂。初診に近い情報ほど医療機関名欄という構造化された項目に残す方が、
+// 後から初診日を確認する際に紛らわしくない）。
+function hospitalsOverlappingSegment(seg, birth){
+  const segStartYear = birth + seg.startAge;
+  const segEndYear = birth + seg.endAge;
+  const results = [];
+  state.hospitals.forEach(h=>{
+    (h.periods || []).forEach(p=>{
+      const fromY = parseInt(p.fromYear) || null;
+      if(!fromY) return; // 決定#24：fromYear不明は対象外（standard/developmental共通の除外ルール）
+      const toY = p.ongoing ? getFormFillDate().year : (parseInt(p.toYear) || null);
+      if(!toY) return; // 終了年も判定できない場合は安全側で対象外とする
+      if(fromY < segEndYear && segStartYear < toY){
+        results.push({
+          hospitalType: h.hospitalType || '',
+          name: h.nameUnknown ? '' : (h.name || ''),
+          fromY: Math.max(fromY, segStartYear),
+          toY: Math.min(toY, segEndYear),
+          sortKey: fromY
+        });
+      }
+    });
+  });
+  results.sort((a, b) => a.sortKey - b.sortKey);
+  return results;
+}
+
+// ---- buildPhase1SegmentNote()：フェーズ1の1区分ぶんの医療機関名欄・状況欄（note）を作る ----
+// 決定#20（区分名のみを自動生成）・決定#22改訂（医療機関名欄は最初の1件）・
+// 決定#28（それ以外の病院は状況欄に、件数上限を設けずすべて書き出す）を実装する。
+// ---- developmental modeの先頭側gap（決定#30）専用のnote生成（決定#33） ----
+// 通常gapのようにGAP_REASONS由来の「理由：」は使わない。「通院しなかった理由」という枠組みは
+// 既に病識があり通院を中断した場合を前提にしており、発達障害の受診前期間（特性が診断されない
+// まま生活の中に表れ続け、対人関係の困難等が積み重なって初めて受診を意識する期間）の実態とは
+// 噛み合わない。障害自体は出生時から連続して存在しており、「通院していない＝障害が休止していた
+// 期間」でもない。フェーズ1のbuildPhase1SegmentNote()と同じ考え方で、出来事カード・断片を
+// 時期でマッチングして自動生成する。
+// seg: {label?, fromY, toY}。fromY/toYはchunk単位の範囲（splitGapIntoChunksが生成する、
+// bandSize連動の3年/5年チャンク）。eventRangeMatchesYear()の点判定ではなく、決定#25で確立した
+// eventRangeOverlapsSegment()の範囲判定を使う（チャンクが複数年幅になりうるため、点判定だと
+// 取りこぼす）。
+// labelは将来のライフステージ単位の区切り（高校・大学等）を接続するための受け口。今回は
+// 常にundefinedのまま呼び出す（5.4節、ラベル生成ロジック自体は次回以降のスコープ）。
+function buildDevelopmentalGapNote(seg, relatedOverride){
+  const noteParts = [];
+  if(seg.label) noteParts.push(`${seg.label}。`); // 今回は未使用
+  // 【決定#41】buildPeriodsForForm()から呼ばれるときは、resolveEventChunkWinners()で
+  // 決定済みのrelated（重複排除済み）が渡される。単体で直接呼び出す場合（テスト等）は
+  // 従来通りこの場で自前計算する（後方互換）。
+  const related = relatedOverride !== undefined
+    ? relatedOverride
+    : buildEventYearRanges().filter(r => eventRangeOverlapsSegment(r, seg.fromY, seg.toY)).map(r => r.label);
+  if(related.length) noteParts.push('この頃の出来事：' + related.join('・') + '。');
+  // 出来事・断片が無ければ空文字列のまま返す。「通院せず。」も付けない。
+  // row.visited=falseにより、Excel（writeRowToMainSheet）・プレビュー
+  // （renderPreviewPeriodRowsHtml）側で「受診していない」のチェックが既に独立して
+  // 描画されるため、note側に重ねて書いても情報が重複するだけで付加価値が無い。
+  return noteParts.join('');
+}
+
+function buildPhase1SegmentNote(seg, birth, relatedOverride){
+  const overlapping = hospitalsOverlappingSegment(seg, birth);
+  const primary = overlapping.length ? overlapping[0] : null; // 決定#22改訂：最初（区分内で一番古い）を医療機関名欄に使う
+  const hospitalName = primary ? (primary.name || '（病院名不明）') : '';
+
+  const noteParts = [`${seg.label}。`];
+
+  // 決定#20・#25：本文は既存の自動要約の仕組み（出来事カード）をそのまま流用する。ただし
+  // 区分は最大6年幅の範囲を持つため、区分の範囲[segStartYear, segEndYear)と出来事の年齢帯の
+  // 範囲を半開区間で重なり判定する（eventRangeMatchesYear()の1点判定ではなく、
+  // eventRangeOverlapsSegment()を使う）。
+  const segStartYear = birth + seg.startAge;
+  const segEndYear = birth + seg.endAge;
+  // 【決定#41】buildDevelopmentalGapNote()と同じ理由で、外からrelatedを渡せるようにする
+  // （省略時は従来通り自前計算、単体呼び出し・テスト向けの後方互換）。
+  const related = relatedOverride !== undefined
+    ? relatedOverride
+    : buildEventYearRanges().filter(r => eventRangeOverlapsSegment(r, segStartYear, segEndYear)).map(r => r.label);
+  if(related.length) noteParts.push('この頃の出来事：' + related.join('・') + '。');
+
+  // 医療機関名欄に入った最初の1件を除く、古い順（＝実際に転院していった順）。上限は設けずすべて書き出す
+  const additional = overlapping.slice(1);
+  additional.forEach(a=>{
+    const label = a.fromY === a.toY ? `${a.fromY}年` : `${a.fromY}年〜${a.toY}年`;
+    noteParts.push(`${a.hospitalType}${a.name || '（病院名不明）'}（${label}）に転院。`);
+  });
+
+  return { hospitalName, note: noteParts.join('') };
 }
 
 function renderChipGroup(containerId, items, selectedArr, multi, onToggle){
@@ -2830,20 +3226,56 @@ function stepCh4Confidence(){
   memoEl.value = state.draft.memo || '';
   memoEl.oninput = e=>{ state.draft.memo = e.target.value; };
   setFooter({secondaryLabel:'戻る', secondaryFn:goBack, primaryLabel:'次へ', primaryEnabled:true, primaryFn:()=>{
+    // 【病院期間分割】保存先をperiods[]対応に変更（病院期間分割_設計案.md 5章）。
+    // draftには「病院全体に紐づく項目」（name/nameUnknown/hospitalType/relatedEvents）と
+    // 「期間ごとの項目」（fromYear〜memo）が混在しているため、保存時にこの2階層へ振り分ける。
     const editId = state.editingHospitalId;
+    const editPeriodId = state.editingPeriodId;
     if(editId !== null && editId !== undefined){
-      // 修正モード：該当IDの病院を上書き。配列内のどの位置にあっても安全に見つけられる
+      // 修正モード：該当IDの病院を見つけ、病院レベルの項目を上書きしつつ、
+      // 対象periodId（editingPeriodId）のperiodだけを上書きする。他のperiodには触れない。
       const idx = state.hospitals.findIndex(h=>h.hospitalId===editId);
       if(idx>=0){
-        state.hospitals[idx] = {...state.draft, hospitalId: editId};
+        const h = state.hospitals[idx];
+        h.name = state.draft.name;
+        h.nameUnknown = state.draft.nameUnknown;
+        h.hospitalType = state.draft.hospitalType;
+        h.relatedEvents = state.draft.relatedEvents || [];
+        if(editPeriodId){
+          const pIdx = h.periods.findIndex(p=>p.periodId===editPeriodId);
+          if(pIdx>=0){
+            h.periods[pIdx] = {
+              periodId: editPeriodId,
+              fromYear: state.draft.fromYear, fromMonth: state.draft.fromMonth,
+              toYear: state.draft.toYear, toMonth: state.draft.toMonth,
+              ongoing: state.draft.ongoing, confidence: state.draft.confidence, memo: state.draft.memo
+            };
+          }
+        }
       }
     } else {
-      // 新規追加モード：永続IDを発行してpush
+      // 新規追加モード：病院の永続ID・periodの永続IDをそれぞれ発行してpush。
+      // 新規病院は常に「1病院＝1期間」のまま作られる（手動の「分割」操作は撤去済み。
+      // 3〜5年超の場合の複数行化はbuildPeriodsForForm()側の自動分割に一本化した）。
       state.draft.hospitalId = state.nextHospitalId++;
-      state.hospitals.push({...state.draft});
+      const periodId = `pd_${state.nextPeriodId++}`;
+      state.hospitals.push({
+        hospitalId: state.draft.hospitalId,
+        name: state.draft.name,
+        nameUnknown: state.draft.nameUnknown,
+        hospitalType: state.draft.hospitalType,
+        relatedEvents: state.draft.relatedEvents || [],
+        periods: [{
+          periodId,
+          fromYear: state.draft.fromYear, fromMonth: state.draft.fromMonth,
+          toYear: state.draft.toYear, toMonth: state.draft.toMonth,
+          ongoing: state.draft.ongoing, confidence: state.draft.confidence, memo: state.draft.memo
+        }]
+      });
     }
     state.draft = {};
     state.editingHospitalId = null;
+    state.editingPeriodId = null;
     // gapの理由確認はここでは行わない。病院入力フェーズはここで終わり、必ずハブ画面（ch4_summary）に戻す。
     goTo('ch4_summary');
   }});
@@ -2852,27 +3284,122 @@ function stepCh4Confidence(){
 // ---- 通院記録から、毎回その場で通院空白（ギャップ）を計算する ----
 // 保存するのはユーザーが入力した「理由」だけ（state.gapReasonsByKey）。
 // 期間そのものは常にhospitalsから導出するので、病院を後から追加・修正・削除しても自動的に追従する。
-function computeGaps(){
-  const sorted = [...state.hospitals]
-    .filter(h=>h.fromYear) // 年が入っていない記録は並べ替え対象から除外（フォールバック）
-    .sort((a,b)=> (parseInt(a.fromYear)||0) - (parseInt(b.fromYear)||0));
+// ---- developmental modeの先頭側gap（決定#30）かどうかを、keyのプレフィックスで判定する ----
+// computeGaps()がこの形式のkey（'phase1end__<hospitalId>'）を生成する。決定#33により、
+// この種類のgapには通常gapの理由チェックリスト（GAP_REASONS・第4章B）を適用しない
+// （「通院しなかった理由」という枠組み自体が、発達障害の受診前期間の実態に合わないため）。
+function isDevelopmentalLeadingGapKey(key){
+  return !!(key && key.startsWith('phase1end__'));
+}
+
+// ---- hasRecognizedGap()：older側の終了とnewer側の開始の間に「空白期間」を認めるかどうかの統一基準 ----
+// 【不具合修正・2026-07-22】以前はcomputeGaps()系のすべての判定が年差（newerFromY - olderToY ≧ 1）
+// のみを見ており、月を一切考慮していなかった。このため
+//   ・12月終了→翌1月開始（実質空白ほぼ0か月）を「空白あり」と誤検出する
+//   ・1月終了→同年12月開始（実質約11か月の空白）を「空白なし」と見逃す
+// という2方向の誤りが起きていた（コードレビューで発覚。様式出力にも影響する）。
+// 修正方針：older/newer両方の月が分かっている場合だけ、実際の月数で「1か月以上の空白」を判定する
+// （fromTotal - toTotal - 1 ≧ 1、すなわち間に丸ごと空いている暦月が1つ以上ある場合のみ空白とする）。
+// 片方でも月が不明な場合は、実際の空白が0か月〜ほぼ1年のどこにあるか判断できないため、
+// 従来通り「年をまたいでいれば空白の可能性ありとして扱う」安全側の基準に倒す
+// （renderHospitalBarRow()の月未入力ケース・decision#38/#40のテスト前提を変えないため）。
+function hasRecognizedGap(toYear, toMonth, fromYear, fromMonth){
+  if(!toYear || !fromYear) return false;
+  if(toMonth && fromMonth){
+    const toTotal = toYear*12 + toMonth;
+    const fromTotal = fromYear*12 + fromMonth;
+    return (fromTotal - toTotal - 1) >= 1;
+  }
+  return (fromYear - toYear) >= 1;
+}
+
+// ---- 決定#37：同じ病院の中の period 同士の間にできる空白の検出 ----
+// 手動の「分割」UIがあった頃は、既存の1期間を指定した年月でぴったり2つに割るだけだったため
+// periods間に空白が生じることはなかった（分割時点で1枚目の終わりと2枚目の始まりが必ず一致する）。
+// しかしそのUI撤去後、修正画面は常にperiods[0]しか書き換えない作りになっており、2枚目以降の
+// 存在を知らないまま1枚目の日付だけを直すと、periods間にすき間ができてしまう。しかもこれは
+// 病院と病院の間の空白（下のfor文）とは別扱いで、今まで一切検出されていなかった。
+// 病院同士の空白とまったく同じ形（キー・reasons）で返し、以降の理由入力・一覧表示・様式出力の
+// すべてに自動的に乗るようにする。キーは periodId の組み合わせにし、病院同士のキー
+// （hospitalId__hospitalId）・developmental modeの先頭側gapキー（phase1end__hospitalId）と
+// 形が異なるため衝突しない。
+function computeIntraHospitalGaps(){
   const gaps = [];
-  for(let i=0;i<sorted.length-1;i++){
-    const older = sorted[i];
-    const newer = sorted[i+1];
-    const olderToY = older.ongoing ? null : parseInt(older.toYear);
-    const newerFromY = parseInt(newer.fromYear);
-    if(olderToY && newerFromY && (newerFromY - olderToY) >= 1){
-      const key = `${older.hospitalId}__${newer.hospitalId}`;
+  state.hospitals.forEach(h=>{
+    const periodsArr = h.periods || [];
+    for(let j=0;j<periodsArr.length-1;j++){
+      const older = periodsArr[j];
+      const newer = periodsArr[j+1];
+      const olderToY = older.ongoing ? null : parseInt(older.toYear);
+      const olderToM = older.ongoing ? null : (parseInt(older.toMonth) || null);
+      const newerFromY = parseInt(newer.fromYear);
+      const newerFromM = parseInt(newer.fromMonth) || null;
+      if(hasRecognizedGap(olderToY, olderToM, newerFromY, newerFromM)){
+        const key = `period__${older.periodId}__${newer.periodId}`;
+        gaps.push({
+          key,
+          fromLabel: `${older.toYear || '?'}年${older.toMonth || ''}頃`,
+          toLabel: `${newer.fromYear || '?'}年${newer.fromMonth || ''}頃`,
+          reasons: state.gapReasonsByKey[key] || []
+        });
+      }
+    }
+  });
+  return gaps;
+}
+
+function computeGaps(){
+  // 【病院期間分割】「病院の開始/終了」をperiods[0].from〜periods[periods.length-1].toから算出する
+  // （病院期間分割_設計案.md 5章）。手動の「分割」操作は撤去済みだが、複数件になるケースへの
+  // 保険としてperiods[]配列のままにしている。
+  const sorted = [...state.hospitals]
+    .filter(h=>h.periods && h.periods.length && h.periods[0].fromYear) // 年が入っていない記録は並べ替え対象から除外（フォールバック）
+    .sort((a,b)=> (parseInt(a.periods[0].fromYear)||0) - (parseInt(b.periods[0].fromYear)||0));
+  const gaps = [];
+
+  // 【developmental mode】standard modeには「一番最初の通院記録より前」という概念自体が無く
+  // （タイムラインが最初の通院記録そのものから始まる設計のため）、computeGaps()は元々
+  // 「既存の通院記録どうしの間」の空白しか計算していなかった。developmental modeは生年を
+  // 起点として導入した（決定#12〜）ため、「生年＋15歳（中学校卒業ごろ）〜最初の通院記録」
+  // という、standard modeには存在しなかった種類の空白が新たに生まれる。これも同じ「通院して
+  // いない期間」として扱い、他のgapと同様に理由入力（ch4）・様式出力の対象にする。
+  const birth = parseInt(state.profile.birthYear) || null;
+  if(state.outputMode === 'developmental' && birth && sorted.length){
+    const phase1EndYear = birth + 15;
+    const first = sorted[0];
+    const firstPeriod = first.periods[0];
+    const firstFromY = parseInt(firstPeriod.fromYear);
+    if(firstFromY && (firstFromY - phase1EndYear) >= 1){
+      const key = `phase1end__${first.hospitalId}`;
       gaps.push({
         key,
-        fromLabel: `${older.toYear || '?'}年${older.toMonth || ''}頃`,
-        toLabel: `${newer.fromYear || '?'}年${newer.fromMonth || ''}頃`,
+        fromLabel: `${phase1EndYear}年頃`,
+        toLabel: `${firstPeriod.fromYear}年${firstPeriod.fromMonth || ''}頃`,
         reasons: state.gapReasonsByKey[key] || []
       });
     }
   }
-  return gaps;
+
+  for(let i=0;i<sorted.length-1;i++){
+    const older = sorted[i];
+    const newer = sorted[i+1];
+    const olderLastPeriod = older.periods[older.periods.length-1];
+    const newerFirstPeriod = newer.periods[0];
+    const olderToY = olderLastPeriod.ongoing ? null : parseInt(olderLastPeriod.toYear);
+    const olderToM = olderLastPeriod.ongoing ? null : (parseInt(olderLastPeriod.toMonth) || null);
+    const newerFromY = parseInt(newerFirstPeriod.fromYear);
+    const newerFromM = parseInt(newerFirstPeriod.fromMonth) || null;
+    if(hasRecognizedGap(olderToY, olderToM, newerFromY, newerFromM)){
+      const key = `${older.hospitalId}__${newer.hospitalId}`;
+      gaps.push({
+        key,
+        fromLabel: `${olderLastPeriod.toYear || '?'}年${olderLastPeriod.toMonth || ''}頃`,
+        toLabel: `${newerFirstPeriod.fromYear || '?'}年${newerFirstPeriod.fromMonth || ''}頃`,
+        reasons: state.gapReasonsByKey[key] || []
+      });
+    }
+  }
+  return [...gaps, ...computeIntraHospitalGaps()];
 }
 
 // ---- 「理由が入力済みか」の判定ルール（この基準で全体を統一する） ----
@@ -2885,9 +3412,11 @@ function isGapReasonAnswered(key){
 
 // 理由が未入力のgapを先頭から1件だけ返す（なければnull）。
 // 一覧を同時に編集させる方式ではなく、必ず1件ずつ確認させるための入口。
+// 決定#33：developmental modeの先頭側gap（phase1end__）は、理由チェックリスト自体を
+// 適用しない設計にしたため、ここで「未回答」として拾わない（第4章Bで聞かれることはない）。
 function findFirstUnansweredGap(){
   const gaps = computeGaps();
-  return gaps.find(g => !isGapReasonAnswered(g.key)) || null;
+  return gaps.find(g => !isDevelopmentalLeadingGapKey(g.key) && !isGapReasonAnswered(g.key)) || null;
 }
 
 // ---- 通院空白確認フェーズ（第4章B） ----
@@ -2932,13 +3461,27 @@ function stepCh4GapReview(){
 
 
 function stepCh4Summary(){
+  // 【決定#37・方針転換】以前はperiods[0]だけを見て「1病院＝1行」で表示していたが、昔の「分割」
+  // UIで作られた複数period（periods[1]以降）が一覧にも修正画面にも一切出てこず、隠れたまま
+  // 気づけないという問題があった。period単位で1枚ずつ、その枚自身の日付・確信度・メモで表示する。
   const orderedIdx = [...state.hospitals.keys()].reverse();
   const combined = [];
   orderedIdx.forEach(idx=>{
     const h = state.hospitals[idx];
-    combined.push({type:'hospital', sortKey: parseInt(h.fromYear) || 0, data:h});
+    (h.periods || []).forEach(p=>{
+      combined.push({type:'hospital', sortKey: parseInt(p.fromYear) || 0, data:{h, p}});
+    });
   });
-  const gaps = computeGaps();
+  // 【決定#39】computeGaps()は、developmental mode（生年からの形式）のときだけ
+  // 「生年＋15歳（中学校卒業ごろ）〜最初の通院記録」という区間（phase1end__キー）を
+  // 追加で返す。この区間は決定#33により理由確認フロー（findFirstUnansweredGap）の対象から
+  // 除外されているため、一覧にそのまま出すと「理由が未確認」のバッジが解消する手段がないまま
+  // 残り続けてしまう。さらに、この区間の有無はプレビュー画面の「初診／生年」切り替え
+  // （state.outputMode）だけで決まるため、出力形式を切り替えただけで一覧の見た目が変わって
+  // しまい混乱のもとになっていた（実利用者からの報告、2026-07-20）。Excel出力側
+  // （buildPeriodsForForm・buildDevelopmentalGapNote）には必要な情報なのでcomputeGaps()自体は
+  // 変更せず、画面表示（一覧・カウント）からだけ除外する。
+  const gaps = computeGaps().filter(g => !isDevelopmentalLeadingGapKey(g.key));
   gaps.forEach(g=>{
     const m = (g.fromLabel || '').match(/\d+/);
     const y = m ? parseInt(m[0]) : 0;
@@ -2947,17 +3490,17 @@ function stepCh4Summary(){
   combined.sort((a,b)=>a.sortKey - b.sortKey);
   const rowsHtml = combined.map(item=>{
     if(item.type==='hospital'){
-      const h = item.data;
-      const fromLabel = `${h.fromYear || '?'}年${h.fromMonth || ''}`;
-      const toLabel = h.ongoing ? '現在' : `${h.toYear || '?'}年${h.toMonth || ''}`;
+      const { h, p } = item.data;
+      const fromLabel = `${p.fromYear || '?'}年${p.fromMonth || ''}`;
+      const toLabel = p.ongoing ? '現在' : `${p.toYear || '?'}年${p.toMonth || ''}`;
       const name = h.nameUnknown ? `（病院名不明・${esc(h.hospitalType) || '種類不明'}）` : (esc(h.name) || '（未入力）');
       const relatedNote = (h.relatedEvents && h.relatedEvents.length)
         ? `<div class="small" style="margin-top:-6px;margin-bottom:8px;">手がかり：${h.relatedEvents.map(k=>esc(findEventLabel(k))).join('・')}</div>`
         : '';
-      const memoNote = h.memo
-        ? `<div class="small" style="margin-top:-6px;margin-bottom:8px;color:var(--ink-soft);">補足：${esc(h.memo)}</div>`
+      const memoNote = p.memo
+        ? `<div class="small" style="margin-top:-6px;margin-bottom:8px;color:var(--ink-soft);">補足：${esc(p.memo)}</div>`
         : '';
-      return `<div class="timeline-row"><span>${fromLabel}〜${toLabel}　${name}</span>${badgeForConfidence(h.confidence)}</div>${relatedNote}${memoNote}<div style="display:flex;gap:14px;margin:-4px 0 8px;"><button type="button" class="link-btn" data-edit-hospital="${h.hospitalId}">この通院記録を修正する →</button><button type="button" class="link-btn" data-delete-hospital="${h.hospitalId}" style="color:var(--danger);">削除する</button></div>`;
+      return `<div class="timeline-row"><span>${fromLabel}〜${toLabel}　${name}</span>${badgeForConfidence(p.confidence)}</div>${relatedNote}${memoNote}<div style="display:flex;gap:14px;margin:-4px 0 8px;"><button type="button" class="link-btn" data-edit-hospital="${h.hospitalId}" data-edit-period="${p.periodId}">この通院記録を修正する →</button><button type="button" class="link-btn" data-delete-hospital="${h.hospitalId}" data-delete-period="${p.periodId}" style="color:var(--danger);">削除する</button></div>`;
     }
     const g = item.data;
     const answered = isGapReasonAnswered(g.key);
@@ -2987,18 +3530,29 @@ function stepCh4Summary(){
   document.querySelectorAll('[data-edit-hospital]').forEach(btn=>{
     btn.onclick = ()=>{
       const id = parseInt(btn.getAttribute('data-edit-hospital'));
+      const periodId = btn.getAttribute('data-edit-period');
       const h = state.hospitals.find(h=>h.hospitalId===id);
+      const p = h.periods.find(p=>p.periodId===periodId) || h.periods[0];
       state.editingHospitalId = id;
-      state.draft = {...h};
+      state.editingPeriodId = p.periodId;
+      // 病院レベルの項目とperiodレベルの項目を1枚のdraftへまとめる（既存4画面がそのまま使えるようにする）
+      state.draft = {
+        name: h.name, nameUnknown: h.nameUnknown, hospitalType: h.hospitalType,
+        relatedEvents: [...(h.relatedEvents||[])],
+        fromYear: p.fromYear, fromMonth: p.fromMonth,
+        toYear: p.toYear, toMonth: p.toMonth,
+        ongoing: p.ongoing, confidence: p.confidence, memo: p.memo
+      };
       goTo('ch4_hospital_name');
     };
   });
   document.querySelectorAll('[data-delete-hospital]').forEach(btn=>{
     btn.onclick = ()=>{
       const id = parseInt(btn.getAttribute('data-delete-hospital'));
+      const periodId = btn.getAttribute('data-delete-period');
       const ok = confirm('この通院記録を削除します。よろしいですか？');
       if(!ok) return;
-      deleteCurrentHospital(id);
+      deleteHospitalPeriod(id, periodId); // 決定#37：その枚だけ削除。残り0枚なら病院ごと削除される
       saveStateToStorage();
       stepCh4Summary(); // 空白期間（gap）を再計算した上で同じ画面を再描画する
     };
@@ -3006,6 +3560,7 @@ function stepCh4Summary(){
   document.getElementById('addHospitalBtn').onclick = ()=>{
     state.draft = {};
     state.editingHospitalId = null;
+    state.editingPeriodId = null;
     goTo('ch4_hospital_name');
   };
   const reviewBtn = document.getElementById('reviewGapsBtn');
@@ -3096,27 +3651,119 @@ function swapEventsInBand(keyA, keyB){
 // 通院していた時期だけを実際の時間軸上の位置（left）・期間の長さ（width）で表す
 // （左端寄せではなく、帯内での実際の時期の位置に配置する）。
 // 文字が入らない幅なら色のみにする（4.4.2節）。
+// 【病院期間分割】2026年7月確定：ch5年表では1本の連続バーのまま維持する
+// （期間分割はch4＝申立書編集側の責務、ch5＝年表は位置関係の把握を優先するため）。
+// periods[0].from〜periods[periods.length-1].toを使うだけで済み、描画ロジック自体は変更不要。
 function renderHospitalBarRow(band){
-  const hs = hospitalsInBand(band);
-  if(hs.length===0) return '';
+  // 【決定#37補足・不具合A修正の続き】以前は病院ごとに`periods[0].from`〜`periods[最後].to`を
+  // 1本の続いたバーとして描いていたため、決定#37で新たに検出できるようになった「periods間の
+  // 隙間」がバーの上には一切反映されなかった（一覧・プレビューは直ったのに、年表のバーだけ
+  // 隙間が無かったことになっていた）。period単位でセグメントを分けて描くことで、隙間がある
+  // 場合はバーの上にもその分だけ空白ができるようにする。
+  //
+  // 【決定#38】上記の分割だけでは、periodの月が未入力（「覚えていない」等）のケースを
+  // 救えなかった。境界の月はfromMonth||1／toMonth||12で補完しており、「2009年まで（月不明）」
+  // →12月扱い、「2010年から（月不明）」→1月扱いになるため、月単位で見ると隙間の幅がゼロになり、
+  // 一覧側（computeIntraHospitalGaps）は「隙間あり」と表示しているのに、バーだけ
+  // 1本の続いた帯に見えてしまっていた。ここでは「隙間と認識されている境界」を一覧側と同じ
+  // 基準（hasRecognizedGap()）で特定し、月の補完計算でゼロ幅になっていた場合だけ、最低限の空白を確保する。
+  // 月が実際に入力されていて自然に隙間ができているケースには一切手を加えない。
+  //
+  // 【決定#40】決定#38は「同じ病院のperiods間」だけを対象にしていたが、現在のUIでは
+  // 手動の「分割」操作が撤去されており、新規に病院を追加すると必ず新しいhospitalIdが
+  // 振られる（1病院＝1期間）。そのため実運用で起きるのはむしろ「別の病院同士が月不明・
+  // 年差1年」というケースの方が多く、決定#38はそちらを救えていなかった。
+  // computeGaps()のinter-hospital判定（病院を最初のperiodのfromYearでソートし、隣り合う
+  // 病院同士を比較）とまったく同じ基準・同じ並び順で、病院間の境界にも最低空白を確保する。
+  // 「隙間と認識されない境界（例：同じ年内での転院）」には一切手を加えない点は決定#38と同じ。
+  //
+  // 【不具合修正・2026-07-22】上記の「隙間と認識されている境界」の判定自体を、年差のみの
+  // 基準からhasRecognizedGap()（月が両方分かっていれば実際の月数、片方でも不明なら従来通り
+  // 年差の基準）に統一した。月が両方判明している場合に、年をまたぐだけで実際には空白が
+  // ほぼ無い境界（例：12月終了→翌1月開始）を誤って「隙間あり」と扱わなくなった。
   const bandMonths = Math.max(1, (band.endYear - band.startYear) * 12);
-  const segsHtml = hs.map(h=>{
-    const fromYear = parseInt(h.fromYear), fromMonth = parseInt(h.fromMonth) || 1;
-    const toYear = h.ongoing ? getCurrentYear() : (parseInt(h.toYear) || fromYear);
-    const toMonth = h.ongoing ? (new Date().getMonth()+1) : (parseInt(h.toMonth) || 12);
-    // 帯の範囲に収まるようクリップしてから、月数ベースの比率（開始位置・幅）を出す。
-    const segStartYear = Math.max(fromYear, band.startYear);
-    const segEndYear = Math.min(toYear, band.endYear);
-    const startOffsetMonths = Math.max(0, (segStartYear - band.startYear) * 12 + (segStartYear===fromYear ? fromMonth-1 : 0));
-    const endOffsetMonths = Math.min(bandMonths, (segEndYear - band.startYear) * 12 + (segEndYear===toYear ? toMonth : 12));
-    const leftPct = (startOffsetMonths / bandMonths) * 100;
-    const widthPct = Math.max(2, ((endOffsetMonths - startOffsetMonths) / bandMonths) * 100);
+  const MIN_SEG_PCT = 2; // 帯の外に出ないための最小可視幅（従来通り）
+  const MIN_GAP_PCT = 4; // 決定#38・#40：隙間と認識されている境界で最低限確保する空白
+
+  function buildSegsForHospital(h){
     const name = h.nameUnknown ? (h.hospitalType || '通院') : (h.name || '通院');
-    // 「通院」の2文字を表示できる幅の目安として8%未満は文字を諦める（4.4.2節）。
-    const showLabel = widthPct >= 8;
-    return `<div class="place-bar-seg place-bar-hospital" style="left:${leftPct}%;width:${widthPct}%;" title="${esc(name)}">${showLabel ? '通院' : ''}</div>`;
-  }).join('');
-  return `<div class="place-bar-row">${segsHtml}</div>`;
+    const periodsArr = h.periods || [];
+    const hospitalSegs = []; // このbandに現れたセグメントを、periods配列の並び順のまま保持（隣接判定用）
+    periodsArr.forEach((p, periodIndex)=>{
+      const fromYear = parseInt(p.fromYear);
+      if(!fromYear) return;
+      const fromMonth = parseInt(p.fromMonth) || 1;
+      const toYear = p.ongoing ? getCurrentYear() : (parseInt(p.toYear) || fromYear);
+      const toMonth = p.ongoing ? (new Date().getMonth()+1) : (parseInt(p.toMonth) || 12);
+      if(!(fromYear <= band.endYear && toYear >= band.startYear)) return; // この帯と重ならないperiodはスキップ
+      // 帯の範囲に収まるようクリップしてから、月数ベースの比率（開始位置・幅）を出す。
+      const segStartYear = Math.max(fromYear, band.startYear);
+      const segEndYear = Math.min(toYear, band.endYear);
+      const startOffsetMonths = Math.max(0, (segStartYear - band.startYear) * 12 + (segStartYear===fromYear ? fromMonth-1 : 0));
+      const endOffsetMonths = Math.min(bandMonths, (segEndYear - band.startYear) * 12 + (segEndYear===toYear ? toMonth : 12));
+      const leftPct = (startOffsetMonths / bandMonths) * 100;
+      const widthPct = Math.max(MIN_SEG_PCT, ((endOffsetMonths - startOffsetMonths) / bandMonths) * 100);
+      hospitalSegs.push({ periodIndex, name, leftPct, widthPct });
+    });
+
+    // 決定#38：一覧側（computeIntraHospitalGaps）と同じ基準（hasRecognizedGap()）で隙間と
+    // 認識されている、隣り合うperiod同士の境界だけを対象に、最低限の空白を確保する。
+    for(let i=0;i<hospitalSegs.length-1;i++){
+      const a = hospitalSegs[i], b = hospitalSegs[i+1];
+      if(b.periodIndex !== a.periodIndex + 1) continue; // このband内で隣接して現れたperiod同士のときだけ対象
+      const olderPeriod = periodsArr[a.periodIndex];
+      const newerPeriod = periodsArr[b.periodIndex];
+      const olderToY = olderPeriod.ongoing ? null : parseInt(olderPeriod.toYear);
+      const olderToM = olderPeriod.ongoing ? null : (parseInt(olderPeriod.toMonth) || null);
+      const newerFromY = parseInt(newerPeriod.fromYear);
+      const newerFromM = parseInt(newerPeriod.fromMonth) || null;
+      const isRecognizedGap = hasRecognizedGap(olderToY, olderToM, newerFromY, newerFromM);
+      if(isRecognizedGap) enforceMinGap(a, b);
+    }
+    return { hospitalSegs, firstPeriod: periodsArr[0], lastPeriod: periodsArr[periodsArr.length-1] };
+  }
+
+  function enforceMinGap(a, b){
+    const actualGapPct = b.leftPct - (a.leftPct + a.widthPct);
+    if(actualGapPct < MIN_GAP_PCT){
+      const shaveEach = (MIN_GAP_PCT - actualGapPct) / 2;
+      a.widthPct = Math.max(MIN_SEG_PCT, a.widthPct - shaveEach);
+      b.leftPct = b.leftPct + shaveEach;
+      b.widthPct = Math.max(MIN_SEG_PCT, b.widthPct - shaveEach);
+    }
+  }
+
+  // 【決定#40】computeGaps()のinter-hospitalループと同じ並び順（最初のperiodのfromYear昇順）で
+  // 病院を揃えてから、病院ごとのセグメントを組み立てる。
+  const sortedHospitals = [...state.hospitals]
+    .filter(h=>h.periods && h.periods.length && h.periods[0].fromYear)
+    .sort((a,b)=> (parseInt(a.periods[0].fromYear)||0) - (parseInt(b.periods[0].fromYear)||0));
+
+  const perHospital = sortedHospitals.map(buildSegsForHospital);
+
+  // 病院同士の境界（前の病院の最後のセグメント〜次の病院の最初のセグメント）も、
+  // computeGaps()のinter-hospital判定と同じ基準でチェックする。
+  for(let i=0;i<perHospital.length-1;i++){
+    const older = perHospital[i], newer = perHospital[i+1];
+    if(older.hospitalSegs.length===0 || newer.hospitalSegs.length===0) continue; // このbandに現れていない病院は対象外
+    const a = older.hospitalSegs[older.hospitalSegs.length-1];
+    const b = newer.hospitalSegs[0];
+    const olderToY = older.lastPeriod.ongoing ? null : parseInt(older.lastPeriod.toYear);
+    const olderToM = older.lastPeriod.ongoing ? null : (parseInt(older.lastPeriod.toMonth) || null);
+    const newerFromY = parseInt(newer.firstPeriod.fromYear);
+    const newerFromM = parseInt(newer.firstPeriod.fromMonth) || null;
+    const isRecognizedGap = hasRecognizedGap(olderToY, olderToM, newerFromY, newerFromM);
+    if(isRecognizedGap) enforceMinGap(a, b);
+  }
+
+  const allSegs = perHospital.flatMap(h=>h.hospitalSegs);
+  if(allSegs.length===0) return '';
+  // 「通院」の2文字を表示できる幅の目安として8%未満は文字を諦める（4.4.2節）。
+  const segsHtml = allSegs.map(s=>{
+    const showLabel = s.widthPct >= 8;
+    return `<div class="place-bar-seg place-bar-hospital" style="left:${s.leftPct}%;width:${s.widthPct}%;" title="${esc(s.name)}">${showLabel ? '通院' : ''}</div>`;
+  });
+  return `<div class="place-bar-row">${segsHtml.join('')}</div>`;
 }
 
 // 義務教育バーの区画を描画する（1本のバーの中に小学校・中学校を隣接区画として表示、4.4.1節）。
@@ -3181,16 +3828,7 @@ function renderCh5PlaceScreen(){
   // ---- 年表（上2/3、独立スクロール） ----
   const timelineEl = document.getElementById('placeTimeline');
   timelineEl.innerHTML = bands.map((band, i)=>{
-    let label = band.label;
-    if(isWareki){
-      const [g1, y1] = yearToWareki(band.startYear);
-      if(band.isLast){
-        label = g1 ? `${g1}${y1}年〜現在（${band.startAge}歳〜現在）` : label;
-      } else {
-        const [g2, y2] = yearToWareki(band.endYear);
-        label = (g1 && g2) ? `${g1}${y1}〜${g2==g1?'':g2}${y2}年（${band.startAge}〜${band.endAge}歳ごろ）` : label;
-      }
-    }
+    const label = formatAgeBandLabel(band, isWareki);
     const hospitalBar = renderHospitalBarRow(band);
     const educationBar = renderEducationBarRow(band);
     const cardsHere = eventsInBand(i).map(k=>renderPlaceCard(findEventObj(k))).join('');
@@ -3301,6 +3939,10 @@ function bindCh5PlaceHandlers(bands){
 
 function stepCh5Done(){
   const bands = buildAgeBands();
+  // 西暦⇄元号切替（4.6節）：stepCh5Place（出来事を年表に置いてみましょう画面）と
+  // 同じstate.eraDisplayModeを共有する（2026-07-18セッション。ユーザー要望：
+  // 「出来事の配置を直す画面と同じスイッチで切り替えできるようにしてほしい」）。
+  const isWareki = state.eraDisplayMode === 'wareki';
   const rowsHtml = bands.map((band, i)=>{
     const eventsHere = Object.keys(state.eventPlacements).filter(k=>{
       const p = state.eventPlacements[k];
@@ -3315,12 +3957,24 @@ function stepCh5Done(){
     const itemsHtml = items.length
       ? `<ul style="margin:4px 0 0;padding-left:18px;font-size:13px;">${items.map(t=>`<li>${t}</li>`).join('')}</ul>`
       : '<p class="small" style="margin:4px 0 0;">記録なし</p>';
-    return `<div class="timeline-row" style="flex-direction:column;align-items:flex-start;"><span>${esc(band.label)}</span>${itemsHtml}</div>`;
+    // 帯グラフ（通院・学齢期）は「出来事の配置画面」（stepCh5Place）と同じrenderHospitalBarRow()・
+    // renderEducationBarRow()をそのまま流用する（2026-07セッション決定#10・#19：
+    // 「バーだけだと分からない」ため、位置関係を示す帯グラフと、病院名等を確認できる
+    // テキスト一覧（items/itemsHtml）を両方表示する）。
+    // .place-band-bodyはカード配置のタップ操作用スタイル（cursor:pointer等）を含むため、
+    // 操作を行わないこの画面には持ち込まない。timeline-rowはflex-direction:columnのため
+    // 子要素の横幅が縮むのを防ぐ目的でwidth:100%のラッパーだけ追加する。
+    const hospitalBar = renderHospitalBarRow(band);
+    const educationBar = renderEducationBarRow(band);
+    const barsHtml = (hospitalBar || educationBar) ? `<div style="width:100%;">${hospitalBar}${educationBar}</div>` : '';
+    return `<div class="timeline-row" style="flex-direction:column;align-items:flex-start;"><span>${esc(formatAgeBandLabel(band, isWareki))}</span>${barsHtml}${itemsHtml}</div>`;
   }).join('');
 
-  const gaps = computeGaps();
+  // 【決定#39】ch4_summaryと同じ理由で、developmental modeの先頭側gap（phase1end__）は
+  // 年表下の一覧からも除外する（Excel出力側の挙動は変えない。詳細はstepCh4Summary()のコメント参照）。
+  const gaps = computeGaps().filter(g => !isDevelopmentalLeadingGapKey(g.key));
   const gapHtml = gaps.map(g=>
-    `<div class="timeline-row gap">${esc(g.fromLabel)}〜${esc(g.toLabel)}は、通院していない時期です</div>`
+    `<div class="timeline-row gap">${esc(formatGapDateLabel(g.fromLabel, isWareki))}〜${esc(formatGapDateLabel(g.toLabel, isWareki))}は、通院していない時期です</div>`
   ).join('');
 
   // 注：旧実装にあった「わからない」状態（'unknown'）はch5_place再設計により廃止された
@@ -3350,7 +4004,7 @@ function stepCh5Done(){
       </div>
     </div>
     <div class="accordion-item">
-      <button type="button" class="accordion-trigger" data-accordion="acc-export">Excel・PDFについて</button>
+      <button type="button" class="accordion-trigger" data-accordion="acc-export">Excel出力について</button>
       <div class="accordion-panel" id="acc-export" hidden>
         <p class="small" style="margin:0;line-height:1.8;">
           通院期間・通院していない期間は、最大16件まで出力されます。件数が多い場合は一部をまとめて出力し、
@@ -3393,7 +4047,10 @@ function stepCh5Done(){
 
   document.getElementById('screen').innerHTML = `
     <div class="card">
-      <h2>年表ができました</h2>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <h2 style="margin:0;">年表ができました</h2>
+        <button type="button" class="place-era-toggle" id="doneEraToggle"></button>
+      </div>
       <p class="lead">ここまでで、申立書の土台ができました。</p>
       ${rowsHtml}
       ${gapHtml ? `<div style="margin-top:12px;">${gapHtml}</div>` : ''}
@@ -3429,6 +4086,15 @@ function stepCh5Done(){
 
   document.getElementById('editPlacementBtn').onclick = ()=>goTo('ch5_place');
   document.getElementById('goToPreviewBtn').onclick = ()=>goTo('ch5_preview');
+
+  // 西暦⇄元号切り替えボタン（4.6節。stepCh5Placeと同じstate.eraDisplayModeを共有する）
+  const doneEraBtn = document.getElementById('doneEraToggle');
+  doneEraBtn.textContent = isWareki ? '元号表示中' : '西暦表示中';
+  doneEraBtn.classList.toggle('place-era-active', isWareki);
+  doneEraBtn.onclick = ()=>{
+    state.eraDisplayMode = isWareki ? 'seireki' : 'wareki';
+    stepCh5Done();
+  };
 
   // アコーディオン開閉（ch5_done仕様書3.6：デフォルト閉じた状態、タップで開閉）
   document.querySelectorAll('.accordion-trigger').forEach(btn=>{
@@ -3488,11 +4154,19 @@ function stepCh5Done(){
 function buildPreviewPeriodRows(){
   const currentRows = buildCurrentPeriodRows();
   const availableSlotsForPast = Math.max(0, 16 - currentRows.length);
-  const compressed = compressPastRowsIfNeeded(state.pastFragments, state.pastHospitals, availableSlotsForPast);
+  const compressed = compressPastRowsIfNeeded(availableSlotsForPast);
   if(compressed && compressed.error){
     return { rows: compressed.rows, error: compressed.message };
   }
   const { mainRows, continuationRows } = allocateRowsToMainAndContinuation(currentRows, compressed);
+  // 【4.4対応】exportToOfficialForm()と同じ基準で、事前（プレビュー時点）にも枠超過を検知する。
+  // ダウンロードボタンを押すまで気づけない状態を避け、プレビュー画面の時点で警告を出す。
+  if(continuationRows.length > CONTINUATION_CAPACITY){
+    return {
+      rows: mainRows.concat(continuationRows),
+      error: `通院記録・通院していない期間の件数が多く、書式の枠（16件）に${continuationRows.length - CONTINUATION_CAPACITY}件収まりません。`
+    };
+  }
   return { rows: mainRows.concat(continuationRows), error: null };
 }
 
@@ -3531,7 +4205,7 @@ function renderPreviewPeriodRowsHtml(rows){
           ${visitedHtml}
           ${hospitalHtml}
         </div>
-        <div class="pp-period-note">${r.note ? esc(r.note) : '<span class="pp-blank">左の期間の状況</span>'}</div>
+        <div class="pp-period-note">${r.note ? esc(r.note) : (r.visited ? '<span class="pp-blank">左の期間の状況</span>' : '')}</div>
       </div>
     </div>`;
   }).join('');
@@ -3653,6 +4327,7 @@ function renderPreviewNotebookSectionHtml(){
 
 function stepCh5Preview(){
   const periodResult = buildPreviewPeriodRows();
+  const mode = state.outputMode || 'standard'; // 決定#12
 
   // ---- 入力状況表示（仕様書4.2節：第1段階は単純な集計表示＋スクロールのみ） ----
   const recognitionEnabled = state.recognitionSnapshot.enabled;
@@ -3684,15 +4359,27 @@ function stepCh5Preview(){
     <div class="card">
       <h2>申立書の下書き確認</h2>
 
-      <div class="preview-status">
-        <p class="preview-status-title">申立書の入力状況</p>
-        <div class="preview-status-counts">
-          <span>✓ 入力済み　${doneCount}</span>
-          <span>○ 任意未入力　${statusItems.filter(s=>!s.done).length}</span>
-          <span>△ 試作版対象外　2</span>
+      <div class="mode-switch-block">
+        <p class="mode-switch-caption">申立書の形式</p>
+        <div class="mode-switch" role="group" aria-label="申立書の形式">
+          <button type="button" class="mode-switch-option${mode==='standard' ? ' mode-switch-selected' : ''}" data-mode="standard">初診からの形式</button>
+          <button type="button" class="mode-switch-option${mode==='developmental' ? ' mode-switch-selected' : ''}" data-mode="developmental">生年からの形式</button>
         </div>
-        <div class="preview-status-list">${statusListHtml}</div>
-        <div class="preview-status-excluded">対象外（この試作版では入力しません）：傷病名・発病日・初診日</div>
+      </div>
+
+      <div class="accordion-item">
+        <button type="button" class="accordion-trigger" data-accordion="acc-input-status">申立書の入力状況（✓ ${doneCount}　○ ${statusItems.filter(s=>!s.done).length}）</button>
+        <div class="accordion-panel" id="acc-input-status" hidden>
+          <div class="preview-status">
+            <div class="preview-status-counts">
+              <span>✓ 入力済み　${doneCount}</span>
+              <span>○ 任意未入力　${statusItems.filter(s=>!s.done).length}</span>
+              <span>△ 試作版対象外　2</span>
+            </div>
+            <div class="preview-status-list">${statusListHtml}</div>
+            <div class="preview-status-excluded">対象外（この試作版では入力しません）：傷病名・発病日・初診日</div>
+          </div>
+        </div>
       </div>
 
       ${periodErrorHtml}
@@ -3731,18 +4418,18 @@ function stepCh5Preview(){
       <button type="button" id="previewExportFormBtn" style="width:100%;padding:12px;border-radius:8px;border:none;background:var(--accent-strong);color:#fff;font-size:15px;cursor:pointer;margin-top:14px;">申立書（Excel）をダウンロード</button>
       <p class="small" id="previewExportFormStatus" style="margin-top:8px;color:var(--accent-strong);"></p>
 
-      <div class="accordion-group" style="margin-top:10px;">
-        <div class="accordion-item">
-          <button type="button" class="accordion-trigger" data-accordion="acc-other-output">その他の出力（PDFなど）</button>
-          <div class="accordion-panel" id="acc-other-output" hidden>
-            <p class="small" style="margin:0;">PDF出力は今後対応予定です。現在はExcel出力のみご利用いただけます。</p>
-          </div>
-        </div>
-      </div>
-
-      <p class="preview-output-note">Excel・PDFは、このプレビューの内容をもとに作成されます</p>
+      <p class="preview-output-note">Excelは、このプレビューの内容をもとに作成されます</p>
     </div>`;
 
+  document.querySelectorAll('.mode-switch-option').forEach(btn=>{
+    btn.onclick = ()=>{
+      const newMode = btn.getAttribute('data-mode');
+      if(newMode === mode) return; // 同じ選択肢を再タップしても何もしない
+      state.outputMode = newMode;
+      saveStateToStorage(); // 章の切り替え（goTo）を待たず、切り替えた時点で保存する
+      stepCh5Preview(); // 決定#26通り、buildPeriodsForForm()経由でプレビュー・Excelが連動更新される
+    };
+  });
   document.querySelectorAll('.preview-jump').forEach(btn=>{
     btn.onclick = ()=>{
       const target = document.getElementById(btn.getAttribute('data-jump'));
@@ -3768,7 +4455,12 @@ function stepCh5Preview(){
       statusEl.textContent = 'ダウンロードしました。';
     }catch(err){
       console.error(err);
-      statusEl.textContent = '作成に失敗しました。もう一度お試しください。';
+      // userFacing:trueが付いたエラーは、対処方法込みで利用者にそのまま見せてよいメッセージ
+      // （exportToOfficialForm()側でuserFacingError()により明示的に作られたもの）。
+      // それ以外（ExcelJS内部の想定外エラー等）は、生の技術的な文言を見せず従来通り汎用文言にする。
+      statusEl.textContent = (err && err.userFacing && err.message)
+        ? err.message
+        : '作成に失敗しました。もう一度お試しください。';
     }finally{
       btn.disabled = false;
       btn.textContent = '申立書（Excel）をダウンロード';
@@ -3808,7 +4500,7 @@ function stepCh6PastIntro(){
       state.returnTo = null;
       goTo(dest);
     },
-    primaryLabel:'出来事カードを作成する',
+    primaryLabel:'出来事カードを自作・修正・削除する',
     primaryEnabled:true,
     primaryFn:()=>goTo('ch7_fragment_board')
   });
@@ -3916,11 +4608,14 @@ function stepCh7FragmentBoard(){
       </div>
 
       <div class="edit-section">
-        <p class="small">通院していた病院の記録は「通院の記録」（第4章）から追加・修正できます。</p>
+        <p class="small">ここから自作出来事カードを年表に配置できます。</p>
+        <button type="button" class="link-btn" id="fragmentBoardPlaceLink" style="margin-top:6px;">出来事の配置を直す →</button>
       </div>
     </div>`;
 
   renderPastFragmentList();
+
+  document.getElementById('fragmentBoardPlaceLink').onclick = ()=>goTo('ch5_place');
 
   const textEl = document.getElementById('newFragmentText');
   const errorEl = document.getElementById('newFragmentError');
