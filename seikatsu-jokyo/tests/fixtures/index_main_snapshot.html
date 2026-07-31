@@ -294,7 +294,7 @@ function yearToWareki(year){
   return [null, null];
 }
 
-// ---- 決定#35：年齢帯（buildAgeBands()の1件）のラベルを、西暦⇄元号切替（state.eraDisplayMode、4.6節）
+// ---- 年齢帯（buildAgeBands()の1件）のラベルを、西暦⇄元号切替（state.eraDisplayMode、4.6節）
 // に応じて組み立てる。「出来事を年表に置いてみましょう」画面（stepCh5Place）と「年表ができました」
 // 画面（stepCh5Done）の両方で使う共通部品（2026-07-18セッション。2.4節の共通部品化課題に対応）。
 function formatAgeBandLabel(band, isWareki){
@@ -674,7 +674,7 @@ function splitGapIntoChunks(fromY, fromM, toY, toM, options){
   const toTotal = toY*12 + ((toM||1) - 1);
   const spanMonths = toTotal - fromTotal;
   const chunkMonths = (state.profile.bandSize || 5) * 12;
-  // 【決定#32・2026-07-16修正】以前はここで固定「60ヶ月（5年）以下ならそのまま1件」を判定していたが、
+  // 【2026-07-16修正】以前はここで固定「60ヶ月（5年）以下ならそのまま1件」を判定していたが、
   // これはbandSize=5を前提にした値がそのまま残っていたもので、bandSize=3を選んでいる場合でも
   // 3〜5年（37〜60ヶ月）の記録が分割されずに1件のまま出てしまうバグがあった（ユーザー報告：
   // bandSize=3で年表は3年区切りなのに、プレビューの一部の行だけ5年になっていた）。選択中の
@@ -894,7 +894,7 @@ async function exportToOfficialForm(){
   const outBuffer = await wb.xlsx.writeBuffer();
   downloadXlsxBuffer(outBuffer, '病歴・就労状況等申立書.xlsx');
   if(outBuffer04){
-    // 【決定#31・developmental mode対応時に発覚】a.click()による連続ダウンロードを間隔なしで2回発火すると、
+    // 【developmental mode対応時に発覚】a.click()による連続ダウンロードを間隔なしで2回発火すると、
     // ブラウザ（特にChrome）が「複数ファイルの自動ダウンロード」とみなして2件目をブロックすることが
     // あるため、1件目の処理が確実に始まってから2件目を発火するよう少し間隔を空ける。
     // developmental modeでフェーズ1の固定行が加わり、02+04の2ファイル出力（=continuationRowsが
@@ -935,15 +935,15 @@ const ADL_HELP_TEXTS = {
   },
   toilet: {
     'できる': '自分のタイミングで問題なくトイレに行けた。後始末や片付けも含めて大きな支障がなかった。',
-    'まあできる': 'トイレには行けるが、間に合わない不安が強い、行くのが億劫で我慢しがちなど、やや支障があった。尿漏れパッドや生理用ナプキンの交換が後回しになることもあった。',
+    'まあできる': 'トイレには行けるが、間に合わない不安が強い、行くのが億劫で我慢しがちなど、やや支障があった。',
     '援助があれば': '声かけや付き添いがあれば行ける、体調や不安が強い時は見守りや手助けが必要だった。',
-    'できない': '自分だけではトイレに行く・後始末することがかなり難しかった。パッドの交換が滞り、肌がかぶれてしまうこともあった。'
+    'できない': '自分だけではトイレに行く・後始末することがかなり難しかった。'
   },
   eating: {
     'できる': '食事の時間や内容をある程度自分で整え、1日3食またはそれに近い形で無理なく食べられていた。極端な偏りや食べ忘れが少なかった。',
-    'まあできる': '食べること自体はできるが、簡単なもの・同じものに偏りやすい、食べる時間が不規則、食事を抜く日や、逆に食べ過ぎてしまう日がたまにあるなど、やや崩れがあった。',
-    '援助があれば': '家族の声かけ、配膳、買い置き、作り置き、温めてもらうなどの助けがあれば食べられた。自分だけだと食事を抜きやすかった、または満腹でも食べる量を自分で加減できず、食べ過ぎてしまうことが多かった。',
-    'できない': '食事を用意したり食べ始めたりできず、欠食が多い、何を食べればよいか決められない、ほとんど食べられない状態だった。または、食欲や満腹感のコントロールが自分では難しく、健康を損なうほど食べ過ぎてしまう状態が続いていた。'
+    'まあできる': '食べること自体はできるが、簡単なもの・同じものに偏りやすい、食べる時間が不規則、食事を抜く日がたまにあるなど、やや崩れがあった。',
+    '援助があれば': '家族の声かけ、配膳、買い置き、作り置き、温めてもらうなどの助けがあれば食べられた。自分だけだと食事を抜きやすかった。',
+    'できない': '食事を用意したり食べ始めたりできず、欠食が多い、何を食べればよいか決められない、ほとんど食べられない状態だった。'
   },
   cooking: {
     'できる': '買い置き、献立を考える、調理する、温める、片付けるまで含めて、日常的に自分でこなせた。',
@@ -960,12 +960,12 @@ const ADL_HELP_TEXTS = {
   washingFace: {
     'できる': '顔を洗う、歯みがき、髪を整えるなどを日常的に自分でできていた。',
     'まあできる': '洗面自体はできるが、かなり面倒で抜ける日がある、歯みがきだけ省くなどの崩れがあった。',
-    '援助があれば': '声かけや準備をしてもらえばできるが、自分からはなかなか始められなかった。鏡を見るのがつらい、身だしなみを客観的に見たくないなどの理由で、特定の部分だけ抜けることもあった。',
+    '援助があれば': '声かけや準備をしてもらえばできるが、自分からはなかなか始められなかった。',
     'できない': '洗面や歯みがきがほとんどできず、何日もできないことが多かった。'
   },
   bathing: {
     'できる': '自分の判断で定期的に入浴またはシャワーができていた。',
-    'まあできる': '入浴はできるが頻度が少ない、シャワーだけで済ませることが増える、痒みやにおいが気になっても入ろうと思えないなどの崩れがあった。',
+    'まあできる': '入浴はできるが頻度が少ない、かなり気合いが必要、数日に1回程度に落ちることがあった。',
     '援助があれば': '声かけ、準備、見守りがあれば入れた。ひとりだと先延ばしになって入れないことが多かった。',
     'できない': '入浴やシャワーがほとんどできず、何日も何週間も入れないことがあった。'
   },
@@ -978,14 +978,14 @@ const ADL_HELP_TEXTS = {
   laundry: {
     'できる': '洗濯機を回す、干す、取り込む、しまうまで一通り自分でできた。',
     'まあできる': '洗濯機は回せるが、干す・取り込む・しまうが負担で溜めやすいなど、一部に支障があった。',
-    '援助があれば': '声かけ、一緒に干す、取り込んでもらうなどの助けがあればできた。やる気が起きず、洗濯全体を代わりにやってもらうこともあった。',
+    '援助があれば': '声かけ、一緒に干す、取り込んでもらうなどの助けがあればできた。',
     'できない': '洗濯がほとんどできず、衣類がかなり溜まる、家族任せになる状態だった。'
   },
   shopping: {
     'できる': '必要な日用品や食べ物を、自分で考えて買いに行けた。',
-    'まあできる': '近場や少量なら買えるが、店内で疲れる、選べない、後回しにしがちなどの支障があった。お金が減るのが不安で、必要以上に切り詰めてしまうこともあった。',
+    'まあできる': '近場や少量なら買えるが、店内で疲れる、選べない、後回しにしがちなどの支障があった。',
     '援助があれば': '付き添い、買う物リスト、代わりに注文してもらうなどの助けがあればできた。',
-    'できない': '買い物にほとんど行けず、必要な物の補充も自分では難しかった。お金が減るのが不安で、食料など必要な買い物すらほとんどできない状態のこともあった。'
+    'できない': '買い物にほとんど行けず、必要な物の補充も自分では難しかった。'
   }
 };
 
@@ -1458,13 +1458,9 @@ function deletePastFragment(id){
 // 過去編は元々ここに専用のPastHospital CRUD関数群（validatePastHospital/addPastHospital/
 // updatePastHospital/deletePastHospital）を持っていたが、ch7_hospital_add画面の廃止に伴い
 // 削除した。病院の追加・修正・削除は、すべて第4章側（state.hospitals、stepCh4Confidence内の
-// 保存処理、deleteCurrentHospital()）に一本化されている。過去編の断片（state.pastFragments）が
-// この病院にリンクしている場合は、linkedHospitalId（病院のhospitalIdそのもの）を手がかりに
-// 直接突き合わせる（buildPeriodsForForm()内、および本ファイル下部）だけで足りており、
-// 病院データを過去編専用の形へ変換する処理は実際には不要だった。
-// 【2026年7月削除】この目的のために用意されていたtoLegacyPastHospitalShape()/
-// getLegacyPastHospitals()は、どこからも呼ばれていない死コードと判明したため削除済み
-// （病院期間分割_設計案.md 5章、00_索引.md参照）。
+// 保存処理、deleteCurrentHospital()）に一本化されている。過去編ロジック（buildPastPeriodGroups
+// 等）がこの一本化されたデータを読む際は、上記のtoLegacyPastHospitalShape()/
+// getLegacyPastHospitals()で変換して使う。
 
 // 現状編（第4章）の通院記録を削除する。
 // computeGaps()は毎回state.hospitalsから計算し直す純粋関数のため、削除するだけで
@@ -1552,13 +1548,37 @@ function removeEventIdFromRelatedEvents(eventId){
 // 過去編は元々state.pastHospitals（ch7_hospital_add画面で入力）という専用の病院配列を
 // 持っていたが、第4章（ch4_hospital_name〜ch4_confidence）と入力項目が完全に重複していた
 // ため、ch7_hospital_addを廃止し、過去編のHospitalGroup生成もstate.hospitals（第4章のデータ）
-// を入力元とするよう一本化した。state.hospitals自体の保存形式は変更していない。
-// 【2026年7月削除】一本化にあたり、第4章形式を過去編ロジック向けの別形式へ変換する
-// toLegacyPastHospitalShape()/getLegacyPastHospitals()を用意していたが、実際には
-// buildPeriodsForForm()側がlinkedHospitalId（hospitalIdそのもの）で直接突き合わせる
-// だけで完結しており、この変換は一度も呼び出されないまま死コード化していたため削除した
-// （病院期間分割_設計案.md 5章、00_索引.md参照）。
+// を入力元とするよう一本化した。第4章側はfromYear/fromMonthのような数値の別フィールドを
+// 持つ形式のため、下記toLegacyPastHospitalShape()で過去編ロジックが期待する
+// {hospitalId, name, from, to, ongoing, confidence, memo}形式（from/toは'YYYY-MM'文字列）
+// へその場で変換してから渡す。state.hospitals自体の保存形式は変更していない。
 // =====================================================================
+
+// ---- 補助：state.hospitals[i]（第4章形式）を、過去編ロジックが期待する形へ変換する ----
+// 第4章の確信度は'unknown'（過去編側は'unsure'）なので、意味は同じだが表記だけ揃える。
+// nameUnknown:trueの場合はname自体をundefinedにし、formatPastDateLabel等の「時期不明」表示と
+// 同じ考え方でbuildHospitalGroupNote等が「病院名なし」を判定できるようにする。
+//
+// 【病院期間分割・2026年7月確認事項】この関数もgetLegacyPastHospitals()も、実際には
+// どこからも呼ばれていない死コード（病院期間分割_設計案.md 5章で確認済み）。
+// 呼び出し側が現れないまま残っているため、下記のh.fromYear等（第4章の旧フラット形式）は
+// 更新していない。呼び出し側を復活させる場合は、先にh.periods[]対応へ書き換えること。
+function toLegacyPastHospitalShape(h){
+  const fromStr = h.fromYear ? (h.fromMonth ? `${h.fromYear}-${String(h.fromMonth).padStart(2,'0')}` : `${h.fromYear}`) : undefined;
+  const toStr = (!h.ongoing && h.toYear) ? (h.toMonth ? `${h.toYear}-${String(h.toMonth).padStart(2,'0')}` : `${h.toYear}`) : undefined;
+  return {
+    hospitalId: h.hospitalId,
+    name: h.nameUnknown ? undefined : h.name,
+    from: fromStr,
+    to: toStr,
+    ongoing: !!h.ongoing,
+    confidence: h.confidence === 'unknown' ? 'unsure' : h.confidence,
+    memo: h.memo
+  };
+}
+function getLegacyPastHospitals(){
+  return state.hospitals.map(toLegacyPastHospitalShape);
+}
 
 // ---- 補助：断片id→断片オブジェクトのMap（仕様書5.3章） ----
 function buildFragmentMap(fragments){
@@ -2449,8 +2469,7 @@ function hospitalsOverlappingSegment(seg, birth){
 }
 
 // ---- buildPhase1SegmentNote()：フェーズ1の1区分ぶんの医療機関名欄・状況欄（note）を作る ----
-// 決定#20（区分名のみを自動生成。決定#34で、決定#11「〜の欄」統一とは食い違わないことを確認済み）・
-// 決定#29（旧#22改訂。医療機関名欄は最初の1件）・
+// 決定#20（区分名のみを自動生成）・決定#22改訂（医療機関名欄は最初の1件）・
 // 決定#28（それ以外の病院は状況欄に、件数上限を設けずすべて書き出す）を実装する。
 // ---- developmental modeの先頭側gap（決定#30）専用のnote生成（決定#33） ----
 // 通常gapのようにGAP_REASONS由来の「理由：」は使わない。「通院しなかった理由」という枠組みは
@@ -2484,7 +2503,7 @@ function buildDevelopmentalGapNote(seg, relatedOverride){
 
 function buildPhase1SegmentNote(seg, birth, relatedOverride){
   const overlapping = hospitalsOverlappingSegment(seg, birth);
-  const primary = overlapping.length ? overlapping[0] : null; // 決定#29（決定#22・#28の再修正）：最初（区分内で一番古い）を医療機関名欄に使う
+  const primary = overlapping.length ? overlapping[0] : null; // 決定#22改訂：最初（区分内で一番古い）を医療機関名欄に使う
   const hospitalName = primary ? (primary.name || '（病院名不明）') : '';
 
   const noteParts = [`${seg.label}。`];
@@ -4709,120 +4728,13 @@ function stepCh2NotworkReason(){
   setFooter({secondaryLabel:'戻る', secondaryFn:goBack, primaryLabel:'次へ', primaryEnabled:true, primaryFn:()=>goTo('ch2_adl')});
 }
 
-// =====================================================================
-// 「生活状況をふりかえる」画面（seikatsu-jokyo/、別リポジトリ内の隣接サブプロジェクト）
-// との連携（2026-07-28統合）。GitHub階層はindex.htmlをリポジトリ直下、seikatsu-jokyo/を
-// その配下に置く前提（seikatsu-jokyo/00_引き継ぎ_最初に読む.md「GitHub階層」で合意済み）。
-//
-// 受け渡し方式は「案B・疎結合」：探索画面側がlocalStorage['adl_handoff_v1']に
-// {ADLキー: 最終レベル文字列} の形で書き込み、本体側はch2_adl画面の表示時に読むだけ
-// （自動反映はしない。値が同じ端末・同一オリジンで動いていることが前提）。
-// 取り込みは必ずstepCh2Adl()内の「取り込む」ボタン経由のみで行い、画面表示のたびに
-// 黙って上書きすることは絶対にしない（seikatsu-jokyo側の依頼メモ「6. やってはいけないこと」）。
-// =====================================================================
-const ADL_HANDOFF_KEY = 'adl_handoff_v1';
-
-// ---- 探索画面が書いたhandoffを実際にstate.adlへ適用する（ボタン押下時のみ呼ぶ） ----
-// seikatsu-jokyo/src/genzai/handoff_connector.js（試作・tests/genzai/test_handoff_to_main_app.js
-// で検証済み）と同じロジック。ADL_ITEMSに無いキー・ADL_LEVEL_TO_NUMに無い値は無視し、
-// state.adlの他のキー（他項目の結果）には触らない。
-function applyAdlHandoff(){
-  const result = {applied:[], skipped:[]};
-  let raw;
-  try{ raw = localStorage.getItem(ADL_HANDOFF_KEY); }catch(e){ return result; }
-  if(!raw) return result;
-  let data;
-  try{ data = JSON.parse(raw); }catch(e){ return result; }
-  if(!data || typeof data !== 'object') return result;
-  const validKeys = {};
-  ADL_ITEMS.forEach(([key])=>{ validKeys[key] = true; });
-  if(!state.adl || typeof state.adl !== 'object'){ state.adl = {}; }
-  Object.keys(data).forEach(key=>{
-    const level = data[key];
-    if(validKeys[key] && Object.prototype.hasOwnProperty.call(ADL_LEVEL_TO_NUM, level)){
-      state.adl[key] = level;
-      result.applied.push(key);
-    } else {
-      result.skipped.push(key);
-    }
-  });
-  return result;
-}
-
-// ---- handoffの中身を「読むだけ」で、差分プレビュー用の一覧を作る（stateは一切変更しない） ----
-// applyAdlHandoff()と同じ判定基準（ADL_ITEMS/ADL_LEVEL_TO_NUMに実在するかどうか）を使うが、
-// 検証済みのapplyAdlHandoff()本体には手を加えたくないため、あえて別関数として読み取り専用で持つ。
-function getAdlHandoffPreviewItems(){
-  let raw;
-  try{ raw = localStorage.getItem(ADL_HANDOFF_KEY); }catch(e){ return []; }
-  if(!raw) return [];
-  let data;
-  try{ data = JSON.parse(raw); }catch(e){ return []; }
-  if(!data || typeof data !== 'object') return [];
-  const items = [];
-  ADL_ITEMS.forEach(([key,label])=>{
-    const newLevel = data[key];
-    if(Object.prototype.hasOwnProperty.call(ADL_LEVEL_TO_NUM, newLevel)){
-      const currentLevel = state.adl && state.adl[key] ? state.adl[key] : null;
-      items.push({ key, label, currentLevel, newLevel, same: currentLevel === newLevel });
-    }
-  });
-  return items;
-}
-
 function stepCh2Adl(){
-  const handoffItems = getAdlHandoffPreviewItems();
-  const hasOverwrite = handoffItems.some(it=>it.currentLevel && !it.same);
-  // 「生活状況をふりかえる」導線ボタンと「取り込む」ボタンを見た目で揃えるための共通スタイル
-  // （.btn/.btn-primaryは<button>タグ限定のCSSのため、<a>タグにも同じ見え方をさせるには
-  // ここでインラインスタイルとして複製する必要がある。他の単発アクションボタン
-  // （addHospitalBtn等）と同じ考え方）。
-  const actionBtnStyle = 'display:block;width:100%;box-sizing:border-box;padding:12px;border-radius:8px;border:none;background:var(--accent-strong);color:#fff;font-size:15px;font-weight:500;cursor:pointer;text-align:center;text-decoration:none;';
-  // ---- 「生活状況をふりかえる」（seikatsu-jokyo/、ADL探索画面）への導線＋取り込みUIを1ブロックに ----
-  // 「自動で反映されます」とは書かない（seikatsu-jokyo側の依頼メモの注意点そのまま）。
-  // 「取り込まない」は単に「取り込む」を押さないだけで実現できるため、専用の取消ボタンは置かない。
-  const handoffBlockHtml = `
-    <div class="hint" style="margin-bottom:14px;">
-      <p style="margin:0 0 10px;">生活の場面をひとつずつふりかえりながら選べる画面もあります。全部やらなくても、気になるものだけで大丈夫です。</p>
-      <a id="adlHandoffLink" href="seikatsu-jokyo/pages/genzai/hub.html" target="_blank" rel="noopener" style="${actionBtnStyle}${handoffItems.length ? 'margin-bottom:14px;' : ''}">生活状況をふりかえる →</a>
-      ${handoffItems.length ? `
-      <p style="margin:0 0 8px;font-weight:600;">ふりかえりの結果</p>
-      <ul style="margin:0 0 10px;padding-left:18px;">
-        ${handoffItems.map(it=>`<li>${esc(it.label)}：${it.currentLevel ? esc(it.currentLevel) : '（未選択）'} → ${esc(it.newLevel)}${it.same ? '（同じ）' : ''}</li>`).join('')}
-      </ul>
-      <p class="small" style="margin:0 0 4px;color:var(--accent-strong);">取り込むボタンで上記項目を取り込めます</p>
-      ${hasOverwrite ? `<p class="small" style="margin:0 0 10px;">すでに選んでいる内容は上書きされます。</p>` : ''}
-      <button type="button" id="adlHandoffApplyBtn" style="${actionBtnStyle}">取り込む</button>
-      ` : ''}
-    </div>`;
-  // ---- ADL_HELP_NOTICEは常時表示のヒントではなく、他項目の「迷ったときの例を見る」と
-  // 同じ折りたたみ（アコーディオン）にする ----
-  const helpNoticeHtml = `
-    <details style="margin-bottom:14px;">
-      <summary class="small" style="cursor:pointer;color:var(--accent-strong);">選ぶときのヒントを見る</summary>
-      <p class="small hint" style="margin-top:6px;">${esc(ADL_HELP_NOTICE)}</p>
-    </details>`;
-  let html = `<div class="card"><h2>最近の日常生活について教えてください</h2><p class="optional-notice">入力しなくても進めます</p>${helpNoticeHtml}${handoffBlockHtml}`;
+  let html = `<div class="card"><h2>最近の日常生活について教えてください</h2><p class="optional-notice">入力しなくても進めます</p><p class="small hint" style="margin-bottom:14px;">${esc(ADL_HELP_NOTICE)}</p>`;
   ADL_ITEMS.forEach(([key,label])=>{
     html += renderAdlItemHtml(key, label, 'adl_');
   });
   html += '</div>';
   document.getElementById('screen').innerHTML = html;
-  const handoffLinkEl = document.getElementById('adlHandoffLink');
-  if(handoffLinkEl){
-    // 探索画面へはgoTo()を経由せず離脱するため、通常の保存タイミング（画面遷移時）を待つと、
-    // この画面でチップを選んだだけでまだ「次へ」を押していない場合に、選択が失われてしまう。
-    // 離脱前に明示的に保存しておく。
-    handoffLinkEl.onclick = ()=>{ saveStateToStorage(); };
-  }
-  const applyBtn = document.getElementById('adlHandoffApplyBtn');
-  if(applyBtn){
-    applyBtn.onclick = ()=>{
-      applyAdlHandoff();
-      saveStateToStorage();
-      stepCh2Adl(); // チップ・差分プレビューとも最新状態で丸ごと再描画する
-    };
-  }
   ADL_ITEMS.forEach(([key])=>{
     const container = document.getElementById('adl_'+key);
     ADL_LEVELS.forEach(levelLabel=>{
@@ -5245,23 +5157,6 @@ function showScreen(){
   renderTasks();
   STEPS[current]();
 }
-
-// 「生活状況をふりかえる」を別タブで開くようにした（2026-07-30）ことに伴う対応。
-// 別タブ側でのふりかえり結果はlocalStorageに書き込まれるが、本体タブ側は
-// ページを読み込み直さない限りそれを検知しない。かといって毎回読み込み直すと
-// 「続きから／最初から」の確認画面（起動時に必ず出る）を経由することになり、
-// 「最初からやり直す」を誤って押すリスクが往復のたびに発生してしまう
-// （このリスクを避けるために別タブ化した経緯そのものと矛盾する）。
-// そのため、タブが再びアクティブになったタイミングで、今ch2_adl画面（ふりかえりの
-// 導線・取り込みボタンがある画面）を表示中の場合に限り、その場で再描画して
-// 最新のふりかえり結果を反映する。stepCh2Adl()はチップ選択もstateから復元して
-// 描画するため、この再描画で入力中の内容が失われることはない
-// （「取り込む」ボタン自身がstepCh2Adl()を呼んで丸ごと再描画しているのと同じ仕組み）。
-document.addEventListener('visibilitychange', function(){
-  if(document.visibilityState === 'visible' && current === 'ch2_adl'){
-    stepCh2Adl();
-  }
-});
 
 resetState();
 current = 'start';

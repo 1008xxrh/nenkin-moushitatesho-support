@@ -1,0 +1,14 @@
+{
+  "name": "seikatsu-jokyo",
+  "version": "0.2.0",
+  "private": true,
+  "description": "生活状況をふりかえる（ADL探索画面）。現在版(genzai)・認定日版(ninteibi)",
+  "scripts": {
+    "build": "node build.js",
+    "pretest": "node build.js",
+    "test": "node run-tests.js"
+  },
+  "devDependencies": {
+    "jsdom": "^29.1.1"
+  }
+}

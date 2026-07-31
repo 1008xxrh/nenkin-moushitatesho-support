@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>生活をふりかえる（炊事）</title>
+<style>
+:root{
+  --bg:#171B26;
+  --card:#1F2433;
+  --ink:#E7E6E0;
+  --ink-soft:#9A9CA8;
+  --line:#2E3446;
+  --accent:#5FA98B;
+  --accent-soft:#20332C;
+  --accent-strong:#8FD6B4;
+  --neutral-soft:#232838;
+  --night-bg:#12151F;
+  --star-off:#4B5468;
+  --star-on:#FAC775;
+  --star-on-ring:#FDEBC7;
+}
+*{box-sizing:border-box;}
+body{
+  margin:0;background:var(--bg);
+  font-family:"Hiragino Sans","Noto Sans JP",system-ui,-apple-system,sans-serif;
+  color:var(--ink);line-height:1.7;
+}
+#app-shell{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;}
+main{flex:1;padding:20px 20px 24px;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px 20px;}
+h1{font-size:19px;font-weight:500;margin:0 0 10px;}
+p.lead{color:var(--ink-soft);font-size:14px;margin:0 0 18px;}
+.progress{font-size:12px;color:var(--ink-soft);padding:0 20px;margin:14px 0 0;}
+.item-row{display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid var(--line);cursor:pointer;}
+.item-row:last-child{border-bottom:none;}
+.item-text{font-size:14.5px;}
+.footer-nav{position:sticky;bottom:0;background:linear-gradient(to top, var(--bg) 75%, transparent);padding:16px 20px 20px;display:flex;gap:10px;max-width:480px;margin:0 auto;width:100%;}
+button.btn{flex:1;padding:14px;border-radius:12px;border:none;font-size:15px;font-weight:500;cursor:pointer;}
+button.btn-primary{background:var(--accent);color:#fff;}
+button.btn-secondary{background:var(--card);border:1px solid var(--line);color:var(--ink);}
+button.btn:disabled{opacity:.45;cursor:not-allowed;}
+button.btn-stacked{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;line-height:1.2;}
+button.btn-stacked .btn-sub{font-size:10px;color:var(--ink-soft);}
+.night-box{background:var(--night-bg);border-radius:14px;padding:14px 10px 6px;margin:6px 0 16px;}
+.star-flash{animation:starFlash 0.4s ease-out;transform-box:fill-box;transform-origin:center;}
+@keyframes starFlash{0%{transform:scale(0.3);opacity:0.3;}45%{transform:scale(1.5);opacity:1;}100%{transform:scale(1);opacity:1;}}
+.found-list{list-style:none;margin:0;padding:0;}
+.found-group{font-size:12px;color:var(--ink-soft);margin:16px 0 6px;}
+.found-item{font-size:14px;padding:6px 0;border-bottom:1px solid var(--line);}
+.option{border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-size:14.5px;cursor:pointer;background:var(--card);margin-bottom:10px;}
+.option.selected{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-strong);}
+.option-title{font-weight:500;margin-bottom:4px;}
+.handoff-box{background:var(--neutral-soft);border-radius:10px;padding:14px;font-size:13px;color:var(--ink-soft);margin-top:16px;}
+/* shared/opening_screen.js（オープニング画面・★アイコン）に対応する見た目。
+   文言を一切含まない「動くしくみ」の見た目だけを置く（.jsと同じ方針）。
+   hub.html自身はopening_screen.jsを使わず独自のrender()で入口を表示しているため、
+   このCSSはhub.htmlには差し込まない（10項目ファイルのみ）。
+   .chick-line / .chick-line .opening-hiyokoは厳密にはchick_widget.jsの出力を
+   各項目ファイルが囲むときの決まり文句だが、hubでは使われずopening_screen側と
+   同じ範囲で共有されるため、ここにまとめている。
+   min-height:56vhは項目ファイル共通の値。hub.htmlだけ一覧表示のため40vhと
+   異なる値を使っており、hub.src.html側にその旨のコメント付きで個別に残している。
+   中身を直すときはこのファイル（shared/opening_screen.css）を編集し、
+   `npm run build`（`npm test`はbuildしてから実行される）で各HTMLに反映すること。 */
+.item-star{width:20px;height:20px;flex-shrink:0;}
+.opening-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:56vh;text-align:center;padding:10px;}
+button.opening-start{margin-top:22px;flex:none;width:180px;padding:7px 14px;}
+.chick-line{display:flex;flex-direction:column;align-items:center;text-align:center;margin:4px 0 18px;}
+.chick-line .opening-hiyoko{margin-bottom:12px;animation:openingBreathe 4s ease-in-out infinite;}
+.opening-standalone-note{font-size:12.5px;color:var(--ink-soft);text-align:center;margin:16px 4px 0;line-height:1.7;}
+/* shared/chick_widget.js（🐥のセリフ吹き出し）に対応する見た目。
+   文言を一切含まない「動くしくみ」の見た目だけを置く（.jsと同じ方針）。
+   現在版(genzai)・認定日版(ninteibi)の両方、およびhub.html含む全画面から共有される。
+   中身を直すときはこのファイル（shared/chick_widget.css）を編集し、
+   `npm run build`（`npm test`はbuildしてから実行される）で各HTMLに反映すること。 */
+.opening-hiyoko{font-size:28px;margin-bottom:16px;animation:openingBreathe 4s ease-in-out infinite;}
+@keyframes openingBreathe{0%,100%{transform:scale(1);}50%{transform:scale(1.04);}}
+.opening-bubble{position:relative;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;font-size:15.5px;line-height:3.2;text-align:center;cursor:pointer;width:280px;}
+.opening-bubble::before{content:'';position:absolute;top:-9px;left:50%;transform:translateX(-50%);border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:9px solid var(--card);}
+.opening-sizer{visibility:hidden;}
+.opening-text-overlay{position:absolute;top:22px;left:22px;right:22px;}
+.doc-note-title{font-size:14px;font-weight:500;margin-bottom:8px;}
+.doc-note-body{font-size:14px;color:var(--ink-soft);margin:0;}
+.divider{border-top:1px solid var(--line);margin:22px 0;}
+.flow-list{margin:4px 0 14px;}
+.flow-step{text-align:center;font-size:14.5px;padding:3px 0;}
+.flow-arrow{text-align:center;color:var(--ink-soft);font-size:13px;line-height:1.4;}
+.hub-back-link{padding:14px 20px 0;font-size:12px;}
+.hub-back-link a{color:var(--ink-soft);text-decoration:none;}
+.hub-back-link a:hover{color:var(--ink);}
+</style>
+</head>
+<body>
+<div id="app-shell">
+  <div class="hub-back-link"><a href="hub.html">&larr; 生活状況の一覧へ戻る</a></div>
+  <div class="progress" id="progress"></div>
+  <main><div class="card" id="screen-root"></div></main>
+  <div class="footer-nav" id="footer-nav"></div>
+</div>
+
+<script>
+// ---- マスタデータ（炊事） ----
+// 2026-07-28作成。食事・着替え・トイレと同じ工程（たたき台→公式基準の裏取り→UI実装→
+// テスト）で作成。公式基準の確認結果：「病歴・就労状況等申立書」裏面の日常生活状況は
+// 着替え・トイレ・食事・炊事・掃除・洗面・入浴・散歩・洗濯・買物の10項目で、それぞれを
+// 「１．自発的にできた」「２．自発的にできたが援助が必要だった」「３．自発的にはできない
+// が援助があればできた」「４．できなかった」の4段階でチェックする（社労士事務所サイトの
+// 解説で複数確認。本体index.htmlのADL_LEVELS＝できる/まあできる/援助があれば/できない と
+// 対応関係も一致）。食事のときのような公式基準との明確なズレ（過食側の記述漏れ等）は、
+// 今回の調査範囲では見つかっていない。
+var FLOW = [
+  {id:'plan', title:'何を作るか考える', items:[
+    {id:'c01', text:'何を作ればいいか、なかなか決められなかった'},
+    {id:'c02', text:'献立を考えるのが面倒に感じた'},
+    {id:'c03', text:'同じようなメニューばかりになった'}
+  ]},
+  {id:'prepare', title:'材料をそろえる', items:[
+    {id:'c04', text:'食材を買いに行くこと自体が億劫だった'},
+    {id:'c05', text:'必要な物を買い忘れることがあった'},
+    {id:'c06', text:'買ったのに使わないまま傷ませてしまうことがあった'}
+  ]},
+  {id:'cook', title:'調理する', items:[
+    {id:'c07', text:'手順を考えながら作るのが負担だった'},
+    {id:'c08', text:'途中で疲れて、作るのをやめてしまうことがあった'},
+    {id:'c09', text:'火や刃物を使うのに、いつもより不安があった'},
+    {id:'c10', text:'レンジで温めるだけなど、簡単なもので済ませることが増えた'}
+  ]},
+  {id:'cleanup', title:'後片付けをする', items:[
+    {id:'c11', text:'洗い物や片付けが後回しになった'},
+    {id:'c12', text:'シンクや台所に洗い物が溜まることがあった'}
+  ]}
+];
+var JUDGMENT = {id:'judgment', title:'気付き・判断の変化', items:[
+  {id:'c13', text:'食べる時間になっても、何か作ろうという気が起きなかった'},
+  {id:'c14', text:'何から手をつければいいか、見通しが立てられなかった'}
+]};
+var ASSISTANCE = {id:'assistance', title:'まわりの助け', items:[
+  {id:'c15', text:'食材を買ってきてもらうことが多かった'},
+  {id:'c16', text:'メニューを決めてもらえれば作れた'},
+  {id:'c17', text:'一緒に作ってくれる人がいれば取り組めた'}
+]};
+var ALL_GROUPS = FLOW.concat([JUDGMENT, ASSISTANCE]);
+var ALL_ITEMS = [];
+ALL_GROUPS.forEach(function(g){ g.items.forEach(function(it){ ALL_ITEMS.push(it); }); });
+
+// 本体index.htmlのADL_HELP_TEXTS.cookingをベースに、献立を決める段階の崩れ（planグループ）・
+// 後片付けまで含めた崩れ（cleanupグループ）も反映して補強した。
+var LEVELS = [
+  {key:'できる', text:'買い置き、献立を考える、調理する、後片付けまで含めて、日常的に自分でこなせていた。'},
+  {key:'まあできる', text:'レトルトや簡単なものなら用意できるが、手の込んだ調理は難しい、後片付けまで手が回らない、メニューがかなり偏るなどの崩れがあった。'},
+  {key:'援助があれば', text:'食材を買ってきてもらう、メニューを決めてもらう、一緒に作ってもらうなどの助けがあればできた。ひとりだと何を作ればよいか決められないことが多かった。'},
+  {key:'できない', text:'調理や後片付けがほとんどできず、レンジで温めるだけで済ませる、または家族や支援者に大きく頼っていた。'}
+];
+
+// ---- 状態（このパイロット専用のlocalStorageキー。index.html本体とは別） ----
+var STORAGE_KEY = 'adl_explorer_pilot_cooking_v1';
+var state = {checked:{}, level:null};
+try{
+  var raw = localStorage.getItem(STORAGE_KEY);
+  if(raw){ var loaded = JSON.parse(raw); if(loaded && typeof loaded==='object'){ state = loaded; } }
+}catch(e){}
+function save(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){} }
+
+// ---- index.html本体への受け渡し（案B：小さいデータだけを共有キー経由で渡す・疎結合） ----
+// 渡すのはADLキー1つにつき最終レベルの文字列1つだけ。詳細は食事パイロットのコメント参照。
+var HANDOFF_KEY = 'adl_handoff_v1';
+var ADL_ITEM_KEY = 'cooking'; // 本体index.htmlのADL_ITEMSにおける、この画面が担当するキー
+function writeHandoff(){
+  try{
+    var raw = localStorage.getItem(HANDOFF_KEY);
+    var data = raw ? JSON.parse(raw) : {};
+    if(!data || typeof data !== 'object'){ data = {}; }
+    if(state.level){ data[ADL_ITEM_KEY] = state.level; }
+    localStorage.setItem(HANDOFF_KEY, JSON.stringify(data));
+  }catch(e){}
+}
+
+// ---- 画面構成：0=はじめに, 1-6=チェック6グループ, 7=見える化, 8=ADL評価, 9=完了 ----
+var step = 0;
+var TOTAL_CHECK_SCREENS = ALL_GROUPS.length; // 6
+var COMPLETE_STEP = TOTAL_CHECK_SCREENS+3; // 完了画面のstep番号（結果を表示する画面）
+
+// ---- オープニング（ADLセクション全体の入口）と🐥のセリフ吹き出し部品。
+//      shared/ 配下の共通部品（2026-07-25切り出し）。
+//      中身を直すときは shared/chick_widget.js / shared/opening_screen.js を編集し、
+//      `npm run build`（`npm test`はbuildしてから実行される）で反映すること。
+// OPENING_MESSAGEは現在版(genzai)固有の文言（認定日版では別の文言になる）。
+var OPENING_MESSAGE = 'ようこそ。\nあなたの普段の生活の詰まりを少しずつ見つけていけます。';
+// ---- 🐥のセリフ吹き出し（共通部品）。枠は最終文の全文サイズで最初から固定し、
+//      タイプライター中も枠が動かないようにする。タップで即座に全文表示できる。
+//      現在版(genzai)・認定日版(ninteibi)の両方から共有される、文言を一切含まない
+//      「動くしくみ」だけを置く（2026-07-25、階層設計の合意により、以前ここにあった
+//      OPENING_MESSAGEは各era（genzai/ninteibi）のsrc側に移した。認定日版では
+//      「あなたの普段の生活の詰まりを…」ではなく別の文言になるため、文言そのものを
+//      shared/に置くと2つのeraで使い回せなくなるため）。
+//      中身を直すときはこのファイル（shared/chick_widget.js）を編集し、
+//      `npm run build`（`npm test`はbuildしてから実行される）で各HTMLに反映すること。 ----
+var chickTyping = false;
+var chickInterval = null;
+
+function chickBubbleHtml(idPrefix, message){
+  return '<div class="opening-bubble" id="'+idPrefix+'Bubble">'+
+      '<div class="opening-sizer" aria-hidden="true">'+message.split('\n').join('<br>')+'</div>'+
+      '<div class="opening-text-overlay" id="'+idPrefix+'Text"></div>'+
+    '</div>';
+}
+
+function wireChickBubble(idPrefix, message, onDone){
+  var bubble = document.getElementById(idPrefix+'Bubble');
+  var textEl = document.getElementById(idPrefix+'Text');
+  bubble.addEventListener('click', function(){
+    if(chickTyping){
+      clearInterval(chickInterval);
+      textEl.innerHTML = message.split('\n').join('<br>');
+      chickTyping = false;
+      if(onDone){ onDone(); }
+    }
+  });
+  textEl.innerHTML = '';
+  var i = 0;
+  chickTyping = true;
+  chickInterval = setInterval(function(){
+    if(i < message.length){
+      textEl.innerHTML += (message[i] === '\n' ? '<br>' : message[i]);
+      i++;
+    } else {
+      clearInterval(chickInterval);
+      chickTyping = false;
+      if(onDone){ onDone(); }
+    }
+  }, 55);
+}
+// ---- オープニング（ADLセクション全体の入口。項目ファイルを単体で直接開いたときに
+//      表示する「ようこそ」画面）と、チェック画面で使う★アイコン。
+//      現在版(genzai)・認定日版(ninteibi)の両方から共有される、文言を一切含まない
+//      「動くしくみ」だけを置く（OPENING_MESSAGE自体は各eraのsrc側で定義され、
+//      ここでは変数名として参照するだけなので、このファイル自体はどちらのeraでも
+//      そのまま使い回せる）。
+//      hub.html自身はこのファイルを使わず、独自のrender()で入口を表示している。
+//      TODO(将来・未着手): この画面が実際に10項目共通の入口として機能するようになったら、
+//      画面下（はじめるボタンの下あたり）に、10項目それぞれの「①はじめに」へ直接飛べる
+//      ボタン一覧を置くアイデアあり。今は保留。
+//      中身を直すときはこのファイル（shared/opening_screen.js）を編集し、
+//      `npm run build`（`npm test`はbuildしてから実行される）で各HTMLに反映すること。 ----
+function renderOpening(){
+  var root = document.getElementById('screen-root');
+  var progress = document.getElementById('progress');
+  var footer = document.getElementById('footer-nav');
+  progress.textContent = '';
+  footer.innerHTML = '';
+  root.innerHTML =
+    '<div class="opening-wrap">'+
+      '<div class="opening-hiyoko">🐥</div>'+
+      chickBubbleHtml('opening', OPENING_MESSAGE)+
+      '<button class="btn btn-primary opening-start" id="openingStartBtn" style="display:none;">はじめる</button>'+
+      '<p class="opening-standalone-note">ほかの生活状況の項目や、この記録の使い方については「← 生活状況の一覧へ戻る」から見られます。</p>'+
+    '</div>';
+  document.getElementById('openingStartBtn').addEventListener('click', function(){
+    step = 0;
+    render();
+  });
+  wireChickBubble('opening', OPENING_MESSAGE, function(){
+    var btn = document.getElementById('openingStartBtn');
+    if(btn){ btn.style.display = 'block'; }
+  });
+}
+
+function starSvg(on){
+  var fill = on ? 'var(--star-on)' : 'var(--star-off)';
+  var ring = on ? '<circle cx="10" cy="10" r="8.5" fill="none" stroke="var(--star-on-ring)" stroke-width="1"/>' : '';
+  return '<svg viewBox="0 0 20 20" class="item-star">'+ring+'<circle cx="10" cy="10" r="6" fill="'+fill+'"/></svg>';
+}
+
+var PENSION_FOCUS_TEXT = 'うまく作れたかどうかではなく、一人で生活したとして、食事の準備を自力で続けられるかを確認します。今誰かが手伝ってくれていても、一人ならどうなるかを思い浮かべながら進めてください。';
+var INTRO_CHICK_LINE = '今日は「炊事」について、一緒に進めてみよう。';
+var REVEAL_CHICK_LINE = '生活の詰まりは、見えてきましたか？';
+// 本体ADL_ITEMSの並び順で、炊事の次は「掃除」。2026-07-28、掃除の画面ができたので有効化。
+var NEXT_ITEM_URL = 'cleaning.html';
+
+function renderIntro(){
+  var flowHtml = '<div class="flow-list">';
+  FLOW.forEach(function(g, i){
+    flowHtml += '<div class="flow-step">'+g.title+'</div>';
+    if(i < FLOW.length-1){ flowHtml += '<div class="flow-arrow">↓</div>'; }
+  });
+  flowHtml += '</div>';
+
+  return '<div class="chick-line">'+
+      '<div class="opening-hiyoko">🐥</div>'+
+      chickBubbleHtml('introChick', INTRO_CHICK_LINE)+
+    '</div>'+
+    '<div class="divider"></div>'+
+    '<div class="doc-note">'+
+      '<div class="doc-note-title">📄 年金事務所が確認したいこと</div>'+
+      '<p class="doc-note-body">'+PENSION_FOCUS_TEXT+'</p>'+
+    '</div>'+
+    flowHtml+
+    '<p class="lead">最近1〜2週間で、当てはまることを一つずつ確認していきます。</p>';
+}
+
+function seededRand(seed){ var x = Math.sin(seed*999)*10000; return x - Math.floor(x); }
+
+var lastToggledId = null;
+
+function renderConstellationSvg(){
+  var n = ALL_ITEMS.length;
+  var svg = '<svg viewBox="0 0 600 300" style="width:100%;height:auto;display:block;">';
+  ALL_ITEMS.forEach(function(it, i){
+    var x = 40 + (i/(n-1))*520 + (seededRand(i)-0.5)*36;
+    var y = 150 + Math.sin(i*2.4)*95 + (seededRand(i+50)-0.5)*30;
+    y = Math.max(28, Math.min(272, y));
+    var on = !!state.checked[it.id];
+    var fill = on ? 'var(--star-on)' : 'var(--star-off)';
+    var r = on ? 6 : 3.5;
+    var flashClass = (on && it.id===lastToggledId) ? ' class="star-flash"' : '';
+    svg += '<circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="'+fill+'"'+flashClass+'/>';
+  });
+  svg += '</svg>';
+  return svg;
+}
+
+function renderChecklistScreen(group){
+  var html = '<h1>'+group.title+'</h1>';
+  html += '<p class="lead">当てはまるものがあれば選んでください。なければそのまま次へ進んでください。</p>';
+  group.items.forEach(function(it){
+    var on = !!state.checked[it.id];
+    html += '<div class="item-row" data-item="'+it.id+'">'+starSvg(on)+'<div class="item-text">'+it.text+'</div></div>';
+  });
+  html += '<div class="night-box">'+renderConstellationSvg()+'</div>';
+  return html;
+}
+
+function renderReveal(){
+  var html = '<h1>気づいたこと</h1>';
+  html += '<p class="lead">ここまでチェックした内容が、星になって並びます。数や点数では見ません。</p>';
+  html += '<div class="night-box">'+renderConstellationSvg()+'</div>';
+
+  var anyChecked = ALL_ITEMS.some(function(it){ return state.checked[it.id]; });
+  html += '<ul class="found-list">';
+  ALL_GROUPS.forEach(function(g){
+    var checkedItems = g.items.filter(function(it){ return state.checked[it.id]; });
+    if(checkedItems.length===0) return;
+    html += '<li class="found-group">'+g.title+'</li>';
+    checkedItems.forEach(function(it){
+      html += '<li class="found-item">'+it.text+'</li>';
+    });
+  });
+  html += '</ul>';
+  if(!anyChecked){
+    html += '<p class="lead">チェックが付いた項目はありませんでした。</p>';
+  } else {
+    html += '<div class="divider"></div>';
+    html += '<div class="chick-line">'+
+        '<div class="opening-hiyoko">🐥</div>'+
+        chickBubbleHtml('revealChick', REVEAL_CHICK_LINE)+
+      '</div>';
+  }
+  return html;
+}
+
+function renderEvaluate(){
+  var html = '<h1>生活状況を選ぶ</h1>';
+  html += '<p class="lead">ここまでの内容を参考に、いま一番近いものを選んでください。迷ったときは、下の説明文を参考にしてください。</p>';
+  LEVELS.forEach(function(lv){
+    var sel = state.level===lv.key ? ' selected' : '';
+    html += '<div class="option'+sel+'" data-level="'+lv.key+'">'+
+      '<div class="option-title">'+lv.key+'</div>'+
+      '<div>'+lv.text+'</div></div>';
+  });
+  return html;
+}
+
+function renderComplete(){
+  var html = '<h1>「炊事」についてはこれでおわりです。</h1>';
+  html += '<div class="option selected"><div class="option-title">炊事</div><div>'+(state.level||'未選択')+'</div></div>';
+  html += '<div class="handoff-box">ここまでの記録は、この端末に保存されています。次に開いたときも、続きから見られます。</div>';
+  html += '<div class="chick-line">'+
+      '<div class="opening-hiyoko">🐥</div>'+
+      '<p class="lead" style="margin:0;">おつかれさまでした。<br>きょうはここまでにしますか？</p>'+
+    '</div>';
+  return html;
+}
+
+function render(){
+  var root = document.getElementById('screen-root');
+  var progress = document.getElementById('progress');
+  var footer = document.getElementById('footer-nav');
+  var html = '';
+  var progressText = '';
+
+  if(step===0){ html = renderIntro(); progressText = 'はじめに'; }
+  else if(step>=1 && step<=TOTAL_CHECK_SCREENS){
+    var group = ALL_GROUPS[step-1];
+    html = renderChecklistScreen(group);
+    progressText = 'チェック '+step+' / '+TOTAL_CHECK_SCREENS;
+  }
+  else if(step===TOTAL_CHECK_SCREENS+1){ html = renderReveal(); progressText = '見える化'; }
+  else if(step===TOTAL_CHECK_SCREENS+2){ html = renderEvaluate(); progressText = '生活状況評価'; }
+  else if(step===COMPLETE_STEP){ html = renderComplete(); progressText = '完了'; }
+
+  root.innerHTML = html;
+  progress.textContent = progressText;
+
+  if(step===0){
+    wireChickBubble('introChick', INTRO_CHICK_LINE);
+  }
+  else if(step===TOTAL_CHECK_SCREENS+1){
+    var revealChickBubble = document.getElementById('revealChickBubble');
+    if(revealChickBubble){ wireChickBubble('revealChick', REVEAL_CHICK_LINE); }
+  }
+
+  // チェック行のクリック
+  root.querySelectorAll('.item-row').forEach(function(row){
+    row.addEventListener('click', function(){
+      var id = row.getAttribute('data-item');
+      state.checked[id] = !state.checked[id];
+      lastToggledId = state.checked[id] ? id : null;
+      save();
+      render();
+    });
+  });
+  // ADL選択のクリック
+  root.querySelectorAll('.option[data-level]').forEach(function(opt){
+    opt.addEventListener('click', function(){
+      state.level = opt.getAttribute('data-level');
+      save();
+      render();
+    });
+  });
+
+  // フッターナビ
+  var footerHtml = '';
+  if(step>0){ footerHtml += '<button class="btn btn-secondary" id="btn-back">戻る</button>'; }
+  if(step<COMPLETE_STEP){
+    // 生活状況評価（LEVELS選択）画面でも、何も選ばずに次へ進めるようにしている
+    // （選ばないと先へ進めない=「選ばされている」感を出さないため。未選択のまま進んだ場合は
+    // 完了画面で「未選択」と表示され、本体への受け渡し（writeHandoff）もされない）。
+    footerHtml += '<button class="btn btn-primary" id="btn-next">次へ</button>';
+  } else if(step===COMPLETE_STEP){
+    if(NEXT_ITEM_URL){
+      footerHtml += '<button class="btn btn-secondary" id="btn-forward">次へすすむ</button>';
+    } else {
+      footerHtml += '<button class="btn btn-secondary btn-stacked" id="btn-forward" disabled>'+
+          '<span class="btn-main">次へすすむ</span><span class="btn-sub">（準備中）</span></button>';
+    }
+    footerHtml += '<button class="btn btn-secondary" id="btn-close">生活状況の一覧へ戻る</button>';
+  }
+  footer.innerHTML = footerHtml;
+  var backBtn = document.getElementById('btn-back');
+  var nextBtn = document.getElementById('btn-next');
+  var forwardBtn = document.getElementById('btn-forward');
+  var closeBtn = document.getElementById('btn-close');
+  if(backBtn){ backBtn.addEventListener('click', function(){ step--; render(); }); }
+  if(nextBtn){ nextBtn.addEventListener('click', function(){ if(!nextBtn.disabled){ step++; render(); } }); }
+  if(forwardBtn){ forwardBtn.addEventListener('click', function(){
+    if(forwardBtn.disabled || !NEXT_ITEM_URL) return;
+    writeHandoff();
+    window.location.href = NEXT_ITEM_URL + '?from=hub';
+  }); }
+  if(closeBtn){ closeBtn.addEventListener('click', function(){
+    // 「次へすすむ」と同じパターン：保存してから直接ハブへ遷移する。
+    writeHandoff();
+    window.location.href = 'hub.html';
+  }); }
+}
+
+// ハブ画面（hub.html）経由、または他の項目からの「次へすすむ」経由で来た場合
+// （?from=hub）は、直前の画面で既に「ようこそ」を見ているので、ここでは重ねて
+// 出さず「はじめに」画面から直接始める。
+var urlParams = new URLSearchParams(window.location.search);
+if(urlParams.get('from') === 'hub'){
+  render();
+} else {
+  renderOpening();
+}
+</script>
+</body>
+</html>

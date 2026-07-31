@@ -1,0 +1,11 @@
+/* shared/chick_widget.js（🐥のセリフ吹き出し）に対応する見た目。
+   文言を一切含まない「動くしくみ」の見た目だけを置く（.jsと同じ方針）。
+   現在版(genzai)・認定日版(ninteibi)の両方、およびhub.html含む全画面から共有される。
+   中身を直すときはこのファイル（shared/chick_widget.css）を編集し、
+   `npm run build`（`npm test`はbuildしてから実行される）で各HTMLに反映すること。 */
+.opening-hiyoko{font-size:28px;margin-bottom:16px;animation:openingBreathe 4s ease-in-out infinite;}
+@keyframes openingBreathe{0%,100%{transform:scale(1);}50%{transform:scale(1.04);}}
+.opening-bubble{position:relative;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;font-size:15.5px;line-height:3.2;text-align:center;cursor:pointer;width:280px;}
+.opening-bubble::before{content:'';position:absolute;top:-9px;left:50%;transform:translateX(-50%);border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:9px solid var(--card);}
+.opening-sizer{visibility:hidden;}
+.opening-text-overlay{position:absolute;top:22px;left:22px;right:22px;}

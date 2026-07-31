@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>生活状況をふりかえる（入口）</title>
+<style>
+:root{
+  --bg:#171B26;
+  --card:#1F2433;
+  --ink:#E7E6E0;
+  --ink-soft:#9A9CA8;
+  --line:#2E3446;
+  --accent:#5FA98B;
+  --accent-soft:#20332C;
+  --accent-strong:#8FD6B4;
+  --neutral-soft:#232838;
+}
+*{box-sizing:border-box;}
+body{
+  margin:0;background:var(--bg);
+  font-family:"Hiragino Sans","Noto Sans JP",system-ui,-apple-system,sans-serif;
+  color:var(--ink);line-height:1.7;
+}
+#app-shell{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;}
+main{flex:1;padding:20px 20px 24px;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px 20px;}
+h1{font-size:19px;font-weight:500;margin:0 0 10px;}
+p.lead{color:var(--ink-soft);font-size:14px;margin:0 0 18px;}
+/* hub専用: 項目一覧を表示する分、他画面のオープニングより低めの高さにしている。
+   shared/opening_screen.cssの56vhとは意図的に異なる値なので、ここだけ個別に残す。 */
+.opening-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:40vh;text-align:center;padding:10px;}
+/* SHARED_CSS: chick_widget */
+.progress-note{font-size:13px;color:var(--ink-soft);text-align:center;margin:22px 0 16px;}
+.hub-permission-note{font-size:13.5px;color:var(--ink);font-weight:600;text-align:center;margin:0 4px 16px;line-height:1.6;}
+.hub-note{font-size:12.5px;color:var(--ink-soft);text-align:center;margin:0 4px 20px;line-height:1.7;}
+.item-list{display:flex;flex-direction:column;gap:10px;}
+a.hub-item, div.hub-item{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 16px;border-radius:12px;border:1px solid var(--line);
+  background:var(--card);color:var(--ink);text-decoration:none;font-size:14.5px;
+}
+a.hub-item:hover{border-color:var(--accent);}
+a.hub-item .hub-item-status{font-size:12px;color:var(--accent-strong);display:inline-flex;align-items:center;gap:5px;}
+.hub-item-num{display:inline-flex;align-items:center;justify-content:center;min-width:15px;height:15px;padding:0 3px;border-radius:8px;background:var(--accent-soft);color:var(--accent-strong);font-size:10.5px;font-weight:700;}
+div.hub-item-disabled{opacity:.45;cursor:not-allowed;}
+div.hub-item-disabled .hub-item-status{font-size:11px;color:var(--ink-soft);}
+.hub-top-bar{padding:14px 20px 0;}
+button.btn{padding:12px 16px;border-radius:12px;border:none;font-size:14px;font-weight:500;cursor:pointer;}
+button.btn-secondary{background:var(--card);border:1px solid var(--line);color:var(--ink);}
+button.btn:disabled{opacity:.45;cursor:not-allowed;}
+</style>
+</head>
+<body>
+<div id="app-shell">
+  <div class="hub-top-bar"><button type="button" class="btn btn-secondary" id="btnBackToIndex">
+      &larr; 申立書サポートに戻る</button></div>
+  <main><div class="card" id="screen-root"></div></main>
+</div>
+
+<script>
+// ---- ADLハブ画面 ----
+// 食事・着替え・トイレの3ファイルにそれぞれ重複していた「ようこそ」オープニング画面を、
+// ここに1つだけ切り出したもの（未着手事項3・4の実装）。
+// 本体index.htmlのADL_ITEMSと同じ並び順・キー名を使う。2026-07-28、10項目すべてのファイルが
+// 実在するようになったため、全項目のリンクが有効。かつて存在した「準備中」（url=null）の分岐
+// は、以後この配列に新しい項目が増えない限り使われない（コード自体は残している）。
+// 画面上部の「← 申立書サポートに戻る」ボタン（#btnBackToIndex）は、本体index.htmlへ戻る
+// ボタン（2026-07-25追加。当初は小さいテキストリンクにしていたが、「indexからADLに来ると
+// 雰囲気が変わるので、戻るボタンがすぐ目に入る方が安心できる」という要望を受け、フッターの
+// 「戻る」「次へ」等と同じ.btnボタンの見た目に変更した）。2026-07-27、本体index.htmlと
+// このプロジェクト(seikatsu-jokyo/)を実際にどう配置するかの合意（index.htmlをリポジトリ
+// 直下、seikatsu-jokyo/をその配下に置く。詳細は00_引き継ぎ_最初に読む.mdの「GitHub階層」
+// 参照）に基づき、disabledを外して遷移先を実装した。
+var ADL_ITEMS = [
+  ['dressing','着替え','dressing.html'],
+  ['toilet','トイレ','toilet.html'],
+  ['eating','食事','eating.html'],
+  ['cooking','炊事', 'cooking.html'],
+  ['cleaning','掃除', 'cleaning.html'],
+  ['washingFace','洗面', 'washing_face.html'],
+  ['bathing','入浴', 'bathing.html'],
+  ['walking','散歩', 'walking.html'],
+  ['laundry','洗濯', 'laundry.html'],
+  ['shopping','買物', 'shopping.html']
+];
+
+var HANDOFF_KEY = 'adl_handoff_v1';
+function readHandoff(){
+  try{
+    var raw = localStorage.getItem(HANDOFF_KEY);
+    var data = raw ? JSON.parse(raw) : {};
+    return (data && typeof data==='object') ? data : {};
+  }catch(e){ return {}; }
+}
+
+// ---- 🐥のセリフ吹き出し部品。以前は食事・着替え・トイレの3ファイルと合わせて4か所に
+//      コピペで重複していたが、2026-07-25、shared/chick_widget.js として切り出した。
+//      中身を直すときはそちらを編集し、`npm run build` で反映すること。
+// OPENING_MESSAGEは現在版(genzai)固有の文言。認定日版(ninteibi)では別の文言になるため、
+// shared/chick_widget.jsには置かず、各era（genzai/ninteibi）のsrc側にそれぞれ定義する。
+var OPENING_MESSAGE = 'ようこそ。\nあなたの普段の生活の詰まりを少しずつ見つけていけます。';
+// SHARED_JS: chick_widget
+
+function renderItemList(){
+  var handoff = readHandoff();
+  var doneCount = ADL_ITEMS.filter(function(it){ return !!handoff[it[0]]; }).length;
+
+  // 本体index.htmlのADL_LEVEL_TO_NUM（できる:1, まあできる:2, 援助があれば:3, できない:4）
+  // と同じ数字を使う。「前回どの選択肢を選んだか」を数字でも一目でわかるようにするため
+  // （2026-07-25追加。文言だけだと「1〜4のどれだったっけ」と思い出しにくいとの要望）。
+  var LEVEL_TO_NUM = {'できる':1, 'まあできる':2, '援助があれば':3, 'できない':4};
+
+  var html = '<div class="progress-note">10項目中 '+doneCount+'項目 完了（'+doneCount+'/'+ADL_ITEMS.length+'）</div>';
+  html += '<p class="hub-permission-note">一度に全部やらなくても大丈夫です。気になるものだけ、途中まででも大丈夫です。</p>';
+  html += '<p class="hub-note">ここでの記録は、この端末に保存されます。申立書サポートアプリ（index.html）の「最近の日常生活について教えてください」画面に戻ると、この記録を確認したうえで取り込めます（自動では反映されません）。</p>';
+  html += '<div class="item-list" id="hubItemList">';
+  ADL_ITEMS.forEach(function(it){
+    var key = it[0], label = it[1], url = it[2];
+    var done = !!handoff[key];
+    if(url){
+      var statusInner;
+      if(done){
+        var num = LEVEL_TO_NUM[handoff[key]];
+        var numBadge = num ? '<span class="hub-item-num">'+num+'</span>' : '';
+        statusInner = numBadge+handoff[key];
+      } else {
+        statusInner = '未着手';
+      }
+      html += '<a class="hub-item" href="'+url+'?from=hub" data-key="'+key+'">'+label+
+        '<span class="hub-item-status">'+statusInner+'</span></a>';
+    } else {
+      html += '<div class="hub-item hub-item-disabled" data-key="'+key+'">'+label+
+        '<span class="hub-item-status">（準備中）</span></div>';
+    }
+  });
+  html += '</div>';
+  return html;
+}
+
+function render(){
+  var root = document.getElementById('screen-root');
+  root.innerHTML =
+    '<div class="opening-wrap">'+
+      '<div class="opening-hiyoko">🐥</div>'+
+      chickBubbleHtml('opening', OPENING_MESSAGE)+
+    '</div>'+
+    '<div id="hubBelowIntro" style="display:none;">'+renderItemList()+'</div>';
+  wireChickBubble('opening', OPENING_MESSAGE, function(){
+    var below = document.getElementById('hubBelowIntro');
+    if(below){ below.style.display = 'block'; }
+  });
+}
+
+render();
+
+// 「← 申立書サポートに戻る」：本体index.htmlへ直接遷移する（保存不要。ハブ画面自体は
+// 各項目の完了画面で既にwriteHandoff()済みのデータを表示しているだけなので）。
+document.getElementById('btnBackToIndex').addEventListener('click', function(){
+  // pages/genzai/hub.html から見て、リポジトリ直下のindex.htmlへは3階層上がる
+  // （genzai→pages→seikatsu-jokyo→リポジトリ直下。実際のindex.htmlと組み合わせた
+  // 配置シミュレーションで検証済み。2026-07-27、以前2階層と誤って書いていたのを修正）
+  window.location.href = '../../../index.html';
+});
+</script>
+</body>
+</html>
