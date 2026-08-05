@@ -61,6 +61,14 @@ textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius
 .adl-item{margin-bottom:18px;}
 .adl-label{font-size:14px;margin-bottom:8px;}
 .adl-options .chip{font-size:12px;padding:7px 10px;}
+.conv-thread{display:flex;flex-direction:column;gap:10px;margin-bottom:6px;}
+.conv-step-label{font-size:11px;color:var(--ink-soft);opacity:.75;margin:6px 0 0 2px;}
+.conv-bot{align-self:flex-start;max-width:92%;background:var(--accent-soft);color:var(--accent-strong);border-radius:14px 14px 14px 4px;padding:10px 14px;font-size:15px;line-height:1.6;}
+.conv-bot-sub{align-self:flex-start;font-size:12px;color:var(--ink-soft);margin:-2px 2px 0;max-width:92%;}
+.conv-user{align-self:flex-end;max-width:85%;background:var(--accent);color:#fff;border-radius:14px 14px 4px 14px;padding:9px 14px;font-size:14px;}
+.conv-user.skip{background:transparent;border:1px dashed var(--line);color:var(--ink-soft);font-style:italic;}
+.conv-current{margin-top:4px;}
+.conv-current .chip-group{margin-bottom:0;}
 .check-row{display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;}
 .check-box{width:18px;height:18px;border:1px solid var(--line);border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:#fff;}
 .check-box.on{background:var(--accent);}
@@ -327,7 +335,19 @@ const COMMUTE_TIME_TO_HM = {
 };
 
 // ---- ADLレベル文字列→様式の番号(1-4) ----
-const ADL_LEVEL_TO_NUM = {'できる':1, 'まあできる':2, '援助があれば':3, 'できない':4};
+// 実テンプレート02.xlsxを確認したところ、現在欄（49-52行目）の選択肢は現在形
+// （自発的にできる／自発的にできるが援助が必要である／自発的にできないが援助があればできる／できない）
+// だが、認定日欄（22-25行目）は過去形（自発的にできた／自発的にできたが援助が必要だった／
+// 自発的にできないが援助があればできた／できなかった）になっている（2026-08-01発見）。
+// アプリ側は元々、現在欄・認定日欄の両方でADL_LEVELS（現在形の簡略ラベル）を共用していたが、
+// 実物に合わせて認定日欄側はADL_LEVELS_PAST（過去形）を使うよう修正した。
+// 番号（1〜4）はどちらの表記でも同じ意味なので、両方の文字列をこの1つの辞書にまとめて持たせる
+// （現在形／過去形で別々の辞書に分けると、ADL_HELP_TEXTSや様式書き込み処理を二重に持つ必要が
+// 出てしまうため。番号さえ正しく引ければ、様式へのチェック書き込み処理側は変更不要）。
+const ADL_LEVEL_TO_NUM = {
+  'できる':1, 'まあできる':2, '援助があれば':3, 'できない':4,
+  'できた':1, 'できたが援助が必要だった':2, 'できないが援助があればできた':3, 'できなかった':4
+};
 
 // ---- ADLキー→様式セル位置（[列1,列2,列3,列4, 行]） ----
 const ADL_CELL_MAP = {
@@ -904,7 +924,42 @@ async function exportToOfficialForm(){
   }
 }
 
-const CH_LABELS = ["就労状況","今の生活の詳細","出来事カード収集","通院の記録","出来事カード配置"];
+const CH_LABELS = ["就労状況","日常生活状況","出来事カード収集","通院の記録","出来事カード配置"];
+
+// 画面ID→章番号の対応表。2026-08-02の章構成見直しで、画面ID(ch2_work_detail等)の
+// 文字列プレフィックスによる前方一致判定から、この明示的な対応表方式に変更した。
+// 理由：画面IDそのものをリネームすると保存済みlocalStorageのcurrent値と食い違い、
+// 入力途中の利用者がアプリを開けなくなる恐れがあるため、画面IDは変えずに
+// 「どの画面がどの章に属するか」だけをこの表で管理する。
+//
+// 新しい画面をSTEPSへ追加したら、必ずこの表かSTEP_CHAPTER_ALLOWLIST（下記）の
+// どちらかに追加すること。どちらにも無いとtest_step_chapter_map.jsの網羅テストが落ちる。
+const STEP_CHAPTER_MAP = {
+  // 第1章：就労状況（就労の有無＋職種等の詳細＋働いていない理由。2026-08-02に職種等をch2から移設）
+  ch1_work_status: 1, ch2_intro: 1, ch2_work_detail: 1, ch2_notwork_reason: 1,
+  // 第2章：日常生活状況（ADL＋その他）
+  ch2_adl: 2, ch2_other: 2,
+  // 第3章：出来事カード収集
+  ch3_intro: 3, ch3_events: 3, ch3_done: 3,
+  // 第4章：通院の記録
+  ch4_intro: 4, ch4_hospital_name: 4, ch4_memory_dig: 4, ch4_period: 4,
+  ch4_confidence: 4, ch4_gap_review: 4, ch4_summary: 4,
+  // 第5章：出来事カード配置
+  ch5_intro: 5, ch5_place: 5, ch5_done: 5, ch5_preview: 5
+  // ch5_recognition系・ch5_notebookは、章に属さないためここには入れない
+  // （2026-08-02修正。理由はSTEP_CHAPTER_ALLOWLIST側のコメント参照）
+};
+// 章に属さないことが意図的な画面（進捗ヘッダーを表示しない）。理由をコメントで残すこと。
+const STEP_CHAPTER_ALLOWLIST = [
+  'start', 'profile_birth', 'profile_band_size', // 章が始まる前の導入画面
+  'ch6_past_intro', 'ch7_fragment_board',         // 過去編（自作カード）の任意画面。元々ヘッダー非表示
+  // 【問題2・2026-08-02修正】ch5_recognition系・ch5_notebookは、旧ロジック（前方一致）では
+  // stepIdが"ch5"始まりのため誤って「第5章 出来事カード配置」表示になっていた。
+  // 認定日ごろの状況・手帳情報は年表配置（第5章の内容）とは無関係な任意の追加入力であり、
+  // 「年表ができました」画面（state.completed.ch5=trueが確定済み）から入る、章のどれにも
+  // 属さない画面のため、過去編（ch6/ch7）と同様にヘッダー非表示にする。
+  'ch5_recognition', 'ch5_recognition_adl', 'ch5_recognition_other', 'ch5_notebook'
+];
 
 const ADL_ITEMS = [
   ['dressing','着替え'],
@@ -919,6 +974,9 @@ const ADL_ITEMS = [
   ['shopping','買物']
 ];
 const ADL_LEVELS = ['できる','まあできる','援助があれば','できない'];
+// 認定日欄（stepCh5RecognitionAdl）専用。実テンプレート02.xlsxの認定日欄が過去形表記のため
+// （詳細はADL_LEVEL_TO_NUM定義のコメント参照）。並び順はADL_LEVELSと同じ1〜4に対応させること。
+const ADL_LEVELS_PAST = ['できた','できたが援助が必要だった','できないが援助があればできた','できなかった'];
 
 // ---- ADL／不就労理由の「迷ったときの例」共通定数 ----
 // ch2系（現在状況）・ch5系（認定日欄）の両方から参照する。
@@ -1009,10 +1067,24 @@ const NOTWORK_REASON_HELP_TEXTS = {
 // 「頑張ればできるか」ではなく「普段どのくらいできていたか」で選ぶ旨も明示する。
 const ADL_HELP_NOTICE = 'あくまで選ぶ目安です。申立書にそのまま書く文ではありません。一番調子がよかった日ではなく、その時期の「普段の状態」に近いものを選んでください。家族の声かけ・準備・見守りがあってできていた場合は、「援助があればできる」を選んで大丈夫です。「頑張ればできるか」ではなく、そのころ普段どのくらいできていたかで選んでください。';
 
+// ---- ch1_work_status（就労状況の選択）の「休職中」に対する補足注記 ----
+// 2026-08-02追加。「休職中＝雇用されているから働いているのと同じ」という誤解が
+// うつ病等で休職中の人に多いと想定されるため、選択を誤らないよう画面下部に常時表示する
+// （ADL_HELP_NOTICE等と違い、選択そのものを左右する重要度が高いため折りたたみにしない）。
+// 根拠：日本年金機構「記載要領（病歴・就労状況等申立書）」の「就労していない（いなかった）
+// 場合」の項目に「休職中だった場合にも理由を記入してください」と明記されている
+// （2026-08-02にsupport会話内で確認・出典URLはセッションまとめ参照）。
+const WORK_LEAVE_NOTICE = '「休職中」は、会社に籍は残っていても実際には働いていない状態です。この申立書では「働いていない」として扱われます。雇用が続いているからといって「働いている」を選ぶ必要はありません。次の画面では、働いていない理由を教えてください。';
+
 // ---- 認定日欄（stepCh5Recognition）専用の時期注記 ----
 // 現在状況(ch2)と認定日欄(ch5)の混同を防ぐための文言強化（GPTレビュー指示1-1）。
 // 画面上部の説明文と、不就労理由・ADLの各ブロック直前の短い再掲注記の2種類を持つ。
-const RECOGNITION_PERIOD_NOTICE_MAIN = 'ここは「今の状態」ではなく、「初診から１年６か月ごろ（認定日ごろ）」の状態を入力する画面です。今とまったく同じでなくても大丈夫です。当時のことを思い出せる範囲で選んでください。今と違っていた点だけ入力する形でもかまいません。';
+// stepCh5RecognitionAdl()（認定日ごろの日常生活について）で、前半だけ常時表示・後半はアコーディオン内に
+// 移すためにINTRO/FLEXへ分割。RECOGNITION_PERIOD_NOTICE_MAIN自体は他画面（stepCh5Recognition）が
+// そのまま使い続けるため、結合結果が従来と完全に一致するようにここで組み立てている。
+const RECOGNITION_PERIOD_NOTICE_MAIN_INTRO = 'ここは「今の状態」ではなく、「初診から１年６か月ごろ（認定日ごろ）」の状態を入力する画面です。';
+const RECOGNITION_PERIOD_NOTICE_MAIN_FLEX = '今とまったく同じでなくても大丈夫です。当時のことを思い出せる範囲で選んでください。今と違っていた点だけ入力する形でもかまいません。';
+const RECOGNITION_PERIOD_NOTICE_MAIN = RECOGNITION_PERIOD_NOTICE_MAIN_INTRO + RECOGNITION_PERIOD_NOTICE_MAIN_FLEX;
 const RECOGNITION_PERIOD_NOTICE_SHORT = '以下は、初診から１年６か月ごろの状態として答えてください。今の生活ではなく、当時の状態を思い出して選んでください。';
 
 // ---- 「その他、生活で困っていること」補足欄のplaceholder文 ----
@@ -2614,13 +2686,19 @@ function renderStringCheckList(containerId, items, selectedArr, helpTexts, onCha
 // ch2_adl（現在状況）・stepCh5Recognition（認定日欄）の両方から呼ぶ共通ヘルパー。
 // 折りたたみにはHTML標準のdetails/summaryを使い、開閉状態をstateで管理する必要がない
 // （選択値の保存・出力ロジックには一切影響しない、表示のみの機能）。
-function renderAdlItemHtml(key, label, containerIdPrefix){
+// levels省略時はADL_LEVELS（現在形）。認定日欄はADL_LEVELS_PAST（過去形）を渡す
+// （2026-08-01、実テンプレート02.xlsxの認定日欄が過去形表記だったため対応）。
+// 「迷ったときの例」の説明文自体はADL_HELP_TEXTSのキー（現在形のADL_LEVELS）で引く。
+// levelsが過去形でも、並び順（idx）でADL_LEVELSの対応するキーを引けば同じ説明文を再利用でき、
+// ADL_HELP_TEXTSを現在形・過去形で二重に持つ必要がない。
+function renderAdlItemHtml(key, label, containerIdPrefix, levels){
+  levels = levels || ADL_LEVELS;
   const help = ADL_HELP_TEXTS[key];
   const helpHtml = help ? `
     <details style="margin-top:4px;">
       <summary class="small" style="cursor:pointer;color:var(--accent-strong);">迷ったときの例を見る</summary>
       <div class="small" style="margin-top:6px;line-height:1.6;">
-        ${ADL_LEVELS.map(level=>`<p style="margin:0 0 6px;"><strong style="font-weight:600;">${esc(level)}：</strong>${esc(help[level]||'')}</p>`).join('')}
+        ${levels.map((level,idx)=>`<p style="margin:0 0 6px;"><strong style="font-weight:600;">${esc(level)}：</strong>${esc(help[ADL_LEVELS[idx]]||'')}</p>`).join('')}
       </div>
     </details>` : '';
   return `<div class="adl-item"><div class="adl-label">${esc(label)}</div><div class="chip-group adl-options" id="${containerIdPrefix}${key}"></div>${helpHtml}</div>`;
@@ -2665,12 +2743,7 @@ function setFooter(opts){
 }
 
 function getChapterNum(stepId){
-  if(stepId.indexOf('ch1')===0) return 1;
-  if(stepId.indexOf('ch2')===0) return 2;
-  if(stepId.indexOf('ch3')===0) return 3;
-  if(stepId.indexOf('ch4')===0) return 4;
-  if(stepId.indexOf('ch5')===0) return 5;
-  return 0;
+  return STEP_CHAPTER_MAP[stepId] || 0;
 }
 
 function renderTasks(){
@@ -2870,6 +2943,7 @@ function stepCh1WorkStatus(){
     <div class="card">
       <h2>今、仕事をしていますか？</h2>
       <div class="option-block" id="opts"></div>
+      <p class="small hint" style="margin-top:14px;">${esc(WORK_LEAVE_NOTICE)}</p>
     </div>`;
   const optsEl = document.getElementById('opts');
   options.forEach(([val,label])=>{
@@ -2886,7 +2960,8 @@ function stepCh1WorkStatus(){
     primaryLabel:'次へ', primaryEnabled: !!state.work.status,
     primaryFn:()=>{
       if(state.workStatusAtCh2Entry && state.workStatusAtCh2Entry !== state.work.status){
-        // 就労状況が以前と変わった場合、第2章の仕事関連データは前提が崩れるため一旦クリアし、再確認してもらう
+        // 就労状況が以前と変わった場合、第1章の仕事関連データ（職種等・働いていない理由）は
+        // 前提が崩れるため一旦クリアし、再確認してもらう
         state.work.jobType = '';
         state.work.commute = [];
         state.work.commuteTime = null;
@@ -2897,9 +2972,33 @@ function stepCh1WorkStatus(){
         state.workStatusJustChanged = true;
       }
       state.workStatusAtCh2Entry = state.work.status;
-      finishChapter('ch1', 'ch2_intro');
+      // 2026-08-02: 第1章の完了フラグは、この先の職種入力／働いていない理由の入力まで
+      // 終えた時点（stepCh2WorkDetail/stepCh2NotworkReason側）で立てるように変更した。
+      // ここではまだ完了とせず、次の画面へ進むだけにする。
+      //
+      // 2026-08-02追加：編集チップ経由（state.returnToがセット済み＝「年表ができました」
+      // 画面から来ている）の場合は、ch2_intro（「今の生活について、もう少し教えてください」
+      // という橋渡し画面）を省略し、職種／理由の入力画面へ直接進む。通常の初回入力フロー
+      // （returnToが無い）では、これまで通りch2_introを経由する。
+      if(state.returnTo){
+        goTo(state.work.status==='working' ? 'ch2_work_detail' : 'ch2_notwork_reason');
+      } else {
+        goTo('ch2_intro');
+      }
     }
   });
+}
+
+// 2026-08-02: 就労状況変更時の「もう一度確認してください」通知。
+// 元々はch2_introだけで表示していたが、編集時にch2_introを省略するようになったため、
+// ch2_intro／ch2_work_detail／ch2_notwork_reasonのどこが最初に表示されても
+// 正しく通知できるよう共通関数化した。呼ばれた時点でフラグを消費（false化）する。
+function workStatusChangedNoticeHtml(){
+  const html = state.workStatusJustChanged
+    ? `<p class="small" style="margin-top:-8px;margin-bottom:16px;color:var(--warn);">就労状況が変更されたため、この先の内容をもう一度確認してください。</p>`
+    : '';
+  state.workStatusJustChanged = false;
+  return html;
 }
 
 function stepCh3Intro(){
@@ -4014,7 +4113,7 @@ function stepCh5Done(){
 
   const editListHtml = `
     <button type="button" class="edit-chip" data-edit-chapter="ch1_work_status">就労状況を修正</button>
-    <button type="button" class="edit-chip" data-edit-chapter="ch2_intro">今の生活を修正</button>
+    <button type="button" class="edit-chip" data-edit-chapter="ch2_adl">日常生活状況を修正</button>
     <button type="button" class="edit-chip" data-edit-chapter="ch3_events">出来事カードを追加・削除</button>
     <button type="button" class="edit-chip" data-edit-chapter="${state.hospitals.length>0 ? 'ch4_summary' : 'ch4_intro'}">通院記録を修正</button>
     <button type="button" class="edit-chip" id="editPlacementChip">出来事の配置を直す</button>
@@ -4192,12 +4291,17 @@ function renderPreviewPeriodRowsHtml(rows){
   }).join('');
 }
 
-// ---- ADL10項目の選択枠（丸数字、仕様書2.2節2番）。ADL_LEVELSの並び順＝実物の1〜4に対応。 ----
+// ---- ADL10項目の選択枠（丸数字、仕様書2.2節2番）。ADL_LEVELSの並び順＝実物の1〜4に対応。
+//      この関数は現在欄（state.adl、現在形の文字列）・認定日欄（state.recognitionSnapshot.adl、
+//      過去形の文字列）の両方から呼ばれるため、文字列そのものではなく、ADL_LEVEL_TO_NUMで
+//      引いた番号同士で比較する（2026-08-01、過去形対応時に文字列比較のままだと認定日欄側の
+//      丸数字が常に「未選択」表示になってしまう不具合を防ぐために修正）。 ----
 function renderPreviewAdlGridHtml(adl){
   const items = ADL_ITEMS.map(([key,label])=>{
     const current = (adl||{})[key];
+    const currentNum = ADL_LEVEL_TO_NUM[current];
     const numsHtml = ADL_LEVELS.map((level, idx)=>{
-      const selected = current === level;
+      const selected = currentNum === (idx+1);
       return `<span class="pp-adl-num${selected?' pp-selected':''}">${idx+1}</span>`;
     }).join('');
     return `<div class="pp-adl-item"><span class="pp-adl-item-label">${esc(label)}</span><span class="pp-adl-nums">${numsHtml}</span></div>`;
@@ -4641,10 +4745,7 @@ function stepCh7FragmentBoard(){
 // 何度でも置き直せる」画面になったため、ch5_doneからの導線もch5_placeへ一本化している。
 
 function stepCh2Intro(){
-  const changedNotice = state.workStatusJustChanged
-    ? `<p class="small" style="margin-top:-8px;margin-bottom:16px;color:var(--warn);">就労状況が変更されたため、この先の内容をもう一度確認してください。</p>`
-    : '';
-  state.workStatusJustChanged = false;
+  const changedNotice = workStatusChangedNoticeHtml();
   document.getElementById('screen').innerHTML = `
     <div class="card">
       <h2>今の生活について、もう少し教えてください</h2>
@@ -4657,11 +4758,37 @@ function stepCh2Intro(){
   }});
 }
 
+// 2026-08-04: 初回入力は会話形式（1問ずつ）、修正時は従来の一覧フォームのまま。
+// ただし優先順位として、まず「状況変更で白紙に戻った直後」を会話形式にする。
+//
+// 判定は上から順に見る：
+// 1) state.workStatusJustChanged … 「働いていない/休職中」→「働いている」等、ch1_work_status
+//    で就労状況が変わり、この画面の項目（職種・通勤方法など）が一旦クリアされた直後。
+//    returnTo/completed.ch1が立っていても、内容は事実上「初めて」なので会話形式にする。
+//    一覧フォームだと全項目が空欄のまま「なんとなく次へ」で素通りされやすく、
+//    せっかくの「もう一度確認してください」という警告の意図に沿わないため。
+// 2) state.returnTo（編集チップ経由の再訪問）または state.completed.ch1（一度は5問
+//    すべて答え終えている＝ch2_adlへ進んだ後に「戻る」で再訪問した場合を含む）
+//    … 内容は既にあるので、一覧フォームで素早く見返せるようにする。
+// 3) それ以外（本当に初めて） … 会話形式。
 function stepCh2WorkDetail(){
+  if(state.workStatusJustChanged){
+    renderCh2WorkDetailConversation();
+  } else if(state.returnTo || state.completed.ch1){
+    renderCh2WorkDetailForm();
+  } else {
+    renderCh2WorkDetailConversation();
+  }
+}
+
+// 修正時に使う、従来からの一覧フォーム（挙動は変更なし）
+function renderCh2WorkDetailForm(){
+  const changedNotice = workStatusChangedNoticeHtml();
   document.getElementById('screen').innerHTML = `
     <div class="card">
       <h2>仕事の内容を教えてください</h2>
       <p class="optional-notice">入力しなくても進めます</p>
+      ${changedNotice}
       <label class="field-label">職種・仕事の内容（短くでOK）</label>
       <input type="text" id="jobType" placeholder="例：事務職、清掃業、接客業" />
       <label class="field-label">通勤方法（複数選択可）</label>
@@ -4682,16 +4809,159 @@ function stepCh2WorkDetail(){
   renderChipGroup('commuteChips', COMMUTE_METHOD, state.work.commute, true, ()=>{});
   renderChipGroup('commuteTimeChips', COMMUTE_TIME, state.work.commuteTime ? [state.work.commuteTime] : [], false, v=>{ state.work.commuteTime = v; });
   renderChipGroup('conditionChips', WORK_CONDITION, state.work.condition, true, ()=>{});
-  setFooter({secondaryLabel:'戻る', secondaryFn:goBack, primaryLabel:'次へ', primaryEnabled:true, primaryFn:()=>goTo('ch2_adl')});
+  // 2026-08-02: 職種等の入力（就労状況の一部）が終わったここで第1章の完了フラグを立てる
+  setFooter({secondaryLabel:'戻る', secondaryFn:goBack, primaryLabel:'次へ', primaryEnabled:true, primaryFn:()=>finishChapter('ch1', 'ch2_adl')});
+}
+
+// 初回入力用の会話形式（1問ずつ）。質問は既存フォームと同じ5項目・同じ選択肢を使う。
+const CH2_WORK_DETAIL_STEPS = [
+  {key:'jobType', type:'text', q:'今の仕事の内容を教えてください', sub:'職種やお仕事の内容を、短くで大丈夫です。', placeholder:'例：事務職、清掃業、接客業'},
+  {key:'commute', type:'chips-multi', q:'通勤方法を教えてください', sub:'あてはまるものを、いくつでも選んでください。', options:COMMUTE_METHOD},
+  {key:'commuteTime', type:'chips-single', q:'片道の通勤時間は、どれくらいですか', sub:'一番近いものをタップしてください。', options:COMMUTE_TIME},
+  {key:'workDays', type:'number', q:'先月の出勤日数は、およそ何日でしたか', sub:'覚えている範囲で大丈夫です。', placeholder:'例：18'},
+  {key:'condition', type:'chips-multi', q:'仕事中や終わった後の、体や気持ちの状態を教えてください', sub:'あてはまるものを、いくつでも選んでください。', options:WORK_CONDITION}
+];
+let ch2WorkDetailConvIndex = 0;
+
+function renderCh2WorkDetailConversation(){
+  ch2WorkDetailConvIndex = 0;
+  const changedNotice = workStatusChangedNoticeHtml();
+  document.getElementById('screen').innerHTML = `
+    <div class="card">
+      <h2>仕事の内容を教えてください</h2>
+      <p class="optional-notice">ひとつずつお聞きします。答えなくても次に進めます</p>
+      ${changedNotice}
+      <div class="conv-thread" id="ch2ConvThread"></div>
+      <div class="conv-current" id="ch2ConvCurrent"></div>
+      <button type="button" class="link-btn" id="ch2ConvSkipAll" style="margin-top:14px;">残りの質問はとばして、日常生活状況へ →</button>
+    </div>`;
+  document.getElementById('ch2ConvSkipAll').onclick = ()=>{
+    ch2ConvCommitCurrentTextValue(); // 入力途中の値を消さずに確定してから抜ける
+    finishChapter('ch1', 'ch2_adl');
+  };
+  renderCh2ConvStep();
+}
+
+// 現在の質問の吹き出し（ラベル・本文・補足）をスレッドに積み、入力コントロールを表示する
+function renderCh2ConvStep(){
+  const step = CH2_WORK_DETAIL_STEPS[ch2WorkDetailConvIndex];
+  const thread = document.getElementById('ch2ConvThread');
+  const label = document.createElement('div');
+  label.className = 'conv-step-label';
+  label.textContent = (ch2WorkDetailConvIndex+1) + ' / ' + CH2_WORK_DETAIL_STEPS.length;
+  thread.appendChild(label);
+  const bubble = document.createElement('div');
+  bubble.className = 'conv-bot';
+  bubble.textContent = step.q;
+  thread.appendChild(bubble);
+  if(step.sub){
+    const sub = document.createElement('div');
+    sub.className = 'conv-bot-sub';
+    sub.textContent = step.sub;
+    thread.appendChild(sub);
+  }
+  renderCh2ConvCurrentControl(step);
+  setFooter({secondaryLabel:'戻る', secondaryFn:ch2ConvGoBack, primaryLabel:'次へ', primaryEnabled:true, primaryFn:ch2ConvNext});
+}
+
+// 質問タイプに応じた入力コントロール（テキスト／数値／チップ）を描画する。
+// チップは既存のrenderChipGroupをそのまま使うため、選択肢・見た目・配列の扱いは元のフォームと同一。
+function renderCh2ConvCurrentControl(step){
+  const el = document.getElementById('ch2ConvCurrent');
+  el.innerHTML = '';
+  if(step.type==='text' || step.type==='number'){
+    const input = document.createElement('input');
+    input.type = step.type;
+    input.id = 'ch2ConvInput';
+    input.placeholder = step.placeholder || '';
+    if(step.type==='number'){ input.min='0'; input.max='31'; }
+    input.value = state.work[step.key] || '';
+    el.appendChild(input);
+    setTimeout(()=>input.focus(), 0);
+  } else if(step.type==='chips-multi'){
+    const box = document.createElement('div');
+    box.className = 'chip-group';
+    box.id = 'ch2ConvChips';
+    el.appendChild(box);
+    renderChipGroup('ch2ConvChips', step.options, state.work[step.key], true, ()=>{});
+  } else if(step.type==='chips-single'){
+    const box = document.createElement('div');
+    box.className = 'chip-group';
+    box.id = 'ch2ConvChips';
+    el.appendChild(box);
+    const selected = state.work[step.key] ? [state.work[step.key]] : [];
+    renderChipGroup('ch2ConvChips', step.options, selected, false, v=>{ state.work[step.key] = v; });
+  }
+}
+
+// 現在の質問がテキスト／数値入力の場合、画面上の値をstate.workへ確定する。
+// チップ選択（複数/単一）は選んだ瞬間にstate側へ反映済みのため、ここでは何もしない。
+// 「次へ」だけでなく「残りはとばす」からも呼ぶことで、入力途中の値が消えないようにする。
+function ch2ConvCommitCurrentTextValue(){
+  const step = CH2_WORK_DETAIL_STEPS[ch2WorkDetailConvIndex];
+  if(step.type==='text' || step.type==='number'){
+    const input = document.getElementById('ch2ConvInput');
+    if(input) state.work[step.key] = input.value.trim();
+  }
+}
+
+// 「次へ」：現在の質問の回答をstate.workへ確定し、回答の吹き出しをスレッドに積んでから次の質問へ。
+// 最後の質問まで終えたら、フォーム版と同じくfinishChapter('ch1','ch2_adl')で第1章を完了する。
+function ch2ConvNext(){
+  const step = CH2_WORK_DETAIL_STEPS[ch2WorkDetailConvIndex];
+  ch2ConvCommitCurrentTextValue();
+  let display, isSkip;
+  if(step.type==='text' || step.type==='number'){
+    const val = state.work[step.key];
+    display = val || '（今回はスキップ）';
+    isSkip = !val;
+  } else {
+    const val = state.work[step.key];
+    const arr = Array.isArray(val) ? val : (val ? [val] : []);
+    display = arr.length ? arr.join('、') : '（今回はスキップ）';
+    isSkip = arr.length===0;
+  }
+  const thread = document.getElementById('ch2ConvThread');
+  const answerBubble = document.createElement('div');
+  answerBubble.className = 'conv-user' + (isSkip ? ' skip' : '');
+  answerBubble.textContent = display;
+  thread.appendChild(answerBubble);
+
+  if(ch2WorkDetailConvIndex < CH2_WORK_DETAIL_STEPS.length - 1){
+    ch2WorkDetailConvIndex++;
+    renderCh2ConvStep();
+  } else {
+    // 2026-08-04: 会話形式でも、5問目の回答確定と同時に第1章の完了フラグを立てる（フォーム版と同じタイミング）
+    finishChapter('ch1', 'ch2_adl');
+  }
+}
+
+// 「戻る」：会話の途中（2問目以降）なら1つ前の質問に戻って答え直せるようにする。
+// 1問目まで戻ったら、通常のgoBack()（画面を出る）に委ねる。
+function ch2ConvGoBack(){
+  if(ch2WorkDetailConvIndex > 0){
+    const thread = document.getElementById('ch2ConvThread');
+    const curStep = CH2_WORK_DETAIL_STEPS[ch2WorkDetailConvIndex];
+    if(curStep.sub) thread.lastElementChild.remove(); // 現在の質問の補足
+    thread.lastElementChild.remove(); // 現在の質問の本文
+    thread.lastElementChild.remove(); // 現在の質問のラベル（N/5）
+    thread.lastElementChild.remove(); // ひとつ前の質問への回答吹き出し
+    ch2WorkDetailConvIndex--;
+    renderCh2ConvCurrentControl(CH2_WORK_DETAIL_STEPS[ch2WorkDetailConvIndex]);
+    setFooter({secondaryLabel:'戻る', secondaryFn:ch2ConvGoBack, primaryLabel:'次へ', primaryEnabled:true, primaryFn:ch2ConvNext});
+  } else {
+    goBack();
+  }
 }
 
 function stepCh2NotworkReason(){
+  const changedNotice = workStatusChangedNoticeHtml();
   const showOtherNote = state.notWorkReasons.includes('その他');
   document.getElementById('screen').innerHTML = `
     <div class="card">
       <h2>仕事をしていない理由を教えてください</h2>
       <p class="optional-notice">入力しなくても進めます</p>
-      <p class="small hint" style="margin-bottom:14px;">${esc(ADL_HELP_NOTICE)}</p>
+      ${changedNotice}
       <div id="reasonList"></div>
       <div id="notWorkReasonOtherBlock" style="display:${showOtherNote?'':'none'};margin-top:10px;">
         <label class="field-label">「その他」の具体的な理由</label>
@@ -4706,7 +4976,8 @@ function stepCh2NotworkReason(){
   const otherTextEl = document.getElementById('notWorkReasonOtherText');
   otherTextEl.value = state.notWorkReasonOther;
   otherTextEl.oninput = e=>state.notWorkReasonOther = e.target.value;
-  setFooter({secondaryLabel:'戻る', secondaryFn:goBack, primaryLabel:'次へ', primaryEnabled:true, primaryFn:()=>goTo('ch2_adl')});
+  // 2026-08-02: 働いていない理由の入力（就労状況の一部）が終わったここで第1章の完了フラグを立てる
+  setFooter({secondaryLabel:'戻る', secondaryFn:goBack, primaryLabel:'次へ', primaryEnabled:true, primaryFn:()=>finishChapter('ch1', 'ch2_adl')});
 }
 
 // =====================================================================
@@ -4770,6 +5041,64 @@ function getAdlHandoffPreviewItems(){
   return items;
 }
 
+// =====================================================================
+// 「生活状況をふりかえる」画面・認定日版（seikatsu-jokyo/pages/ninteibi/）との連携
+// （2026-08-02統合）。上のgenzai版（ADL_HANDOFF_KEY・applyAdlHandoff等）と同じ
+// 「案B・疎結合」方式だが、保存先のlocalStorageキー・書き込み先state・レベル表記
+// （過去形）がそれぞれ異なるため、ロジックを共有せず別関数として持つ。
+// ・localStorageキー：'adl_handoff_ninteibi_v1'（genzai側の'adl_handoff_v1'とは別名前空間。
+//   ninteibi側が意図的に分けている。seikatsu-jokyo/src/ninteibi/hub.src.html参照）
+// ・書き込み先：state.adlではなくstate.recognitionSnapshot.adl（認定日時点のADL）
+// ・レベル値：ninteibi側のLEVELSは、本体ADL_LEVEL_TO_NUMの過去形キー（できた／
+//   できたが援助が必要だった／できないが援助があればできた／できなかった）と
+//   完全一致させてある設計のため、変換処理なしでそのままADL_LEVEL_TO_NUMが引ける
+//   （2026-08-01セッションまとめ「積み残し」参照）。
+// =====================================================================
+const ADL_HANDOFF_NINTEIBI_KEY = 'adl_handoff_ninteibi_v1';
+
+function applyAdlHandoffNinteibi(){
+  const result = {applied:[], skipped:[]};
+  let raw;
+  try{ raw = localStorage.getItem(ADL_HANDOFF_NINTEIBI_KEY); }catch(e){ return result; }
+  if(!raw) return result;
+  let data;
+  try{ data = JSON.parse(raw); }catch(e){ return result; }
+  if(!data || typeof data !== 'object') return result;
+  const validKeys = {};
+  ADL_ITEMS.forEach(([key])=>{ validKeys[key] = true; });
+  const snap = state.recognitionSnapshot;
+  if(!snap.adl || typeof snap.adl !== 'object'){ snap.adl = {}; }
+  Object.keys(data).forEach(key=>{
+    const level = data[key];
+    if(validKeys[key] && Object.prototype.hasOwnProperty.call(ADL_LEVEL_TO_NUM, level)){
+      snap.adl[key] = level;
+      result.applied.push(key);
+    } else {
+      result.skipped.push(key);
+    }
+  });
+  return result;
+}
+
+function getAdlHandoffNinteibiPreviewItems(){
+  let raw;
+  try{ raw = localStorage.getItem(ADL_HANDOFF_NINTEIBI_KEY); }catch(e){ return []; }
+  if(!raw) return [];
+  let data;
+  try{ data = JSON.parse(raw); }catch(e){ return []; }
+  if(!data || typeof data !== 'object') return [];
+  const items = [];
+  const snap = state.recognitionSnapshot;
+  ADL_ITEMS.forEach(([key,label])=>{
+    const newLevel = data[key];
+    if(Object.prototype.hasOwnProperty.call(ADL_LEVEL_TO_NUM, newLevel)){
+      const currentLevel = snap.adl && snap.adl[key] ? snap.adl[key] : null;
+      items.push({ key, label, currentLevel, newLevel, same: currentLevel === newLevel });
+    }
+  });
+  return items;
+}
+
 function stepCh2Adl(){
   const handoffItems = getAdlHandoffPreviewItems();
   const hasOverwrite = handoffItems.some(it=>it.currentLevel && !it.same);
@@ -4783,7 +5112,7 @@ function stepCh2Adl(){
   // 「取り込まない」は単に「取り込む」を押さないだけで実現できるため、専用の取消ボタンは置かない。
   const handoffBlockHtml = `
     <div class="hint" style="margin-bottom:14px;">
-      <p style="margin:0 0 10px;">生活の場面をひとつずつふりかえりながら選べる画面もあります。全部やらなくても、気になるものだけで大丈夫です。</p>
+      <p style="margin:0 0 10px;">生活の場面をひとつずつふりかえりながら選べる画面もあります。いちどに全部をやらなくても大丈夫です。できそうな日に振り返ってみましょう。</p>
       <a id="adlHandoffLink" href="seikatsu-jokyo/pages/genzai/hub.html" target="_blank" rel="noopener" style="${actionBtnStyle}${handoffItems.length ? 'margin-bottom:14px;' : ''}">生活状況をふりかえる →</a>
       ${handoffItems.length ? `
       <p style="margin:0 0 8px;font-weight:600;">ふりかえりの結果</p>
@@ -4932,7 +5261,6 @@ function stepCh5Recognition(){
       <div id="recogNotWorkingBlock" style="display:none;">
         <label class="field-label">仕事をしていなかった理由（複数選択可）</label>
         <p class="small" style="margin-bottom:4px;color:var(--accent-strong);">${esc(RECOGNITION_PERIOD_NOTICE_SHORT)}</p>
-        <p class="small hint" style="margin-bottom:10px;">${esc(ADL_HELP_NOTICE)}</p>
         <div id="recogReasonList"></div>
         <div id="recogReasonOtherBlock" style="display:${snap.notWorkReasons.includes('その他')?'':'none'};margin-top:10px;">
           <label class="field-label">「その他」の具体的な理由</label>
@@ -5019,13 +5347,36 @@ function stepCh5Recognition(){
 //      就労状況（stepCh5Recognition）とは別画面に分離（情報過多を避けるため）。 ----
 function stepCh5RecognitionAdl(){
   const snap = state.recognitionSnapshot;
+  const handoffItems = getAdlHandoffNinteibiPreviewItems();
+  const hasOverwrite = handoffItems.some(it=>it.currentLevel && !it.same);
+  // stepCh2Adl()のactionBtnStyleと同じ（<a>タグにも<button>と同じ見た目を持たせるための複製）
+  const actionBtnStyle = 'display:block;width:100%;box-sizing:border-box;padding:12px;border-radius:8px;border:none;background:var(--accent-strong);color:#fff;font-size:15px;font-weight:500;cursor:pointer;text-align:center;text-decoration:none;';
+  // stepCh2Adl()のhandoffBlockHtmlと同じ考え方（案B・疎結合、「自動で反映されます」とは書かない）。
+  // リンク先・文言のみ認定日版（ninteibi）向けに差し替えている。
+  const handoffBlockHtml = `
+    <div class="hint" style="margin-bottom:14px;">
+      <p style="margin:0 0 10px;">認定日ごろの生活の場面をひとつずつふりかえりながら選べる画面もあります。いちどに全部をやらなくても大丈夫です。できそうな日に振り返ってみましょう。</p>
+      <a id="adlHandoffNinteibiLink" href="seikatsu-jokyo/pages/ninteibi/hub.html" target="_blank" rel="noopener" style="${actionBtnStyle}${handoffItems.length ? 'margin-bottom:14px;' : ''}">認定日ごろの生活状況をふりかえる →</a>
+      ${handoffItems.length ? `
+      <p style="margin:0 0 8px;font-weight:600;">ふりかえりの結果</p>
+      <ul style="margin:0 0 10px;padding-left:18px;">
+        ${handoffItems.map(it=>`<li>${esc(it.label)}：${it.currentLevel ? esc(it.currentLevel) : '（未選択）'} → ${esc(it.newLevel)}${it.same ? '（同じ）' : ''}</li>`).join('')}
+      </ul>
+      <p class="small" style="margin:0 0 4px;color:var(--accent-strong);">取り込むボタンで上記項目を取り込めます</p>
+      ${hasOverwrite ? `<p class="small" style="margin:0 0 10px;">すでに選んでいる内容は上書きされます。</p>` : ''}
+      <button type="button" id="adlHandoffNinteibiApplyBtn" style="${actionBtnStyle}">取り込む</button>
+      ` : ''}
+    </div>`;
 
   document.getElementById('screen').innerHTML = `
     <div class="card">
       <h2>障害認定日ごろの日常生活について（任意）</h2>
-      <p class="lead" style="font-weight:600;color:var(--accent-strong);">${esc(RECOGNITION_PERIOD_NOTICE_MAIN)}</p>
-      <p class="small" style="margin-bottom:4px;color:var(--accent-strong);">${esc(RECOGNITION_PERIOD_NOTICE_SHORT)}</p>
-      <p class="small hint" style="margin-bottom:10px;">${esc(ADL_HELP_NOTICE)}</p>
+      <p class="lead" style="font-weight:600;color:var(--accent-strong);">${esc(RECOGNITION_PERIOD_NOTICE_MAIN_INTRO)}</p>
+      <details style="margin-bottom:14px;">
+        <summary class="small" style="cursor:pointer;color:var(--accent-strong);">選ぶときのヒントを見る</summary>
+        <p class="small hint" style="margin-top:6px;">${esc(RECOGNITION_PERIOD_NOTICE_MAIN_FLEX + ADL_HELP_NOTICE)}</p>
+      </details>
+      ${handoffBlockHtml}
       <div id="recogAdlList"></div>
 
       <button type="button" id="disableRecognitionBtn" style="width:100%;margin-top:18px;padding:10px;border-radius:8px;border:1px solid var(--danger);background:var(--danger-soft);color:var(--danger);font-size:14px;cursor:pointer;">この入力を取りやめて空欄に戻す</button>
@@ -5033,14 +5384,31 @@ function stepCh5RecognitionAdl(){
       <p class="small" style="margin-top:14px;text-align:center;">入力した内容は自動的に保存されます。そのまま戻っても消えません。</p>
     </div>`;
 
+  const handoffLinkEl = document.getElementById('adlHandoffNinteibiLink');
+  if(handoffLinkEl){
+    // stepCh2Adl()と同じ理由：離脱前に明示的に保存しておく（画面遷移時の保存タイミングを待たない）
+    handoffLinkEl.onclick = ()=>{ saveStateToStorage(); };
+  }
+  const applyBtn = document.getElementById('adlHandoffNinteibiApplyBtn');
+  if(applyBtn){
+    applyBtn.onclick = ()=>{
+      applyAdlHandoffNinteibi();
+      saveStateToStorage();
+      stepCh5RecognitionAdl(); // チップ・差分プレビューとも最新状態で丸ごと再描画する
+    };
+  }
+
+  // 2026-08-01：実テンプレート02.xlsxを確認したところ、認定日欄の選択肢は過去形
+  // （できた／できたが援助が必要だった／できないが援助があればできた／できなかった）だったため、
+  // 現在欄と同じADL_LEVELSではなくADL_LEVELS_PASTを使う（詳細はADL_LEVEL_TO_NUM定義のコメント参照）。
   let adlHtml = '';
   ADL_ITEMS.forEach(([key,label])=>{
-    adlHtml += renderAdlItemHtml(key, label, 'recogAdl_');
+    adlHtml += renderAdlItemHtml(key, label, 'recogAdl_', ADL_LEVELS_PAST);
   });
   document.getElementById('recogAdlList').innerHTML = adlHtml;
   ADL_ITEMS.forEach(([key])=>{
     const container = document.getElementById('recogAdl_'+key);
-    ADL_LEVELS.forEach(levelLabel=>{
+    ADL_LEVELS_PAST.forEach(levelLabel=>{
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'chip' + (snap.adl[key]===levelLabel ? ' chip-selected' : '');
@@ -5252,14 +5620,17 @@ function showScreen(){
 // 「続きから／最初から」の確認画面（起動時に必ず出る）を経由することになり、
 // 「最初からやり直す」を誤って押すリスクが往復のたびに発生してしまう
 // （このリスクを避けるために別タブ化した経緯そのものと矛盾する）。
-// そのため、タブが再びアクティブになったタイミングで、今ch2_adl画面（ふりかえりの
-// 導線・取り込みボタンがある画面）を表示中の場合に限り、その場で再描画して
-// 最新のふりかえり結果を反映する。stepCh2Adl()はチップ選択もstateから復元して
-// 描画するため、この再描画で入力中の内容が失われることはない
-// （「取り込む」ボタン自身がstepCh2Adl()を呼んで丸ごと再描画しているのと同じ仕組み）。
+// そのため、タブが再びアクティブになったタイミングで、今ch2_adl画面（現在の生活状況・
+// ふりかえりの導線がある画面）またはch5_recognition_adl画面（認定日ごろの生活状況・同じ
+// 導線がある画面）を表示中の場合に限り、その場で再描画して最新のふりかえり結果を反映する。
+// どちらの関数もチップ選択をstateから復元して描画するため、この再描画で入力中の内容が
+// 失われることはない（「取り込む」ボタン自身が同じ関数を呼んで丸ごと再描画しているのと同じ仕組み）。
 document.addEventListener('visibilitychange', function(){
-  if(document.visibilityState === 'visible' && current === 'ch2_adl'){
+  if(document.visibilityState !== 'visible') return;
+  if(current === 'ch2_adl'){
     stepCh2Adl();
+  } else if(current === 'ch5_recognition_adl'){
+    stepCh5RecognitionAdl();
   }
 });
 

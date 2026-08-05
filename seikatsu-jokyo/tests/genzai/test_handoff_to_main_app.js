@@ -37,8 +37,10 @@ function assert(c,m){ if(!c){console.error('FAIL:',m); process.exitCode=1;} else
   pdoc.querySelectorAll('.option[data-level]')[levelIndex].click();
   next(); // evaluate -> complete
 
-  assert(pilotDom.window.localStorage.getItem('adl_handoff_v1') === null,
-    'とじる前はまだhandoffが書かれていない');
+  // 2026-08-01：選んだ直後にwriteHandoff()されるようになったため、とじる前から既に
+  // 書き込まれている（実機確認でのユーザー指摘を受けた修正。詳細はdecision log参照）。
+  assert(pilotDom.window.localStorage.getItem('adl_handoff_v1') !== null,
+    'とじる前でも、評価画面で選んだ時点で既にhandoffが書かれている');
 
   pdoc.getElementById('btn-close').click(); // とじる
   await wait(20);

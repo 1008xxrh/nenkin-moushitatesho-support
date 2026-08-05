@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>生活をふりかえる（炊事）</title>
+<title>認定日ごろの生活をふりかえる（食事）</title>
 <style>
 :root{
   --bg:#171B26;
@@ -11,9 +11,9 @@
   --ink:#E7E6E0;
   --ink-soft:#9A9CA8;
   --line:#2E3446;
-  --accent:#5FA98B;
-  --accent-soft:#20332C;
-  --accent-strong:#8FD6B4;
+  --accent:#8087D8;
+  --accent-soft:#262A45;
+  --accent-strong:#C0C4F5;
   --neutral-soft:#232838;
   --night-bg:#12151F;
   --star-off:#4B5468;
@@ -68,69 +68,96 @@ button.btn-stacked .btn-sub{font-size:10px;color:var(--ink-soft);}
 </head>
 <body>
 <div id="app-shell">
-  <div class="era-badge">現在について</div>
+  <div class="era-badge">認定日（当時）について</div>
   <div class="hub-back-link"><a href="hub.html">&larr; 生活状況の一覧へ戻る</a></div>
   <div class="progress" id="progress"></div>
   <main><div class="card" id="screen-root"></div></main>
   <div class="footer-nav" id="footer-nav"></div>
 </div>
 
+<!-- 【2026-07-31】この画面は src/genzai/eating.src.html を元に、認定日版(ninteibi)向けに
+     以下の点だけを書き換えて作成した（段取り・詳細は 00_索引.md「認定日版(ninteibi)の中身作成」参照）。
+       ・チェック項目一覧（FLOW/JUDGMENT/ASSISTANCE）・LEVELSの本文：無変更（いつの時期を尋ねるかに関わらず
+         同じ内容が使えるよう、元々「〜だった」という時期非依存の言い回しで書かれていたため）
+       ・「いつの時期を振り返るか」を示す文言（オープニング・チェック画面冒頭・🐥のセリフ・年金事務所ノート内の
+         「今」）を、本体index.htmlのRECOGNITION_PERIOD_NOTICE_MAINと同じ言い回し・トーンで「認定日ごろ」に書き換え
+       ・STORAGE_KEY・HANDOFF_KEYを、genzai側のデータと混ざらないよう別名前空間に変更
+       ・見た目のアクセントカラー（--accent系）をgenzai側の緑（#5FA98B）とは別系統（インディゴ）に変更し、
+         画面上部に常時「認定日（当時）について」ラベルを表示。genzai側にも対の「現在について」ラベルを追加。
+         現在／認定日を切り替え式にせず完全に画面を分ける、というこのプロジェクトの基本方針を、見た目の面でも
+         裏付けるための措置（00_引き継ぎ_最初に読む.md「認定日版(ninteibi)の計画」2026-07-25合意分の反映）
+       ・本体index.html側（stepCh5Recognitionへの「取り込む」導線）との連携は未実装（次回以降のスコープ）。
+         そのため、ここでの案内文は「この端末に保存される」という事実のみを述べ、本体への取り込みには触れない
+         （存在しない機能を書かない。決定#44と同じ考え方）。 -->
 <script>
-// ---- マスタデータ（炊事） ----
-// 2026-07-28作成。食事・着替え・トイレと同じ工程（たたき台→公式基準の裏取り→UI実装→
-// テスト）で作成。公式基準の確認結果：「病歴・就労状況等申立書」裏面の日常生活状況は
-// 着替え・トイレ・食事・炊事・掃除・洗面・入浴・散歩・洗濯・買物の10項目で、それぞれを
-// 「１．自発的にできた」「２．自発的にできたが援助が必要だった」「３．自発的にはできない
-// が援助があればできた」「４．できなかった」の4段階でチェックする（社労士事務所サイトの
-// 解説で複数確認。本体index.htmlのADL_LEVELS＝できる/まあできる/援助があれば/できない と
-// 対応関係も一致）。食事のときのような公式基準との明確なズレ（過食側の記述漏れ等）は、
-// 今回の調査範囲では見つかっていない。
+// ---- マスタデータ（食事） ----
 var FLOW = [
-  {id:'plan', title:'何を作るか考える', items:[
-    {id:'c01', text:'何を作ればいいか、なかなか決められなかった'},
-    {id:'c02', text:'献立を考えるのが面倒に感じた'},
-    {id:'c03', text:'同じようなメニューばかりになった'}
+  {id:'want', title:'食べようと思う', items:[
+    {id:'e01', text:'食欲がわかなかった'},
+    {id:'e02', text:'食事を面倒だと感じた'},
+    {id:'e03', text:'食事を抜いた日があった'},
+    {id:'e04', text:'食べてもおいしい・満足と感じなかった'}
   ]},
-  {id:'prepare', title:'材料をそろえる', items:[
-    {id:'c04', text:'食材を買いに行くこと自体が億劫だった'},
-    {id:'c05', text:'必要な物を買い忘れることがあった'},
-    {id:'c06', text:'買ったのに使わないまま傷ませてしまうことがあった'}
+  {id:'decide', title:'何を食べるか考える', items:[
+    {id:'e05', text:'何を食べればよいか決められなかった'},
+    {id:'e06', text:'考えるのが面倒で食べなかった'},
+    {id:'e07', text:'同じものばかり食べていた'}
   ]},
-  {id:'cook', title:'調理する', items:[
-    {id:'c07', text:'手順を考えながら作るのが負担だった'},
-    {id:'c08', text:'途中で疲れて、作るのをやめてしまうことがあった'},
-    {id:'c09', text:'火や刃物を使うのに、いつもより不安があった'},
-    {id:'c10', text:'レンジで温めるだけなど、簡単なもので済ませることが増えた'}
+  {id:'prepare', title:'準備する', items:[
+    {id:'e08', text:'作る気力がなかった'},
+    {id:'e09', text:'電子レンジを使うのも負担だった'},
+    {id:'e10', text:'買い物へ行けず用意できなかった'},
+    {id:'e11', text:'カップ麺やお菓子だけで済ませることが多かった'},
+    {id:'e12', text:'水分だけで済ませたことがあった'}
   ]},
-  {id:'cleanup', title:'後片付けをする', items:[
-    {id:'c11', text:'洗い物や片付けが後回しになった'},
-    {id:'c12', text:'シンクや台所に洗い物が溜まることがあった'}
+  {id:'eat', title:'食べる', items:[
+    {id:'e13', text:'1日1食以下の日があった'},
+    {id:'e14', text:'食事量が極端に少なかった'},
+    {id:'e15', text:'食べ始めても途中でやめてしまった'},
+    {id:'e16', text:'食べ過ぎてしまう日があった'},
+    {id:'e24', text:'お腹がいっぱいで、もう入らないのに、食べたい気持ちが続いた'}
+  ]},
+  {id:'cleanup', title:'片付ける', items:[
+    {id:'e17', text:'食器をそのまま放置した'},
+    {id:'e18', text:'ゴミを片付けられなかった'}
   ]}
 ];
 var JUDGMENT = {id:'judgment', title:'気付き・判断の変化', items:[
-  {id:'c13', text:'食べる時間になっても、何か作ろうという気が起きなかった'},
-  {id:'c14', text:'何から手をつければいいか、見通しが立てられなかった'}
+  {id:'e19', text:'お腹が空いていることに自分で気付きにくかった'},
+  {id:'e20', text:'「これくらい食べなくても平気」と思うことが増えた'}
 ]};
 var ASSISTANCE = {id:'assistance', title:'まわりの助け', items:[
-  {id:'c15', text:'食材を買ってきてもらうことが多かった'},
-  {id:'c16', text:'メニューを決めてもらえれば作れた'},
-  {id:'c17', text:'一緒に作ってくれる人がいれば取り組めた'}
+  {id:'e21', text:'家族に声をかけてもらって、ようやく食べた'},
+  {id:'e22', text:'家族に作ってもらう・買ってきてもらうことが多かった'},
+  {id:'e23', text:'一人だと食事を抜きやすかった'}
 ]};
 var ALL_GROUPS = FLOW.concat([JUDGMENT, ASSISTANCE]);
 var ALL_ITEMS = [];
 ALL_GROUPS.forEach(function(g){ g.items.forEach(function(it){ ALL_ITEMS.push(it); }); });
 
-// 本体index.htmlのADL_HELP_TEXTS.cookingをベースに、献立を決める段階の崩れ（planグループ）・
-// 後片付けまで含めた崩れ（cleanupグループ）も反映して補強した。
+// 【2026-07-24修正】index.html本体のADL_HELP_TEXTS.eatingは元々「食べられない」方向
+// （拒食・欠食側）にしか触れておらず、「過食・満腹感のコントロール不能」側の記述が
+// 一切なかった。これは単なる書き忘れではなく、実際の等級判定ガイドライン・診断書記載要領の
+// 基準（「不食、偏食、過食などにより健康を害するほど適切でない食行動になる」＝過食も不食と
+// 同格で扱われる）とズレていることを、複数の社労士事務所サイトの独立した記述で確認した上で
+// 修正した（詳細はセッション内のやり取り参照）。
+// TODO(将来・本体側の改善提案・未着手): 同じ「できない＝足りない方向」の偏りは、食事以外の
+// 9項目（着替え・トイレ・洗面・入浴・外出・洗濯・掃除・買い物・炊事）のADL_HELP_TEXTSにも
+// 見られる。ただしそれぞれについて食事のような一次情報での裏付け調査はまだ行っていない。
+// index.html本体側のADL_HELP_TEXTS修正は、このパイロットとは別の作業として扱う（今回は
+// 食事のみ、このパイロットのLEVELS配列だけを直した）。
+// 2026-08-01：LEVELSのkeyを過去形に変更（できる→できた 等）。実テンプレート02.xlsxの
+// 認定日欄が過去形表記だったため（本体index.htmlのADL_LEVELS_PASTと同じ対応）。text（説明文）側は
+// 元々「〜だった」という時期非依存の言い回しのため無変更。
 var LEVELS = [
-  {key:'できる', text:'買い置き、献立を考える、調理する、後片付けまで含めて、日常的に自分でこなせていた。'},
-  {key:'まあできる', text:'レトルトや簡単なものなら用意できるが、手の込んだ調理は難しい、後片付けまで手が回らない、メニューがかなり偏るなどの崩れがあった。'},
-  {key:'援助があれば', text:'食材を買ってきてもらう、メニューを決めてもらう、一緒に作ってもらうなどの助けがあればできた。ひとりだと何を作ればよいか決められないことが多かった。'},
-  {key:'できない', text:'調理や後片付けがほとんどできず、レンジで温めるだけで済ませる、または家族や支援者に大きく頼っていた。'}
+  {key:'できた', text:'食事の時間や内容をある程度自分で整え、1日3食またはそれに近い形で無理なく食べられていた。極端な偏りや食べ忘れが少なかった。'},
+  {key:'できたが援助が必要だった', text:'食べること自体はできるが、簡単なもの・同じものに偏りやすい、食べる時間が不規則、食事を抜く日や、逆に食べ過ぎてしまう日がたまにあるなど、やや崩れがあった。'},
+  {key:'できないが援助があればできた', text:'家族の声かけ、配膳、買い置き、作り置き、温めてもらうなどの助けがあれば食べられた。自分だけだと食事を抜きやすかった、または満腹でも食べる量を自分で加減できず、食べ過ぎてしまうことが多かった。'},
+  {key:'できなかった', text:'食事を用意したり食べ始めたりできず、欠食が多い、何を食べればよいか決められない、ほとんど食べられない状態だった。または、食欲や満腹感のコントロールが自分では難しく、健康を損なうほど食べ過ぎてしまう状態が続いていた。'}
 ];
 
 // ---- 状態（このパイロット専用のlocalStorageキー。index.html本体とは別） ----
-var STORAGE_KEY = 'adl_explorer_pilot_cooking_v1';
+var STORAGE_KEY = 'adl_explorer_ninteibi_eating_v1';
 var state = {checked:{}, level:null};
 try{
   var raw = localStorage.getItem(STORAGE_KEY);
@@ -139,9 +166,12 @@ try{
 function save(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){} }
 
 // ---- index.html本体への受け渡し（案B：小さいデータだけを共有キー経由で渡す・疎結合） ----
-// 渡すのはADLキー1つにつき最終レベルの文字列1つだけ。詳細は食事パイロットのコメント参照。
-var HANDOFF_KEY = 'adl_handoff_v1';
-var ADL_ITEM_KEY = 'cooking'; // 本体index.htmlのADL_ITEMSにおける、この画面が担当するキー
+// 渡すのはADLキー1つにつき最終レベルの文字列1つだけ（例：{"eating":"できない"}）。
+// チェック画面の「気づいたこと」詳細（state.checked）は渡さない。あれは⑦ADL評価で
+// 1〜4を選ぶための道標であり、申立書の記載内容そのものではないため（本人確認済み）。
+// HANDOFF_KEYは複数のADL項目画面（食事・炊事・…）が将来共有する、マージ書き込み前提のキー。
+var HANDOFF_KEY = 'adl_handoff_ninteibi_v1';
+var ADL_ITEM_KEY = 'eating'; // 本体index.htmlのADL_ITEMSにおける、この画面が担当するキー
 function writeHandoff(){
   try{
     var raw = localStorage.getItem(HANDOFF_KEY);
@@ -152,25 +182,26 @@ function writeHandoff(){
   }catch(e){}
 }
 
-// ---- 画面構成：0=はじめに, 1-6=チェック6グループ, 7=見える化, 8=ADL評価, 9=完了 ----
+// ---- 画面構成：0=はじめに, 1-7=チェック7グループ, 8=見える化, 9=ADL評価, 10=完了 ----
 var step = 0;
-var TOTAL_CHECK_SCREENS = ALL_GROUPS.length; // 6
+var TOTAL_CHECK_SCREENS = ALL_GROUPS.length; // 7
 var COMPLETE_STEP = TOTAL_CHECK_SCREENS+3; // 完了画面のstep番号（結果を表示する画面）
 
 // ---- オープニング（ADLセクション全体の入口）と🐥のセリフ吹き出し部品。
-//      shared/ 配下の共通部品（2026-07-25切り出し）。
+//      以前は食事・着替え・トイレの3ファイルにコピペで重複していたが、
+//      2026-07-25、shared/ 配下の共通部品として切り出した。
 //      中身を直すときは shared/chick_widget.js / shared/opening_screen.js を編集し、
 //      `npm run build`（`npm test`はbuildしてから実行される）で反映すること。
 // OPENING_MESSAGEは現在版(genzai)固有の文言（認定日版では別の文言になる）。
-var OPENING_MESSAGE = 'ようこそ。\nあなたの普段の生活の詰まりを少しずつ見つけていけます。';
+var OPENING_MESSAGE = 'ようこそ。\n今回は「認定日ごろ（初診から１年６か月ごろ）」の生活を、少しずつ思い出していきます。';
 // SHARED_JS: chick_widget
 // SHARED_JS: opening_screen
 
-var PENSION_FOCUS_TEXT = 'うまく作れたかどうかではなく、一人で生活したとして、食事の準備を自力で続けられるかを確認します。今誰かが手伝ってくれていても、一人ならどうなるかを思い浮かべながら進めてください。';
-var INTRO_CHICK_LINE = '今日は「炊事」について、一緒に進めてみよう。';
-var REVEAL_CHICK_LINE = '生活の詰まりは、見えてきましたか？';
-// 本体ADL_ITEMSの並び順で、炊事の次は「掃除」。2026-07-28、掃除の画面ができたので有効化。
-var NEXT_ITEM_URL = 'cleaning.html';
+var PENSION_FOCUS_TEXT = '「食べたかどうか」ではなく、一人で生活したとして、健康を維持できる食生活を自力で続けられるかを確認します。その頃誰かが手伝ってくれていても、一人ならどうなるかを思い浮かべながら進めてください。';
+var INTRO_CHICK_LINE = '今日は認定日ごろの「食事」について、一緒に思い出してみよう。';
+var REVEAL_CHICK_LINE = '当時の生活の詰まりは、見えてきましたか？';
+// 本体ADL_ITEMSの並び順で、食事の次は「炊事」。2026-07-28、炊事の画面ができたので有効化。
+var NEXT_ITEM_URL = 'cooking.html';
 
 function renderIntro(){
   var flowHtml = '<div class="flow-list">';
@@ -190,7 +221,7 @@ function renderIntro(){
       '<p class="doc-note-body">'+PENSION_FOCUS_TEXT+'</p>'+
     '</div>'+
     flowHtml+
-    '<p class="lead">最近1〜2週間で、当てはまることを一つずつ確認していきます。</p>';
+    '<p class="lead">認定日（初診から１年６か月ごろ）の前後の頃を思い出しながら、当てはまることを一つずつ確認していきます。今と違っていても大丈夫です。</p>';
 }
 
 function seededRand(seed){ var x = Math.sin(seed*999)*10000; return x - Math.floor(x); }
@@ -255,7 +286,7 @@ function renderReveal(){
 
 function renderEvaluate(){
   var html = '<h1>生活状況を選ぶ</h1>';
-  html += '<p class="lead">ここまでの内容を参考に、いま一番近いものを選んでください。迷ったときは、下の説明文を参考にしてください。</p>';
+  html += '<p class="lead">ここまでの内容を参考に、当時、一番近いものを選んでください。迷ったときは、下の説明文を参考にしてください。</p>';
   LEVELS.forEach(function(lv){
     var sel = state.level===lv.key ? ' selected' : '';
     html += '<div class="option'+sel+'" data-level="'+lv.key+'">'+
@@ -266,8 +297,8 @@ function renderEvaluate(){
 }
 
 function renderComplete(){
-  var html = '<h1>「炊事」についてはこれでおわりです。</h1>';
-  html += '<div class="option selected"><div class="option-title">炊事</div><div>'+(state.level||'未選択')+'</div></div>';
+  var html = '<h1>「食事」についてはこれでおわりです。</h1>';
+  html += '<div class="option selected"><div class="option-title">食事</div><div>'+(state.level||'未選択')+'</div></div>';
   html += '<div class="handoff-box">ここまでの記録は、この端末に保存されています。次に開いたときも、続きから見られます。</div>';
   html += '<div class="chick-line">'+
       '<div class="opening-hiyoko">🐥</div>'+
@@ -339,6 +370,8 @@ function render(){
     // 完了画面で「未選択」と表示され、本体への受け渡し（writeHandoff）もされない）。
     footerHtml += '<button class="btn btn-primary" id="btn-next">次へ</button>';
   } else if(step===COMPLETE_STEP){
+    // 「次へすすむ」＝本体ADL_ITEMSの並び順で次のADL項目へ。NEXT_ITEM_URLに実在する
+    // ファイル名が入っていれば有効なリンクに、まだファイルが無ければ無効化＋「準備中」にする。
     if(NEXT_ITEM_URL){
       footerHtml += '<button class="btn btn-secondary" id="btn-forward">次へすすむ</button>';
     } else {
@@ -360,7 +393,9 @@ function render(){
     window.location.href = NEXT_ITEM_URL + '?from=hub';
   }); }
   if(closeBtn){ closeBtn.addEventListener('click', function(){
-    // 「次へすすむ」と同じパターン：保存してから直接ハブへ遷移する。
+    // 「次へすすむ」と同じパターン：保存してから直接ハブへ遷移する
+    // （以前は「とじた後」の着地画面を経由していたが、その画面からハブへ戻るための
+    // 導線が無く行き止まりになっていたため、2026-07-25に直接遷移する形に変更した）。
     writeHandoff();
     window.location.href = 'hub.html';
   }); }

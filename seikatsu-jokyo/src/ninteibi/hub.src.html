@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>生活状況をふりかえる（入口）</title>
+<title>認定日ごろの生活状況をふりかえる（入口）</title>
 <style>
 :root{
   --bg:#171B26;
@@ -11,9 +11,9 @@
   --ink:#E7E6E0;
   --ink-soft:#9A9CA8;
   --line:#2E3446;
-  --accent:#5FA98B;
-  --accent-soft:#20332C;
-  --accent-strong:#8FD6B4;
+  --accent:#8087D8;
+  --accent-soft:#262A45;
+  --accent-strong:#C0C4F5;
   --neutral-soft:#232838;
 }
 *{box-sizing:border-box;}
@@ -54,26 +54,26 @@ button.btn:disabled{opacity:.45;cursor:not-allowed;}
 </head>
 <body>
 <div id="app-shell">
-  <div class="era-badge">現在について</div>
+  <div class="era-badge">認定日（当時）について</div>
   <div class="hub-top-bar"><button type="button" class="btn btn-secondary" id="btnBackToIndex">
       &larr; 申立書サポートに戻る</button></div>
   <main><div class="card" id="screen-root"></div></main>
 </div>
 
+<!-- 【2026-07-31】この画面は src/genzai/hub.src.html を元に、認定日版(ninteibi)向けに
+     以下の点だけを書き換えて作成した（段取り・詳細は 00_索引.md「認定日版(ninteibi)の中身作成」参照）。
+       ・ADL_ITEMSの並び順・キー名・遷移先ファイル名：無変更（genzai側と同じ10項目・同じ順序）
+       ・OPENING_MESSAGE・タイトルを「認定日ごろ」の文脈に書き換え（各itemファイルと同じ言い回し）
+       ・HANDOFF_KEYを 'adl_handoff_ninteibi_v1' に変更（genzai側のデータと混ざらないようにするため）
+       ・hub-noteの文言から「本体index.htmlに戻ると取り込める」という記述を削除した。
+         本体index.html側（stepCh5Recognitionへの「取り込む」導線）との連携は未実装（次回以降の
+         スコープ）であり、まだ存在しない機能をあるかのように書かないため（決定#44と同じ考え方）。
+         「この端末に保存される」という、今回時点でも事実である部分だけを案内する。
+       ・「← 申立書サポートに戻る」の遷移先（../../../index.html）：無変更
+         （pages/ninteibi/hub.html から見た相対階層はpages/genzai/hub.htmlと同じ深さのため）。 -->
 <script>
-// ---- ADLハブ画面 ----
-// 食事・着替え・トイレの3ファイルにそれぞれ重複していた「ようこそ」オープニング画面を、
-// ここに1つだけ切り出したもの（未着手事項3・4の実装）。
-// 本体index.htmlのADL_ITEMSと同じ並び順・キー名を使う。2026-07-28、10項目すべてのファイルが
-// 実在するようになったため、全項目のリンクが有効。かつて存在した「準備中」（url=null）の分岐
-// は、以後この配列に新しい項目が増えない限り使われない（コード自体は残している）。
-// 画面上部の「← 申立書サポートに戻る」ボタン（#btnBackToIndex）は、本体index.htmlへ戻る
-// ボタン（2026-07-25追加。当初は小さいテキストリンクにしていたが、「indexからADLに来ると
-// 雰囲気が変わるので、戻るボタンがすぐ目に入る方が安心できる」という要望を受け、フッターの
-// 「戻る」「次へ」等と同じ.btnボタンの見た目に変更した）。2026-07-27、本体index.htmlと
-// このプロジェクト(seikatsu-jokyo/)を実際にどう配置するかの合意（index.htmlをリポジトリ
-// 直下、seikatsu-jokyo/をその配下に置く。詳細は00_引き継ぎ_最初に読む.mdの「GitHub階層」
-// 参照）に基づき、disabledを外して遷移先を実装した。
+// ---- ADLハブ画面（認定日版） ----
+// genzai側のhub.src.htmlと同じ構造・同じ10項目。「いつの時期を振り返るか」だけが違う。
 var ADL_ITEMS = [
   ['dressing','着替え','dressing.html'],
   ['toilet','トイレ','toilet.html'],
@@ -87,7 +87,7 @@ var ADL_ITEMS = [
   ['shopping','買物', 'shopping.html']
 ];
 
-var HANDOFF_KEY = 'adl_handoff_v1';
+var HANDOFF_KEY = 'adl_handoff_ninteibi_v1';
 function readHandoff(){
   try{
     var raw = localStorage.getItem(HANDOFF_KEY);
@@ -96,26 +96,24 @@ function readHandoff(){
   }catch(e){ return {}; }
 }
 
-// ---- 🐥のセリフ吹き出し部品。以前は食事・着替え・トイレの3ファイルと合わせて4か所に
-//      コピペで重複していたが、2026-07-25、shared/chick_widget.js として切り出した。
-//      中身を直すときはそちらを編集し、`npm run build` で反映すること。
-// OPENING_MESSAGEは現在版(genzai)固有の文言。認定日版(ninteibi)では別の文言になるため、
-// shared/chick_widget.jsには置かず、各era（genzai/ninteibi）のsrc側にそれぞれ定義する。
-var OPENING_MESSAGE = 'ようこそ。\nあなたの普段の生活の詰まりを少しずつ見つけていけます。';
+// ---- 🐥のセリフ吹き出し部品（shared/chick_widget.js、genzai側と共通） ----
+// OPENING_MESSAGEは認定日版(ninteibi)固有の文言。genzai側のhub.src.htmlとは別の文言。
+var OPENING_MESSAGE = 'ようこそ。\n今回は「認定日ごろ（初診から１年６か月ごろ）」の生活を、少しずつ思い出していきます。';
 // SHARED_JS: chick_widget
 
 function renderItemList(){
   var handoff = readHandoff();
   var doneCount = ADL_ITEMS.filter(function(it){ return !!handoff[it[0]]; }).length;
 
-  // 本体index.htmlのADL_LEVEL_TO_NUM（できる:1, まあできる:2, 援助があれば:3, できない:4）
-  // と同じ数字を使う。「前回どの選択肢を選んだか」を数字でも一目でわかるようにするため
-  // （2026-07-25追加。文言だけだと「1〜4のどれだったっけ」と思い出しにくいとの要望）。
-  var LEVEL_TO_NUM = {'できる':1, 'まあできる':2, '援助があれば':3, 'できない':4};
+  // 本体index.htmlのADL_LEVEL_TO_NUMと同じ数字を使う（genzai側のhub.src.htmlと同じ理由）。
+  // 2026-08-01：実テンプレート02.xlsxの認定日欄が過去形表記だったため、各項目のLEVELSも
+  // 過去形（できた/できたが援助が必要だった/できないが援助があればできた/できなかった）に
+  // 変更した。ここもそれに合わせて更新（本体側ADL_LEVEL_TO_NUMの過去形キーと同じ対応）。
+  var LEVEL_TO_NUM = {'できた':1, 'できたが援助が必要だった':2, 'できないが援助があればできた':3, 'できなかった':4};
 
   var html = '<div class="progress-note">10項目中 '+doneCount+'項目 完了（'+doneCount+'/'+ADL_ITEMS.length+'）</div>';
   html += '<p class="hub-permission-note">一度に全部やらなくても大丈夫です。気になるものだけ、途中まででも大丈夫です。</p>';
-  html += '<p class="hub-note">ここでの記録は、この端末に保存されます。申立書サポートアプリ（index.html）の「最近の日常生活について教えてください」画面に戻ると、この記録を確認したうえで取り込めます（自動では反映されません）。</p>';
+  html += '<p class="hub-note">ここでの記録は、この端末に保存されます。次に開いたときも、続きから見られます。</p>';
   html += '<div class="item-list" id="hubItemList">';
   ADL_ITEMS.forEach(function(it){
     var key = it[0], label = it[1], url = it[2];
@@ -156,23 +154,19 @@ function render(){
 
 render();
 
-// 「← 申立書サポートに戻る」：2026-08-04、本体index.html側を別タブ化＋visibilitychangeで
-// 自動反映する仕組みに揃えたため、このボタンもタブを閉じるだけにする（index.html側の
-// 「続きから／最初から」確認画面を経由させないため。それを避けるために別タブ化した経緯と
-// 一貫させる）。window.close()は「スクリプトから開かれた」タブでないと一部ブラウザで
-// 無視されることがあるため、その場合のフォールバックとして従来どおりindex.htmlへ遷移する
-// （フォールバック時は今までと同じ挙動に留まるだけで、悪化はしない）。
+// 「← 申立書サポートに戻る」：2026-08-04、genzai版と同じ理由でタブを閉じるだけにする
+// （index.html側の別タブ化＋visibilitychange自動反映と一貫させ、「続きから／最初から」
+// 確認画面を経由させないため）。window.close()が無視される環境向けのフォールバックとして
+// 従来どおりindex.htmlへ遷移する処理も残す（詳しい経緯はgenzai/hub.src.html参照）。
 document.getElementById('btnBackToIndex').addEventListener('click', function(){
   window.close();
   if(window.closed) return; // 閉じられた場合はここで終了（実ブラウザでの通常ケース）
   try {
-    // pages/genzai/hub.html から見て、リポジトリ直下のindex.htmlへは3階層上がる
-    // （genzai→pages→seikatsu-jokyo→リポジトリ直下。実際のindex.htmlと組み合わせた
-    // 配置シミュレーションで検証済み。2026-07-27、以前2階層と誤って書いていたのを修正）
+    // pages/ninteibi/hub.html から見て、リポジトリ直下のindex.htmlへは3階層上がる
+    // （ninteibi→pages→seikatsu-jokyo→リポジトリ直下。genzai側と同じ深さ）。
     window.location.href = '../../../index.html';
   } catch(e) {
-    // 一部環境（jsdomでのテスト実行時など）はwindow.closed未実装のままclose()が
-    // 内部的にdocumentを破棄し、直後のlocation操作が例外になることがあるための保険
+    // 一部環境（jsdomでのテスト実行時など）向けの保険。詳しい経緯はgenzai/hub.src.html参照
   }
 });
 </script>

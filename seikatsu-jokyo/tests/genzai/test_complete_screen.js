@@ -44,14 +44,21 @@ function assert(c,m){ if(!c){console.error('FAIL:',m); process.exitCode=1;} else
 
   assert(doc.body.textContent.includes('おつかれさまでした'), '完了画面自体に労いの一言が表示される（2026-07-25、専用の「とじた後」画面を廃止し、ここに統合した）');
 
-  // --- 「生活状況の一覧へ戻る」操作：保存してハブへ遷移しようとする ---
-  assert(window.localStorage.getItem('adl_handoff_v1') === null, '押す前はまだhandoffが書かれていない');
+  // --- 2026-08-01：評価画面で選んだ直後にhandoffが書かれることの確認 ---
+  // （実機確認でのユーザー指摘。以前は「生活状況の一覧へ戻る」ボタンを押すまで書かれず、
+  //   画面上部の常設リンクで先に離脱すると選択結果が失われる不具合があった） ---
+  const handoffAfterSelect = window.localStorage.getItem('adl_handoff_v1');
+  let handoffAfterSelectData = null;
+  try{ handoffAfterSelectData = JSON.parse(handoffAfterSelect); }catch(e){}
+  assert(handoffAfterSelectData && handoffAfterSelectData.eating === 'できない', '評価画面でレベルを選んだ直後、完了画面を経由しなくてもhandoffに書き込まれている: ' + JSON.stringify(handoffAfterSelectData));
+
+  // --- 「生活状況の一覧へ戻る」操作：改めて保存してハブへ遷移する ---
   closeBtn.click();
   await wait(20);
   const handoffRaw = window.localStorage.getItem('adl_handoff_v1');
   let handoffData = null;
   try{ handoffData = JSON.parse(handoffRaw); }catch(e){}
-  assert(handoffData && handoffData.eating, '押すと本体への受け渡し用handoffが書き込まれる（遷移先の「次へすすむ」と同じパターン）: ' + JSON.stringify(handoffData));
+  assert(handoffData && handoffData.eating, '押した後も本体への受け渡し用handoffが書き込まれたままである（遷移先の「次へすすむ」と同じパターン）: ' + JSON.stringify(handoffData));
 
   console.log(process.exitCode === 1 ? 'FAILURES ABOVE' : 'COMPLETE SCREEN: ALL PASSED');
   process.exit(process.exitCode||0);

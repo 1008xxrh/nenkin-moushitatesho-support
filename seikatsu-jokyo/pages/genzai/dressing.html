@@ -21,6 +21,7 @@
   --star-on-ring:#FDEBC7;
 }
 *{box-sizing:border-box;}
+.era-badge{text-align:center;font-size:12px;font-weight:600;letter-spacing:0.02em;color:var(--accent-strong);background:var(--accent-soft);padding:7px 10px;}
 body{
   margin:0;background:var(--bg);
   font-family:"Hiragino Sans","Noto Sans JP",system-ui,-apple-system,sans-serif;
@@ -93,6 +94,7 @@ button.opening-start{margin-top:22px;flex:none;width:180px;padding:7px 14px;}
 </head>
 <body>
 <div id="app-shell">
+  <div class="era-badge">現在について</div>
   <div class="hub-back-link"><a href="hub.html">&larr; 生活状況の一覧へ戻る</a></div>
   <div class="progress" id="progress"></div>
   <main><div class="card" id="screen-root"></div></main>
@@ -428,6 +430,13 @@ function render(){
     opt.addEventListener('click', function(){
       state.level = opt.getAttribute('data-level');
       save();
+      // 2026-08-01：選んだ直後にwriteHandoff()も呼ぶ（実機確認でのユーザー指摘）。
+      // 以前はここで呼んでおらず、完了画面の「生活状況の一覧へ戻る」（btn-close）を
+      // 押した時だけHANDOFF_KEYに書き込んでいたため、画面上部の常設リンク
+      // 「← 生活状況の一覧へ戻る」（hub.htmlへの単なる<a href>）でハブに戻ると、
+      // 選択済みでも反映されないまま失われる不具合があった（genzai・ninteibi両方に存在）。
+      // 選んだ瞬間に書き込むようにすることで、その後どちらの戻り方をしても結果が残る。
+      writeHandoff();
       render();
     });
   });

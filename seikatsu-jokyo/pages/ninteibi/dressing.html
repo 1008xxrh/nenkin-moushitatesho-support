@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>生活をふりかえる（着替え）</title>
+<title>認定日ごろの生活をふりかえる（着替え）</title>
 <style>
 :root{
   --bg:#171B26;
@@ -11,9 +11,9 @@
   --ink:#E7E6E0;
   --ink-soft:#9A9CA8;
   --line:#2E3446;
-  --accent:#5FA98B;
-  --accent-soft:#20332C;
-  --accent-strong:#8FD6B4;
+  --accent:#8087D8;
+  --accent-soft:#262A45;
+  --accent-strong:#C0C4F5;
   --neutral-soft:#232838;
   --night-bg:#12151F;
   --star-off:#4B5468;
@@ -53,8 +53,34 @@ button.btn-stacked .btn-sub{font-size:10px;color:var(--ink-soft);}
 .option.selected{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-strong);}
 .option-title{font-weight:500;margin-bottom:4px;}
 .handoff-box{background:var(--neutral-soft);border-radius:10px;padding:14px;font-size:13px;color:var(--ink-soft);margin-top:16px;}
-/* SHARED_CSS: opening_screen */
-/* SHARED_CSS: chick_widget */
+/* shared/opening_screen.js（オープニング画面・★アイコン）に対応する見た目。
+   文言を一切含まない「動くしくみ」の見た目だけを置く（.jsと同じ方針）。
+   hub.html自身はopening_screen.jsを使わず独自のrender()で入口を表示しているため、
+   このCSSはhub.htmlには差し込まない（10項目ファイルのみ）。
+   .chick-line / .chick-line .opening-hiyokoは厳密にはchick_widget.jsの出力を
+   各項目ファイルが囲むときの決まり文句だが、hubでは使われずopening_screen側と
+   同じ範囲で共有されるため、ここにまとめている。
+   min-height:56vhは項目ファイル共通の値。hub.htmlだけ一覧表示のため40vhと
+   異なる値を使っており、hub.src.html側にその旨のコメント付きで個別に残している。
+   中身を直すときはこのファイル（shared/opening_screen.css）を編集し、
+   `npm run build`（`npm test`はbuildしてから実行される）で各HTMLに反映すること。 */
+.item-star{width:20px;height:20px;flex-shrink:0;}
+.opening-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:56vh;text-align:center;padding:10px;}
+button.opening-start{margin-top:22px;flex:none;width:180px;padding:7px 14px;}
+.chick-line{display:flex;flex-direction:column;align-items:center;text-align:center;margin:4px 0 18px;}
+.chick-line .opening-hiyoko{margin-bottom:12px;animation:openingBreathe 4s ease-in-out infinite;}
+.opening-standalone-note{font-size:12.5px;color:var(--ink-soft);text-align:center;margin:16px 4px 0;line-height:1.7;}
+/* shared/chick_widget.js（🐥のセリフ吹き出し）に対応する見た目。
+   文言を一切含まない「動くしくみ」の見た目だけを置く（.jsと同じ方針）。
+   現在版(genzai)・認定日版(ninteibi)の両方、およびhub.html含む全画面から共有される。
+   中身を直すときはこのファイル（shared/chick_widget.css）を編集し、
+   `npm run build`（`npm test`はbuildしてから実行される）で各HTMLに反映すること。 */
+.opening-hiyoko{font-size:28px;margin-bottom:16px;animation:openingBreathe 4s ease-in-out infinite;}
+@keyframes openingBreathe{0%,100%{transform:scale(1);}50%{transform:scale(1.04);}}
+.opening-bubble{position:relative;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;font-size:15.5px;line-height:3.2;text-align:center;cursor:pointer;width:280px;}
+.opening-bubble::before{content:'';position:absolute;top:-9px;left:50%;transform:translateX(-50%);border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:9px solid var(--card);}
+.opening-sizer{visibility:hidden;}
+.opening-text-overlay{position:absolute;top:22px;left:22px;right:22px;}
 .doc-note-title{font-size:14px;font-weight:500;margin-bottom:8px;}
 .doc-note-body{font-size:14px;color:var(--ink-soft);margin:0;}
 .divider{border-top:1px solid var(--line);margin:22px 0;}
@@ -68,13 +94,27 @@ button.btn-stacked .btn-sub{font-size:10px;color:var(--ink-soft);}
 </head>
 <body>
 <div id="app-shell">
-  <div class="era-badge">現在について</div>
+  <div class="era-badge">認定日（当時）について</div>
   <div class="hub-back-link"><a href="hub.html">&larr; 生活状況の一覧へ戻る</a></div>
   <div class="progress" id="progress"></div>
   <main><div class="card" id="screen-root"></div></main>
   <div class="footer-nav" id="footer-nav"></div>
 </div>
 
+<!-- 【2026-07-31】この画面は src/genzai/dressing.src.html を元に、認定日版(ninteibi)向けに
+     以下の点だけを書き換えて作成した（段取り・詳細は 00_索引.md「認定日版(ninteibi)の中身作成」参照）。
+       ・チェック項目一覧（FLOW/JUDGMENT/ASSISTANCE）・LEVELSの本文：無変更（いつの時期を尋ねるかに関わらず
+         同じ内容が使えるよう、元々「〜だった」という時期非依存の言い回しで書かれていたため）
+       ・「いつの時期を振り返るか」を示す文言（オープニング・チェック画面冒頭・🐥のセリフ・年金事務所ノート内の
+         「今」）を、本体index.htmlのRECOGNITION_PERIOD_NOTICE_MAINと同じ言い回し・トーンで「認定日ごろ」に書き換え
+       ・STORAGE_KEY・HANDOFF_KEYを、genzai側のデータと混ざらないよう別名前空間に変更
+       ・見た目のアクセントカラー（--accent系）をgenzai側の緑（#5FA98B）とは別系統（インディゴ）に変更し、
+         画面上部に常時「認定日（当時）について」ラベルを表示。genzai側にも対の「現在について」ラベルを追加。
+         現在／認定日を切り替え式にせず完全に画面を分ける、というこのプロジェクトの基本方針を、見た目の面でも
+         裏付けるための措置（00_引き継ぎ_最初に読む.md「認定日版(ninteibi)の計画」2026-07-25合意分の反映）
+       ・本体index.html側（stepCh5Recognitionへの「取り込む」導線）との連携は未実装（次回以降のスコープ）。
+         そのため、ここでの案内文は「この端末に保存される」という事実のみを述べ、本体への取り込みには触れない
+         （存在しない機能を書かない。決定#44と同じ考え方）。 -->
 <script>
 // ---- マスタデータ（着替え） ----
 // 2026-07-24 たたき台をユーザー確認済み。公式基準の確認結果：
@@ -124,15 +164,18 @@ ALL_GROUPS.forEach(function(g){ g.items.forEach(function(it){ ALL_ITEMS.push(it)
 // 本体index.htmlのADL_HELP_TEXTS.dressingをベースに、清潔・季節適合への「気付き」の
 // 崩れ（judgmentグループ）も反映して補強した。食事のときのような明確な公式基準との
 // ズレ（過食の見落とし等）は、今回の調査範囲では見つかっていない。
+// 2026-08-01：LEVELSのkeyを過去形に変更（できる→できた 等）。実テンプレート02.xlsxの
+// 認定日欄が過去形表記だったため（本体index.htmlのADL_LEVELS_PASTと同じ対応）。text（説明文）側は
+// 元々「〜だった」という時期非依存の言い回しのため無変更。
 var LEVELS = [
-  {key:'できる', text:'気温や状況に合わせて服を選び、無理なく着替えができていた。同じ服が何日も続く、汚れに気付かないといったことは少なかった。'},
-  {key:'まあできる', text:'着替えること自体はできるが、服を選ぶのに時間がかかる、面倒で同じ服を着回す、多少汚れていても気にせず着てしまうなど、やや崩れがあった。'},
-  {key:'援助があれば', text:'家族の声かけ、服を出してもらう・選んでもらうなどの助けがあれば着替えられた。自分だけだと何日も同じ服のまま、または汚れに気付かず過ごしやすかった。'},
-  {key:'できない', text:'着替えがほとんどできず、何日も同じ服やパジャマのままで過ごすことが多かった。または、服の汚れや季節との不一致に自分では気付けない状態が続いていた。'}
+  {key:'できた', text:'気温や状況に合わせて服を選び、無理なく着替えができていた。同じ服が何日も続く、汚れに気付かないといったことは少なかった。'},
+  {key:'できたが援助が必要だった', text:'着替えること自体はできるが、服を選ぶのに時間がかかる、面倒で同じ服を着回す、多少汚れていても気にせず着てしまうなど、やや崩れがあった。'},
+  {key:'できないが援助があればできた', text:'家族の声かけ、服を出してもらう・選んでもらうなどの助けがあれば着替えられた。自分だけだと何日も同じ服のまま、または汚れに気付かず過ごしやすかった。'},
+  {key:'できなかった', text:'着替えがほとんどできず、何日も同じ服やパジャマのままで過ごすことが多かった。または、服の汚れや季節との不一致に自分では気付けない状態が続いていた。'}
 ];
 
 // ---- 状態（このパイロット専用のlocalStorageキー。index.html本体とは別） ----
-var STORAGE_KEY = 'adl_explorer_pilot_dressing_v1';
+var STORAGE_KEY = 'adl_explorer_ninteibi_dressing_v1';
 var state = {checked:{}, level:null};
 try{
   var raw = localStorage.getItem(STORAGE_KEY);
@@ -142,7 +185,7 @@ function save(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); 
 
 // ---- index.html本体への受け渡し（案B：小さいデータだけを共有キー経由で渡す・疎結合） ----
 // 渡すのはADLキー1つにつき最終レベルの文字列1つだけ。詳細は食事パイロットのコメント参照。
-var HANDOFF_KEY = 'adl_handoff_v1';
+var HANDOFF_KEY = 'adl_handoff_ninteibi_v1';
 var ADL_ITEM_KEY = 'dressing'; // 本体index.htmlのADL_ITEMSにおける、この画面が担当するキー
 function writeHandoff(){
   try{
@@ -165,13 +208,95 @@ var COMPLETE_STEP = TOTAL_CHECK_SCREENS+3; // 完了画面のstep番号（結果
 //      中身を直すときは shared/chick_widget.js / shared/opening_screen.js を編集し、
 //      `npm run build`（`npm test`はbuildしてから実行される）で反映すること。
 // OPENING_MESSAGEは現在版(genzai)固有の文言（認定日版では別の文言になる）。
-var OPENING_MESSAGE = 'ようこそ。\nあなたの普段の生活の詰まりを少しずつ見つけていけます。';
-// SHARED_JS: chick_widget
-// SHARED_JS: opening_screen
+var OPENING_MESSAGE = 'ようこそ。\n今回は「認定日ごろ（初診から１年６か月ごろ）」の生活を、少しずつ思い出していきます。';
+// ---- 🐥のセリフ吹き出し（共通部品）。枠は最終文の全文サイズで最初から固定し、
+//      タイプライター中も枠が動かないようにする。タップで即座に全文表示できる。
+//      現在版(genzai)・認定日版(ninteibi)の両方から共有される、文言を一切含まない
+//      「動くしくみ」だけを置く（2026-07-25、階層設計の合意により、以前ここにあった
+//      OPENING_MESSAGEは各era（genzai/ninteibi）のsrc側に移した。認定日版では
+//      「あなたの普段の生活の詰まりを…」ではなく別の文言になるため、文言そのものを
+//      shared/に置くと2つのeraで使い回せなくなるため）。
+//      中身を直すときはこのファイル（shared/chick_widget.js）を編集し、
+//      `npm run build`（`npm test`はbuildしてから実行される）で各HTMLに反映すること。 ----
+var chickTyping = false;
+var chickInterval = null;
 
-var PENSION_FOCUS_TEXT = '「おしゃれかどうか」ではなく、一人で生活したとして、季節や状況に合った身なりを自力で保てるかを確認します。今誰かが手伝ってくれていても、一人ならどうなるかを思い浮かべながら進めてください。';
-var INTRO_CHICK_LINE = '今日は「着替え」について、一緒に進めてみよう。';
-var REVEAL_CHICK_LINE = '生活の詰まりは、見えてきましたか？';
+function chickBubbleHtml(idPrefix, message){
+  return '<div class="opening-bubble" id="'+idPrefix+'Bubble">'+
+      '<div class="opening-sizer" aria-hidden="true">'+message.split('\n').join('<br>')+'</div>'+
+      '<div class="opening-text-overlay" id="'+idPrefix+'Text"></div>'+
+    '</div>';
+}
+
+function wireChickBubble(idPrefix, message, onDone){
+  var bubble = document.getElementById(idPrefix+'Bubble');
+  var textEl = document.getElementById(idPrefix+'Text');
+  bubble.addEventListener('click', function(){
+    if(chickTyping){
+      clearInterval(chickInterval);
+      textEl.innerHTML = message.split('\n').join('<br>');
+      chickTyping = false;
+      if(onDone){ onDone(); }
+    }
+  });
+  textEl.innerHTML = '';
+  var i = 0;
+  chickTyping = true;
+  chickInterval = setInterval(function(){
+    if(i < message.length){
+      textEl.innerHTML += (message[i] === '\n' ? '<br>' : message[i]);
+      i++;
+    } else {
+      clearInterval(chickInterval);
+      chickTyping = false;
+      if(onDone){ onDone(); }
+    }
+  }, 55);
+}
+// ---- オープニング（ADLセクション全体の入口。項目ファイルを単体で直接開いたときに
+//      表示する「ようこそ」画面）と、チェック画面で使う★アイコン。
+//      現在版(genzai)・認定日版(ninteibi)の両方から共有される、文言を一切含まない
+//      「動くしくみ」だけを置く（OPENING_MESSAGE自体は各eraのsrc側で定義され、
+//      ここでは変数名として参照するだけなので、このファイル自体はどちらのeraでも
+//      そのまま使い回せる）。
+//      hub.html自身はこのファイルを使わず、独自のrender()で入口を表示している。
+//      TODO(将来・未着手): この画面が実際に10項目共通の入口として機能するようになったら、
+//      画面下（はじめるボタンの下あたり）に、10項目それぞれの「①はじめに」へ直接飛べる
+//      ボタン一覧を置くアイデアあり。今は保留。
+//      中身を直すときはこのファイル（shared/opening_screen.js）を編集し、
+//      `npm run build`（`npm test`はbuildしてから実行される）で各HTMLに反映すること。 ----
+function renderOpening(){
+  var root = document.getElementById('screen-root');
+  var progress = document.getElementById('progress');
+  var footer = document.getElementById('footer-nav');
+  progress.textContent = '';
+  footer.innerHTML = '';
+  root.innerHTML =
+    '<div class="opening-wrap">'+
+      '<div class="opening-hiyoko">🐥</div>'+
+      chickBubbleHtml('opening', OPENING_MESSAGE)+
+      '<button class="btn btn-primary opening-start" id="openingStartBtn" style="display:none;">はじめる</button>'+
+      '<p class="opening-standalone-note">ほかの生活状況の項目や、この記録の使い方については「← 生活状況の一覧へ戻る」から見られます。</p>'+
+    '</div>';
+  document.getElementById('openingStartBtn').addEventListener('click', function(){
+    step = 0;
+    render();
+  });
+  wireChickBubble('opening', OPENING_MESSAGE, function(){
+    var btn = document.getElementById('openingStartBtn');
+    if(btn){ btn.style.display = 'block'; }
+  });
+}
+
+function starSvg(on){
+  var fill = on ? 'var(--star-on)' : 'var(--star-off)';
+  var ring = on ? '<circle cx="10" cy="10" r="8.5" fill="none" stroke="var(--star-on-ring)" stroke-width="1"/>' : '';
+  return '<svg viewBox="0 0 20 20" class="item-star">'+ring+'<circle cx="10" cy="10" r="6" fill="'+fill+'"/></svg>';
+}
+
+var PENSION_FOCUS_TEXT = '「おしゃれかどうか」ではなく、一人で生活したとして、季節や状況に合った身なりを自力で保てるかを確認します。その頃誰かが手伝ってくれていても、一人ならどうなるかを思い浮かべながら進めてください。';
+var INTRO_CHICK_LINE = '今日は認定日ごろの「着替え」について、一緒に思い出してみよう。';
+var REVEAL_CHICK_LINE = '当時の生活の詰まりは、見えてきましたか？';
 // 本体ADL_ITEMSの並び順で、着替えの次は「トイレ」。実在するのでリンクを有効化する。
 var NEXT_ITEM_URL = 'toilet.html';
 
@@ -193,7 +318,7 @@ function renderIntro(){
       '<p class="doc-note-body">'+PENSION_FOCUS_TEXT+'</p>'+
     '</div>'+
     flowHtml+
-    '<p class="lead">最近1〜2週間で、当てはまることを一つずつ確認していきます。</p>';
+    '<p class="lead">認定日（初診から１年６か月ごろ）の前後の頃を思い出しながら、当てはまることを一つずつ確認していきます。今と違っていても大丈夫です。</p>';
 }
 
 function seededRand(seed){ var x = Math.sin(seed*999)*10000; return x - Math.floor(x); }
@@ -258,7 +383,7 @@ function renderReveal(){
 
 function renderEvaluate(){
   var html = '<h1>生活状況を選ぶ</h1>';
-  html += '<p class="lead">ここまでの内容を参考に、いま一番近いものを選んでください。迷ったときは、下の説明文を参考にしてください。</p>';
+  html += '<p class="lead">ここまでの内容を参考に、当時、一番近いものを選んでください。迷ったときは、下の説明文を参考にしてください。</p>';
   LEVELS.forEach(function(lv){
     var sel = state.level===lv.key ? ' selected' : '';
     html += '<div class="option'+sel+'" data-level="'+lv.key+'">'+

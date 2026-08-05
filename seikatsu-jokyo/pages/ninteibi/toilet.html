@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>生活をふりかえる（トイレ）</title>
+<title>認定日ごろの生活をふりかえる（トイレ）</title>
 <style>
 :root{
   --bg:#171B26;
@@ -11,9 +11,9 @@
   --ink:#E7E6E0;
   --ink-soft:#9A9CA8;
   --line:#2E3446;
-  --accent:#5FA98B;
-  --accent-soft:#20332C;
-  --accent-strong:#8FD6B4;
+  --accent:#8087D8;
+  --accent-soft:#262A45;
+  --accent-strong:#C0C4F5;
   --neutral-soft:#232838;
   --night-bg:#12151F;
   --star-off:#4B5468;
@@ -94,13 +94,27 @@ button.opening-start{margin-top:22px;flex:none;width:180px;padding:7px 14px;}
 </head>
 <body>
 <div id="app-shell">
-  <div class="era-badge">現在について</div>
+  <div class="era-badge">認定日（当時）について</div>
   <div class="hub-back-link"><a href="hub.html">&larr; 生活状況の一覧へ戻る</a></div>
   <div class="progress" id="progress"></div>
   <main><div class="card" id="screen-root"></div></main>
   <div class="footer-nav" id="footer-nav"></div>
 </div>
 
+<!-- 【2026-07-31】この画面は src/genzai/toilet.src.html を元に、認定日版(ninteibi)向けに
+     以下の点だけを書き換えて作成した（段取り・詳細は 00_索引.md「認定日版(ninteibi)の中身作成」参照）。
+       ・チェック項目一覧（FLOW/JUDGMENT/ASSISTANCE）・LEVELSの本文：無変更（いつの時期を尋ねるかに関わらず
+         同じ内容が使えるよう、元々「〜だった」という時期非依存の言い回しで書かれていたため）
+       ・「いつの時期を振り返るか」を示す文言（オープニング・チェック画面冒頭・🐥のセリフ・年金事務所ノート内の
+         「今」）を、本体index.htmlのRECOGNITION_PERIOD_NOTICE_MAINと同じ言い回し・トーンで「認定日ごろ」に書き換え
+       ・STORAGE_KEY・HANDOFF_KEYを、genzai側のデータと混ざらないよう別名前空間に変更
+       ・見た目のアクセントカラー（--accent系）をgenzai側の緑（#5FA98B）とは別系統（インディゴ）に変更し、
+         画面上部に常時「認定日（当時）について」ラベルを表示。genzai側にも対の「現在について」ラベルを追加。
+         現在／認定日を切り替え式にせず完全に画面を分ける、というこのプロジェクトの基本方針を、見た目の面でも
+         裏付けるための措置（00_引き継ぎ_最初に読む.md「認定日版(ninteibi)の計画」2026-07-25合意分の反映）
+       ・本体index.html側（stepCh5Recognitionへの「取り込む」導線）との連携は未実装（次回以降のスコープ）。
+         そのため、ここでの案内文は「この端末に保存される」という事実のみを述べ、本体への取り込みには触れない
+         （存在しない機能を書かない。決定#44と同じ考え方）。 -->
 <script>
 // ---- マスタデータ（トイレ） ----
 // 2026-07-24 たたき台をユーザー確認済み。デリケートな内容のため、他の項目より項目数を
@@ -150,15 +164,18 @@ ALL_GROUPS.forEach(function(g){ g.items.forEach(function(it){ ALL_ITEMS.push(it)
 // 本体index.htmlのADL_HELP_TEXTS.toiletをベースに、尿意・便意への「気付き」の崩れ
 // （judgmentグループ）も反映して補強した。食事のときのような明確な公式基準とのズレは、
 // 今回の調査範囲では見つかっていない（そもそもトイレは診断書側の7項目には存在しない）。
+// 2026-08-01：LEVELSのkeyを過去形に変更（できる→できた 等）。実テンプレート02.xlsxの
+// 認定日欄が過去形表記だったため（本体index.htmlのADL_LEVELS_PASTと同じ対応）。text（説明文）側は
+// 元々「〜だった」という時期非依存の言い回しのため無変更。
 var LEVELS = [
-  {key:'できる', text:'自分のタイミングで問題なくトイレに行け、後始末や清潔保持も含めて大きな支障がなかった。'},
-  {key:'まあできる', text:'トイレには行けるが、間に合わない不安が強い、行くのが億劫で我慢しがち、後始末が雑になることがあるなど、やや支障があった。'},
-  {key:'援助があれば', text:'声かけや付き添いがあれば行けた。体調や不安が強いときは見守りや手助けが必要だった。自分だけだと我慢して長時間そのままでいることが多かった。'},
-  {key:'できない', text:'自分だけではトイレに行く・後始末をすることがかなり難しかった。または、尿意・便意への気付き自体が難しく、我慢し続けてしまう状態が続いていた。'}
+  {key:'できた', text:'自分のタイミングで問題なくトイレに行け、後始末や清潔保持も含めて大きな支障がなかった。'},
+  {key:'できたが援助が必要だった', text:'トイレには行けるが、間に合わない不安が強い、行くのが億劫で我慢しがち、後始末が雑になることがあるなど、やや支障があった。'},
+  {key:'できないが援助があればできた', text:'声かけや付き添いがあれば行けた。体調や不安が強いときは見守りや手助けが必要だった。自分だけだと我慢して長時間そのままでいることが多かった。'},
+  {key:'できなかった', text:'自分だけではトイレに行く・後始末をすることがかなり難しかった。または、尿意・便意への気付き自体が難しく、我慢し続けてしまう状態が続いていた。'}
 ];
 
 // ---- 状態（このパイロット専用のlocalStorageキー。index.html本体とは別） ----
-var STORAGE_KEY = 'adl_explorer_pilot_toilet_v1';
+var STORAGE_KEY = 'adl_explorer_ninteibi_toilet_v1';
 var state = {checked:{}, level:null};
 try{
   var raw = localStorage.getItem(STORAGE_KEY);
@@ -168,7 +185,7 @@ function save(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); 
 
 // ---- index.html本体への受け渡し（案B：小さいデータだけを共有キー経由で渡す・疎結合） ----
 // 渡すのはADLキー1つにつき最終レベルの文字列1つだけ。詳細は食事パイロットのコメント参照。
-var HANDOFF_KEY = 'adl_handoff_v1';
+var HANDOFF_KEY = 'adl_handoff_ninteibi_v1';
 var ADL_ITEM_KEY = 'toilet'; // 本体index.htmlのADL_ITEMSにおける、この画面が担当するキー
 function writeHandoff(){
   try{
@@ -191,7 +208,7 @@ var COMPLETE_STEP = TOTAL_CHECK_SCREENS+3; // 完了画面のstep番号（結果
 //      中身を直すときは shared/chick_widget.js / shared/opening_screen.js を編集し、
 //      `npm run build`（`npm test`はbuildしてから実行される）で反映すること。
 // OPENING_MESSAGEは現在版(genzai)固有の文言（認定日版では別の文言になる）。
-var OPENING_MESSAGE = 'ようこそ。\nあなたの普段の生活の詰まりを少しずつ見つけていけます。';
+var OPENING_MESSAGE = 'ようこそ。\n今回は「認定日ごろ（初診から１年６か月ごろ）」の生活を、少しずつ思い出していきます。';
 // ---- 🐥のセリフ吹き出し（共通部品）。枠は最終文の全文サイズで最初から固定し、
 //      タイプライター中も枠が動かないようにする。タップで即座に全文表示できる。
 //      現在版(genzai)・認定日版(ninteibi)の両方から共有される、文言を一切含まない
@@ -277,9 +294,9 @@ function starSvg(on){
   return '<svg viewBox="0 0 20 20" class="item-star">'+ring+'<circle cx="10" cy="10" r="6" fill="'+fill+'"/></svg>';
 }
 
-var PENSION_FOCUS_TEXT = 'うまくできたかどうかではなく、一人で生活したとして、トイレに関することを自力で続けられるかを確認します。今誰かが手伝ってくれていても、一人ならどうなるかを思い浮かべながら進めてください。';
-var INTRO_CHICK_LINE = '今日は「トイレ」について、一緒に進めてみよう。';
-var REVEAL_CHICK_LINE = '生活の詰まりは、見えてきましたか？';
+var PENSION_FOCUS_TEXT = 'うまくできたかどうかではなく、一人で生活したとして、トイレに関することを自力で続けられるかを確認します。その頃誰かが手伝ってくれていても、一人ならどうなるかを思い浮かべながら進めてください。';
+var INTRO_CHICK_LINE = '今日は認定日ごろの「トイレ」について、一緒に思い出してみよう。';
+var REVEAL_CHICK_LINE = '当時の生活の詰まりは、見えてきましたか？';
 // 本体ADL_ITEMSの並び順で、トイレの次は「食事」。実在するのでリンクを有効化する。
 var NEXT_ITEM_URL = 'eating.html';
 
@@ -301,7 +318,7 @@ function renderIntro(){
       '<p class="doc-note-body">'+PENSION_FOCUS_TEXT+'</p>'+
     '</div>'+
     flowHtml+
-    '<p class="lead">最近1〜2週間で、当てはまることを一つずつ確認していきます。</p>';
+    '<p class="lead">認定日（初診から１年６か月ごろ）の前後の頃を思い出しながら、当てはまることを一つずつ確認していきます。今と違っていても大丈夫です。</p>';
 }
 
 function seededRand(seed){ var x = Math.sin(seed*999)*10000; return x - Math.floor(x); }
@@ -366,7 +383,7 @@ function renderReveal(){
 
 function renderEvaluate(){
   var html = '<h1>生活状況を選ぶ</h1>';
-  html += '<p class="lead">ここまでの内容を参考に、いま一番近いものを選んでください。迷ったときは、下の説明文を参考にしてください。</p>';
+  html += '<p class="lead">ここまでの内容を参考に、当時、一番近いものを選んでください。迷ったときは、下の説明文を参考にしてください。</p>';
   LEVELS.forEach(function(lv){
     var sel = state.level===lv.key ? ' selected' : '';
     html += '<div class="option'+sel+'" data-level="'+lv.key+'">'+

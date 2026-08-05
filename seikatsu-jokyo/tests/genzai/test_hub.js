@@ -19,9 +19,16 @@ function assert(c,m){ if(!c){console.error('FAIL:',m); process.exitCode=1;} else
     'フッターの「戻る」等と同じ.btnボタンの見た目になっている');
   assert(backBtn.disabled !== true, 'ディレクトリ構成が確定したので、有効化されている');
   assert(backBtn.textContent.includes('申立書サポートに戻る'), 'ボタンの文言が正しい');
-  // クリックしても例外が起きず、writeHandoffのような副作用も無いことだけ確認する
-  // （window.location.hrefの実際のナビゲーションはjsdomでは検証できないため）
-  backBtn.click();
+  // クリック時の実際の動作（window.close()の呼び出し）検証は、このdoc1を使う以降の
+  // 検証（era-badge・リンク一覧など）に影響しないよう、ファイル末尾の専用DOMで行う
+  // （2026-08-04、戻るボタンをwindow.close()方式に変更した際に分離。jsdomのclose()は
+  // 実ブラウザと異なりdocument.bodyをその場で空にするため、同じdoc1で続けて他の
+  // 検証をするとera-badge等がnullになってしまう）。
+
+  // 2026-07-31追加：現在版・認定日版を見た目で区別するための常時ラベル
+  // （00_引き継ぎ_最初に読む.md「認定日版(ninteibi)の計画」で合意済みの方針）
+  const eraBadge = doc1.querySelector('.era-badge');
+  assert(eraBadge !== null && eraBadge.textContent === '現在について', 'era-badgeが「現在について」と表示される: ' + (eraBadge && eraBadge.textContent));
 
   doc1.getElementById('openingBubble').click();
   await wait(3200);
@@ -69,6 +76,17 @@ function assert(c,m){ if(!c){console.error('FAIL:',m); process.exitCode=1;} else
   const toiletLink = doc2.querySelector('a.hub-item[data-key="toilet"]');
   const toiletNum = toiletLink.querySelector('.hub-item-num');
   assert(toiletNum && toiletNum.textContent === '3', '「援助があれば」を選んだ項目には番号3が表示される: ' + (toiletNum && toiletNum.textContent));
+
+  // ---- ケース3：戻るボタンをクリックしたとき、例外が起きないことの確認 ----
+  // 2026-08-04、「タブを閉じる→失敗時のみindex.htmlへ遷移」という方式に変更したため、
+  // ケース1・2とは別の使い捨てDOMで検証する（クリックがdocumentを書き換えるため）。
+  const dom3 = new JSDOM(html, { runScripts: 'dangerously', resources: 'usable', url: 'http://localhost/' });
+  const doc3 = dom3.window.document;
+  await wait(50);
+  const backBtn3 = doc3.getElementById('btnBackToIndex');
+  let clickThrew = false;
+  try { backBtn3.click(); } catch(e){ clickThrew = true; }
+  assert(!clickThrew, '戻るボタンをクリックしても例外が起きない（window.close()呼び出し・失敗時のフォールバック含む）');
 
   console.log(process.exitCode === 1 ? 'HUB: FAILURES ABOVE' : 'HUB: ALL PASSED');
   process.exit(process.exitCode||0);

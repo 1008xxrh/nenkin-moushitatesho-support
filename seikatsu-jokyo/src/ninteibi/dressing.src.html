@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>生活をふりかえる（炊事）</title>
+<title>認定日ごろの生活をふりかえる（着替え）</title>
 <style>
 :root{
   --bg:#171B26;
@@ -11,9 +11,9 @@
   --ink:#E7E6E0;
   --ink-soft:#9A9CA8;
   --line:#2E3446;
-  --accent:#5FA98B;
-  --accent-soft:#20332C;
-  --accent-strong:#8FD6B4;
+  --accent:#8087D8;
+  --accent-soft:#262A45;
+  --accent-strong:#C0C4F5;
   --neutral-soft:#232838;
   --night-bg:#12151F;
   --star-off:#4B5468;
@@ -68,69 +68,88 @@ button.btn-stacked .btn-sub{font-size:10px;color:var(--ink-soft);}
 </head>
 <body>
 <div id="app-shell">
-  <div class="era-badge">現在について</div>
+  <div class="era-badge">認定日（当時）について</div>
   <div class="hub-back-link"><a href="hub.html">&larr; 生活状況の一覧へ戻る</a></div>
   <div class="progress" id="progress"></div>
   <main><div class="card" id="screen-root"></div></main>
   <div class="footer-nav" id="footer-nav"></div>
 </div>
 
+<!-- 【2026-07-31】この画面は src/genzai/dressing.src.html を元に、認定日版(ninteibi)向けに
+     以下の点だけを書き換えて作成した（段取り・詳細は 00_索引.md「認定日版(ninteibi)の中身作成」参照）。
+       ・チェック項目一覧（FLOW/JUDGMENT/ASSISTANCE）・LEVELSの本文：無変更（いつの時期を尋ねるかに関わらず
+         同じ内容が使えるよう、元々「〜だった」という時期非依存の言い回しで書かれていたため）
+       ・「いつの時期を振り返るか」を示す文言（オープニング・チェック画面冒頭・🐥のセリフ・年金事務所ノート内の
+         「今」）を、本体index.htmlのRECOGNITION_PERIOD_NOTICE_MAINと同じ言い回し・トーンで「認定日ごろ」に書き換え
+       ・STORAGE_KEY・HANDOFF_KEYを、genzai側のデータと混ざらないよう別名前空間に変更
+       ・見た目のアクセントカラー（--accent系）をgenzai側の緑（#5FA98B）とは別系統（インディゴ）に変更し、
+         画面上部に常時「認定日（当時）について」ラベルを表示。genzai側にも対の「現在について」ラベルを追加。
+         現在／認定日を切り替え式にせず完全に画面を分ける、というこのプロジェクトの基本方針を、見た目の面でも
+         裏付けるための措置（00_引き継ぎ_最初に読む.md「認定日版(ninteibi)の計画」2026-07-25合意分の反映）
+       ・本体index.html側（stepCh5Recognitionへの「取り込む」導線）との連携は未実装（次回以降のスコープ）。
+         そのため、ここでの案内文は「この端末に保存される」という事実のみを述べ、本体への取り込みには触れない
+         （存在しない機能を書かない。決定#44と同じ考え方）。 -->
 <script>
-// ---- マスタデータ（炊事） ----
-// 2026-07-28作成。食事・着替え・トイレと同じ工程（たたき台→公式基準の裏取り→UI実装→
-// テスト）で作成。公式基準の確認結果：「病歴・就労状況等申立書」裏面の日常生活状況は
-// 着替え・トイレ・食事・炊事・掃除・洗面・入浴・散歩・洗濯・買物の10項目で、それぞれを
-// 「１．自発的にできた」「２．自発的にできたが援助が必要だった」「３．自発的にはできない
-// が援助があればできた」「４．できなかった」の4段階でチェックする（社労士事務所サイトの
-// 解説で複数確認。本体index.htmlのADL_LEVELS＝できる/まあできる/援助があれば/できない と
-// 対応関係も一致）。食事のときのような公式基準との明確なズレ（過食側の記述漏れ等）は、
-// 今回の調査範囲では見つかっていない。
+// ---- マスタデータ（着替え） ----
+// 2026-07-24 たたき台をユーザー確認済み。公式基準の確認結果：
+// 「精神の障害に係る等級判定ガイドライン」（診断書用・7項目）では、着替えは単独項目ではなく
+// 「身辺の清潔保持」（洗面・洗髪・入浴・着替え・自室の清掃）の一部として扱われる。
+// ただしこの探索画面が対象にしているのは「病歴・就労状況等申立書」裏面の10項目チェックで、
+// そちらでは着替えは独立した記入項目（食事パイロットの調査と合わせて確認済み）。
 var FLOW = [
-  {id:'plan', title:'何を作るか考える', items:[
-    {id:'c01', text:'何を作ればいいか、なかなか決められなかった'},
-    {id:'c02', text:'献立を考えるのが面倒に感じた'},
-    {id:'c03', text:'同じようなメニューばかりになった'}
+  {id:'want', title:'着替えようと思う', items:[
+    {id:'d01', text:'着替えるのが面倒に感じた'},
+    {id:'d02', text:'何日も同じ服のままでいいと思ってしまった'},
+    {id:'d03', text:'着替える気力がわかなかった'},
+    {id:'d04', text:'パジャマや部屋着のまま一日過ごすことが多かった'}
   ]},
-  {id:'prepare', title:'材料をそろえる', items:[
-    {id:'c04', text:'食材を買いに行くこと自体が億劫だった'},
-    {id:'c05', text:'必要な物を買い忘れることがあった'},
-    {id:'c06', text:'買ったのに使わないまま傷ませてしまうことがあった'}
+  {id:'decide', title:'何を着るか考える', items:[
+    {id:'d05', text:'何を着ればよいか決められなかった'},
+    {id:'d06', text:'気温や天気に合わせて選ぶのが負担だった'},
+    {id:'d07', text:'迷って結局いつも同じ服になった'},
+    {id:'d08', text:'服を選ぶこと自体が大きな負担に感じた'}
   ]},
-  {id:'cook', title:'調理する', items:[
-    {id:'c07', text:'手順を考えながら作るのが負担だった'},
-    {id:'c08', text:'途中で疲れて、作るのをやめてしまうことがあった'},
-    {id:'c09', text:'火や刃物を使うのに、いつもより不安があった'},
-    {id:'c10', text:'レンジで温めるだけなど、簡単なもので済ませることが増えた'}
+  {id:'change', title:'着替える', items:[
+    {id:'d09', text:'着替えの途中で疲れてやめてしまった'},
+    {id:'d10', text:'ボタンや細かい作業が面倒に感じた'},
+    {id:'d11', text:'脱いだところで気力が切れてしまった'},
+    {id:'d12', text:'出かける直前まで着替えられなかった'}
   ]},
-  {id:'cleanup', title:'後片付けをする', items:[
-    {id:'c11', text:'洗い物や片付けが後回しになった'},
-    {id:'c12', text:'シンクや台所に洗い物が溜まることがあった'}
+  {id:'maintain', title:'清潔を保つ', items:[
+    {id:'d13', text:'服が汚れていることに気付きにくかった'},
+    {id:'d14', text:'洗濯していない服と、洗濯した服の区別がつかなくなった'},
+    {id:'d15', text:'同じ服を何日も続けて着ていた'},
+    {id:'d16', text:'匂いや汚れを人に言われて初めて気付いた'}
   ]}
 ];
 var JUDGMENT = {id:'judgment', title:'気付き・判断の変化', items:[
-  {id:'c13', text:'食べる時間になっても、何か作ろうという気が起きなかった'},
-  {id:'c14', text:'何から手をつければいいか、見通しが立てられなかった'}
+  {id:'d17', text:'服が季節や状況に合っているか、自分で気付きにくかった'},
+  {id:'d18', text:'「これくらいで大丈夫」と思うことが増えた'}
 ]};
 var ASSISTANCE = {id:'assistance', title:'まわりの助け', items:[
-  {id:'c15', text:'食材を買ってきてもらうことが多かった'},
-  {id:'c16', text:'メニューを決めてもらえれば作れた'},
-  {id:'c17', text:'一緒に作ってくれる人がいれば取り組めた'}
+  {id:'d19', text:'家族に声をかけてもらって、ようやく着替えた'},
+  {id:'d20', text:'服を出してもらう・選んでもらうことが多かった'},
+  {id:'d21', text:'一人だと何日も着替えないことがあった'}
 ]};
 var ALL_GROUPS = FLOW.concat([JUDGMENT, ASSISTANCE]);
 var ALL_ITEMS = [];
 ALL_GROUPS.forEach(function(g){ g.items.forEach(function(it){ ALL_ITEMS.push(it); }); });
 
-// 本体index.htmlのADL_HELP_TEXTS.cookingをベースに、献立を決める段階の崩れ（planグループ）・
-// 後片付けまで含めた崩れ（cleanupグループ）も反映して補強した。
+// 本体index.htmlのADL_HELP_TEXTS.dressingをベースに、清潔・季節適合への「気付き」の
+// 崩れ（judgmentグループ）も反映して補強した。食事のときのような明確な公式基準との
+// ズレ（過食の見落とし等）は、今回の調査範囲では見つかっていない。
+// 2026-08-01：LEVELSのkeyを過去形に変更（できる→できた 等）。実テンプレート02.xlsxの
+// 認定日欄が過去形表記だったため（本体index.htmlのADL_LEVELS_PASTと同じ対応）。text（説明文）側は
+// 元々「〜だった」という時期非依存の言い回しのため無変更。
 var LEVELS = [
-  {key:'できる', text:'買い置き、献立を考える、調理する、後片付けまで含めて、日常的に自分でこなせていた。'},
-  {key:'まあできる', text:'レトルトや簡単なものなら用意できるが、手の込んだ調理は難しい、後片付けまで手が回らない、メニューがかなり偏るなどの崩れがあった。'},
-  {key:'援助があれば', text:'食材を買ってきてもらう、メニューを決めてもらう、一緒に作ってもらうなどの助けがあればできた。ひとりだと何を作ればよいか決められないことが多かった。'},
-  {key:'できない', text:'調理や後片付けがほとんどできず、レンジで温めるだけで済ませる、または家族や支援者に大きく頼っていた。'}
+  {key:'できた', text:'気温や状況に合わせて服を選び、無理なく着替えができていた。同じ服が何日も続く、汚れに気付かないといったことは少なかった。'},
+  {key:'できたが援助が必要だった', text:'着替えること自体はできるが、服を選ぶのに時間がかかる、面倒で同じ服を着回す、多少汚れていても気にせず着てしまうなど、やや崩れがあった。'},
+  {key:'できないが援助があればできた', text:'家族の声かけ、服を出してもらう・選んでもらうなどの助けがあれば着替えられた。自分だけだと何日も同じ服のまま、または汚れに気付かず過ごしやすかった。'},
+  {key:'できなかった', text:'着替えがほとんどできず、何日も同じ服やパジャマのままで過ごすことが多かった。または、服の汚れや季節との不一致に自分では気付けない状態が続いていた。'}
 ];
 
 // ---- 状態（このパイロット専用のlocalStorageキー。index.html本体とは別） ----
-var STORAGE_KEY = 'adl_explorer_pilot_cooking_v1';
+var STORAGE_KEY = 'adl_explorer_ninteibi_dressing_v1';
 var state = {checked:{}, level:null};
 try{
   var raw = localStorage.getItem(STORAGE_KEY);
@@ -140,8 +159,8 @@ function save(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); 
 
 // ---- index.html本体への受け渡し（案B：小さいデータだけを共有キー経由で渡す・疎結合） ----
 // 渡すのはADLキー1つにつき最終レベルの文字列1つだけ。詳細は食事パイロットのコメント参照。
-var HANDOFF_KEY = 'adl_handoff_v1';
-var ADL_ITEM_KEY = 'cooking'; // 本体index.htmlのADL_ITEMSにおける、この画面が担当するキー
+var HANDOFF_KEY = 'adl_handoff_ninteibi_v1';
+var ADL_ITEM_KEY = 'dressing'; // 本体index.htmlのADL_ITEMSにおける、この画面が担当するキー
 function writeHandoff(){
   try{
     var raw = localStorage.getItem(HANDOFF_KEY);
@@ -158,19 +177,20 @@ var TOTAL_CHECK_SCREENS = ALL_GROUPS.length; // 6
 var COMPLETE_STEP = TOTAL_CHECK_SCREENS+3; // 完了画面のstep番号（結果を表示する画面）
 
 // ---- オープニング（ADLセクション全体の入口）と🐥のセリフ吹き出し部品。
-//      shared/ 配下の共通部品（2026-07-25切り出し）。
+//      以前は食事・着替え・トイレの3ファイルにコピペで重複していたが、
+//      2026-07-25、shared/ 配下の共通部品として切り出した。
 //      中身を直すときは shared/chick_widget.js / shared/opening_screen.js を編集し、
 //      `npm run build`（`npm test`はbuildしてから実行される）で反映すること。
 // OPENING_MESSAGEは現在版(genzai)固有の文言（認定日版では別の文言になる）。
-var OPENING_MESSAGE = 'ようこそ。\nあなたの普段の生活の詰まりを少しずつ見つけていけます。';
+var OPENING_MESSAGE = 'ようこそ。\n今回は「認定日ごろ（初診から１年６か月ごろ）」の生活を、少しずつ思い出していきます。';
 // SHARED_JS: chick_widget
 // SHARED_JS: opening_screen
 
-var PENSION_FOCUS_TEXT = 'うまく作れたかどうかではなく、一人で生活したとして、食事の準備を自力で続けられるかを確認します。今誰かが手伝ってくれていても、一人ならどうなるかを思い浮かべながら進めてください。';
-var INTRO_CHICK_LINE = '今日は「炊事」について、一緒に進めてみよう。';
-var REVEAL_CHICK_LINE = '生活の詰まりは、見えてきましたか？';
-// 本体ADL_ITEMSの並び順で、炊事の次は「掃除」。2026-07-28、掃除の画面ができたので有効化。
-var NEXT_ITEM_URL = 'cleaning.html';
+var PENSION_FOCUS_TEXT = '「おしゃれかどうか」ではなく、一人で生活したとして、季節や状況に合った身なりを自力で保てるかを確認します。その頃誰かが手伝ってくれていても、一人ならどうなるかを思い浮かべながら進めてください。';
+var INTRO_CHICK_LINE = '今日は認定日ごろの「着替え」について、一緒に思い出してみよう。';
+var REVEAL_CHICK_LINE = '当時の生活の詰まりは、見えてきましたか？';
+// 本体ADL_ITEMSの並び順で、着替えの次は「トイレ」。実在するのでリンクを有効化する。
+var NEXT_ITEM_URL = 'toilet.html';
 
 function renderIntro(){
   var flowHtml = '<div class="flow-list">';
@@ -190,7 +210,7 @@ function renderIntro(){
       '<p class="doc-note-body">'+PENSION_FOCUS_TEXT+'</p>'+
     '</div>'+
     flowHtml+
-    '<p class="lead">最近1〜2週間で、当てはまることを一つずつ確認していきます。</p>';
+    '<p class="lead">認定日（初診から１年６か月ごろ）の前後の頃を思い出しながら、当てはまることを一つずつ確認していきます。今と違っていても大丈夫です。</p>';
 }
 
 function seededRand(seed){ var x = Math.sin(seed*999)*10000; return x - Math.floor(x); }
@@ -255,7 +275,7 @@ function renderReveal(){
 
 function renderEvaluate(){
   var html = '<h1>生活状況を選ぶ</h1>';
-  html += '<p class="lead">ここまでの内容を参考に、いま一番近いものを選んでください。迷ったときは、下の説明文を参考にしてください。</p>';
+  html += '<p class="lead">ここまでの内容を参考に、当時、一番近いものを選んでください。迷ったときは、下の説明文を参考にしてください。</p>';
   LEVELS.forEach(function(lv){
     var sel = state.level===lv.key ? ' selected' : '';
     html += '<div class="option'+sel+'" data-level="'+lv.key+'">'+
@@ -266,8 +286,8 @@ function renderEvaluate(){
 }
 
 function renderComplete(){
-  var html = '<h1>「炊事」についてはこれでおわりです。</h1>';
-  html += '<div class="option selected"><div class="option-title">炊事</div><div>'+(state.level||'未選択')+'</div></div>';
+  var html = '<h1>「着替え」についてはこれでおわりです。</h1>';
+  html += '<div class="option selected"><div class="option-title">着替え</div><div>'+(state.level||'未選択')+'</div></div>';
   html += '<div class="handoff-box">ここまでの記録は、この端末に保存されています。次に開いたときも、続きから見られます。</div>';
   html += '<div class="chick-line">'+
       '<div class="opening-hiyoko">🐥</div>'+
@@ -360,7 +380,9 @@ function render(){
     window.location.href = NEXT_ITEM_URL + '?from=hub';
   }); }
   if(closeBtn){ closeBtn.addEventListener('click', function(){
-    // 「次へすすむ」と同じパターン：保存してから直接ハブへ遷移する。
+    // 「次へすすむ」と同じパターン：保存してから直接ハブへ遷移する
+    // （以前は「とじた後」の着地画面を経由していたが、その画面からハブへ戻るための
+    // 導線が無く行き止まりになっていたため、2026-07-25に直接遷移する形に変更した）。
     writeHandoff();
     window.location.href = 'hub.html';
   }); }

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>生活をふりかえる（トイレ）</title>
+<title>認定日ごろの生活をふりかえる（散歩）</title>
 <style>
 :root{
   --bg:#171B26;
@@ -11,9 +11,9 @@
   --ink:#E7E6E0;
   --ink-soft:#9A9CA8;
   --line:#2E3446;
-  --accent:#5FA98B;
-  --accent-soft:#20332C;
-  --accent-strong:#8FD6B4;
+  --accent:#8087D8;
+  --accent-soft:#262A45;
+  --accent-strong:#C0C4F5;
   --neutral-soft:#232838;
   --night-bg:#12151F;
   --star-off:#4B5468;
@@ -94,71 +94,81 @@ button.opening-start{margin-top:22px;flex:none;width:180px;padding:7px 14px;}
 </head>
 <body>
 <div id="app-shell">
-  <div class="era-badge">現在について</div>
+  <div class="era-badge">認定日（当時）について</div>
   <div class="hub-back-link"><a href="hub.html">&larr; 生活状況の一覧へ戻る</a></div>
   <div class="progress" id="progress"></div>
   <main><div class="card" id="screen-root"></div></main>
   <div class="footer-nav" id="footer-nav"></div>
 </div>
 
+<!-- 【2026-07-31】この画面は src/genzai/walking.src.html を元に、認定日版(ninteibi)向けに
+     以下の点だけを書き換えて作成した（段取り・詳細は 00_索引.md「認定日版(ninteibi)の中身作成」参照）。
+       ・チェック項目一覧（FLOW/JUDGMENT/ASSISTANCE）・LEVELSの本文：無変更（いつの時期を尋ねるかに関わらず
+         同じ内容が使えるよう、元々「〜だった」という時期非依存の言い回しで書かれていたため）
+       ・「いつの時期を振り返るか」を示す文言（オープニング・チェック画面冒頭・🐥のセリフ・年金事務所ノート内の
+         「今」）を、本体index.htmlのRECOGNITION_PERIOD_NOTICE_MAINと同じ言い回し・トーンで「認定日ごろ」に書き換え
+       ・STORAGE_KEY・HANDOFF_KEYを、genzai側のデータと混ざらないよう別名前空間に変更
+       ・見た目のアクセントカラー（--accent系）をgenzai側の緑（#5FA98B）とは別系統（インディゴ）に変更し、
+         画面上部に常時「認定日（当時）について」ラベルを表示。genzai側にも対の「現在について」ラベルを追加。
+         現在／認定日を切り替え式にせず完全に画面を分ける、というこのプロジェクトの基本方針を、見た目の面でも
+         裏付けるための措置（00_引き継ぎ_最初に読む.md「認定日版(ninteibi)の計画」2026-07-25合意分の反映）
+       ・本体index.html側（stepCh5Recognitionへの「取り込む」導線）との連携は未実装（次回以降のスコープ）。
+         そのため、ここでの案内文は「この端末に保存される」という事実のみを述べ、本体への取り込みには触れない
+         （存在しない機能を書かない。決定#44と同じ考え方）。 -->
 <script>
-// ---- マスタデータ（トイレ） ----
-// 2026-07-24 たたき台をユーザー確認済み。デリケートな内容のため、他の項目より項目数を
-// 絞り、網羅性より言葉遣いの丁寧さを優先している（本人確認済み）。
-// 公式基準の確認結果：「精神の障害に係る等級判定ガイドライン」（診断書用・7項目）には
-// トイレ（排泄）に対応する単独項目は無い。ただしこの探索画面が対象にしているのは
-// 「病歴・就労状況等申立書」裏面の10項目チェックで、そちらではトイレは独立した記入項目
-// （社労士事務所サイトの解説で確認済み）。
+// ---- マスタデータ（散歩） ----
+// 2026-07-28作成。他の項目と同じ工程で作成。公式基準の確認結果：外出のしづらさは
+// 「ひきこもり」として、精神の障害に係る等級判定ガイドラインでも「病状の影響により、
+// 継続して日常生活に制限が生じている場合は、それを考慮する」と明記されている。また
+// 別の社労士サイトでは「外出が怖くて通院が難しい」が具体的な困難の例として挙げられて
+// おり、恐怖・不安を理由に外出できない側面を、encounterグループ・judgmentグループに
+// 反映した。
 var FLOW = [
-  {id:'notice', title:'行きたいと気付く', items:[
-    {id:'t01', text:'尿意や便意になかなか気付けなかった'},
-    {id:'t02', text:'気付いても、ついそのままにしてしまった'},
-    {id:'t03', text:'我慢して長い時間そのままでいた'},
-    {id:'t04', text:'トイレに行くこと自体が億劫に感じた'}
+  {id:'prepare', title:'外に出る準備をする', items:[
+    {id:'wk01', text:'着替えるだけで、かなり時間がかかることがあった'},
+    {id:'wk02', text:'何を着ていけばいいか決められず、準備が進まないことがあった'}
   ]},
-  {id:'go', title:'トイレに向かう', items:[
-    {id:'t05', text:'動くのが面倒で、ぎりぎりまで行かなかった'},
-    {id:'t06', text:'外出先だと、強い不安を感じた'},
-    {id:'t07', text:'人の視線や物音が気になって行きにくかった'}
+  {id:'decide', title:'外に出るきっかけ・決心をする', items:[
+    {id:'wk03', text:'外に出ようと思っても、なかなか一歩が踏み出せなかった'},
+    {id:'wk04', text:'理由もなく、外に出ることが怖く感じることがあった'},
+    {id:'wk05', text:'何日も外に出ないまま過ごすことがあった'}
   ]},
-  {id:'do', title:'用を足す', items:[
-    {id:'t08', text:'落ち着いてできないことがあった'},
-    {id:'t09', text:'気持ちが焦ってしまうことがあった'},
-    {id:'t10', text:'間に合わないことがあった'}
+  {id:'walk', title:'外を歩く・移動する', items:[
+    {id:'wk06', text:'少し歩いただけで、ひどく疲れてしまった'},
+    {id:'wk07', text:'人通りの多い道や場所を、できるだけ避けるようになった'},
+    {id:'wk08', text:'遠くまで行くのが不安で、行動範囲がかなり狭くなった'}
   ]},
-  {id:'aftercare', title:'後始末をする', items:[
-    {id:'t11', text:'後始末が雑になってしまうことがあった'},
-    {id:'t12', text:'手を洗うのを忘れることがあった'},
-    {id:'t13', text:'トイレットペーパーなどの補充ができていなかった'},
-    {id:'t19', text:'尿漏れパッドや生理用ナプキンなどの交換が、後回しになってしまうことがあった'}
+  {id:'encounter', title:'人や物に出会ったときの対応', items:[
+    {id:'wk09', text:'知っている人に会うかもしれないと思うと、外に出づらかった'},
+    {id:'wk10', text:'人とすれ違うだけで、緊張したり疲れたりした'}
   ]}
 ];
 var JUDGMENT = {id:'judgment', title:'気付き・判断の変化', items:[
-  {id:'t14', text:'尿意や便意そのものに気付きにくかった'},
-  {id:'t15', text:'「まだ大丈夫」と我慢することが増えた'},
-  {id:'t20', text:'尿漏れパッドや生理用ナプキンなどの交換が滞り、肌がかぶれてしまうことがあった'}
+  {id:'wk11', text:'前にいつ外に出たか、はっきり思い出せないことがあった'},
+  {id:'wk12', text:'外に出る予定があっても、直前で行けなくなることがあった'}
 ]};
 var ASSISTANCE = {id:'assistance', title:'まわりの助け', items:[
-  {id:'t16', text:'家族に声をかけてもらって、ようやく行けた'},
-  {id:'t17', text:'外出時は付き添ってもらうことが多かった'},
-  {id:'t18', text:'一人だと我慢しやすかった'}
+  {id:'wk13', text:'付き添ってもらえれば外に出られた'},
+  {id:'wk14', text:'送迎してもらえば行き先には着けた'},
+  {id:'wk15', text:'強く後押ししてもらわないと、外に出る気になれなかった'}
 ]};
 var ALL_GROUPS = FLOW.concat([JUDGMENT, ASSISTANCE]);
 var ALL_ITEMS = [];
 ALL_GROUPS.forEach(function(g){ g.items.forEach(function(it){ ALL_ITEMS.push(it); }); });
 
-// 本体index.htmlのADL_HELP_TEXTS.toiletをベースに、尿意・便意への「気付き」の崩れ
-// （judgmentグループ）も反映して補強した。食事のときのような明確な公式基準とのズレは、
-// 今回の調査範囲では見つかっていない（そもそもトイレは診断書側の7項目には存在しない）。
+// 本体index.htmlのADL_HELP_TEXTS.walkingをベースに、人通りを避ける側の崩れも反映して補強した。
+// 2026-08-01：LEVELSのkeyを過去形に変更（できる→できた 等）。実テンプレート02.xlsxの
+// 認定日欄が過去形表記だったため（本体index.htmlのADL_LEVELS_PASTと同じ対応）。text（説明文）側は
+// 元々「〜だった」という時期非依存の言い回しのため無変更。
 var LEVELS = [
-  {key:'できる', text:'自分のタイミングで問題なくトイレに行け、後始末や清潔保持も含めて大きな支障がなかった。'},
-  {key:'まあできる', text:'トイレには行けるが、間に合わない不安が強い、行くのが億劫で我慢しがち、後始末が雑になることがあるなど、やや支障があった。'},
-  {key:'援助があれば', text:'声かけや付き添いがあれば行けた。体調や不安が強いときは見守りや手助けが必要だった。自分だけだと我慢して長時間そのままでいることが多かった。'},
-  {key:'できない', text:'自分だけではトイレに行く・後始末をすることがかなり難しかった。または、尿意・便意への気付き自体が難しく、我慢し続けてしまう状態が続いていた。'}
+  {key:'できた', text:'近所への外出や必要な移動を、特に大きな不安なくひとりで行えた。'},
+  {key:'できたが援助が必要だった', text:'短時間・近距離なら行けるが、疲れや不安が強く、外出範囲や頻度がかなり限られていた。人通りの多い場所を避けるなどの崩れもあった。'},
+  {key:'できないが援助があればできた', text:'付き添い、送迎、強い後押しがあれば外出できた。ひとりでは、外に出る一歩がなかなか踏み出せなかった。'},
+  {key:'できなかった', text:'外出自体がかなり難しく、ほとんど家から出られない状態だった。'}
 ];
 
 // ---- 状態（このパイロット専用のlocalStorageキー。index.html本体とは別） ----
-var STORAGE_KEY = 'adl_explorer_pilot_toilet_v1';
+var STORAGE_KEY = 'adl_explorer_ninteibi_walking_v1';
 var state = {checked:{}, level:null};
 try{
   var raw = localStorage.getItem(STORAGE_KEY);
@@ -168,8 +178,8 @@ function save(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); 
 
 // ---- index.html本体への受け渡し（案B：小さいデータだけを共有キー経由で渡す・疎結合） ----
 // 渡すのはADLキー1つにつき最終レベルの文字列1つだけ。詳細は食事パイロットのコメント参照。
-var HANDOFF_KEY = 'adl_handoff_v1';
-var ADL_ITEM_KEY = 'toilet'; // 本体index.htmlのADL_ITEMSにおける、この画面が担当するキー
+var HANDOFF_KEY = 'adl_handoff_ninteibi_v1';
+var ADL_ITEM_KEY = 'walking'; // 本体index.htmlのADL_ITEMSにおける、この画面が担当するキー
 function writeHandoff(){
   try{
     var raw = localStorage.getItem(HANDOFF_KEY);
@@ -186,12 +196,11 @@ var TOTAL_CHECK_SCREENS = ALL_GROUPS.length; // 6
 var COMPLETE_STEP = TOTAL_CHECK_SCREENS+3; // 完了画面のstep番号（結果を表示する画面）
 
 // ---- オープニング（ADLセクション全体の入口）と🐥のセリフ吹き出し部品。
-//      以前は食事・着替え・トイレの3ファイルにコピペで重複していたが、
-//      2026-07-25、shared/ 配下の共通部品として切り出した。
+//      shared/ 配下の共通部品（2026-07-25切り出し）。
 //      中身を直すときは shared/chick_widget.js / shared/opening_screen.js を編集し、
 //      `npm run build`（`npm test`はbuildしてから実行される）で反映すること。
 // OPENING_MESSAGEは現在版(genzai)固有の文言（認定日版では別の文言になる）。
-var OPENING_MESSAGE = 'ようこそ。\nあなたの普段の生活の詰まりを少しずつ見つけていけます。';
+var OPENING_MESSAGE = 'ようこそ。\n今回は「認定日ごろ（初診から１年６か月ごろ）」の生活を、少しずつ思い出していきます。';
 // ---- 🐥のセリフ吹き出し（共通部品）。枠は最終文の全文サイズで最初から固定し、
 //      タイプライター中も枠が動かないようにする。タップで即座に全文表示できる。
 //      現在版(genzai)・認定日版(ninteibi)の両方から共有される、文言を一切含まない
@@ -277,11 +286,11 @@ function starSvg(on){
   return '<svg viewBox="0 0 20 20" class="item-star">'+ring+'<circle cx="10" cy="10" r="6" fill="'+fill+'"/></svg>';
 }
 
-var PENSION_FOCUS_TEXT = 'うまくできたかどうかではなく、一人で生活したとして、トイレに関することを自力で続けられるかを確認します。今誰かが手伝ってくれていても、一人ならどうなるかを思い浮かべながら進めてください。';
-var INTRO_CHICK_LINE = '今日は「トイレ」について、一緒に進めてみよう。';
-var REVEAL_CHICK_LINE = '生活の詰まりは、見えてきましたか？';
-// 本体ADL_ITEMSの並び順で、トイレの次は「食事」。実在するのでリンクを有効化する。
-var NEXT_ITEM_URL = 'eating.html';
+var PENSION_FOCUS_TEXT = 'うまくできたかどうかではなく、一人で生活したとして、近所への外出や必要な移動を自力で続けられるかを確認します。その頃誰かが手伝ってくれていても、一人ならどうなるかを思い浮かべながら進めてください。';
+var INTRO_CHICK_LINE = '今日は認定日ごろの「散歩」について、一緒に思い出してみよう。';
+var REVEAL_CHICK_LINE = '当時の生活の詰まりは、見えてきましたか？';
+// 本体ADL_ITEMSの並び順で、散歩の次は「洗濯」。2026-07-28、洗濯の画面ができたので有効化。
+var NEXT_ITEM_URL = 'laundry.html';
 
 function renderIntro(){
   var flowHtml = '<div class="flow-list">';
@@ -301,7 +310,7 @@ function renderIntro(){
       '<p class="doc-note-body">'+PENSION_FOCUS_TEXT+'</p>'+
     '</div>'+
     flowHtml+
-    '<p class="lead">最近1〜2週間で、当てはまることを一つずつ確認していきます。</p>';
+    '<p class="lead">認定日（初診から１年６か月ごろ）の前後の頃を思い出しながら、当てはまることを一つずつ確認していきます。今と違っていても大丈夫です。</p>';
 }
 
 function seededRand(seed){ var x = Math.sin(seed*999)*10000; return x - Math.floor(x); }
@@ -366,7 +375,7 @@ function renderReveal(){
 
 function renderEvaluate(){
   var html = '<h1>生活状況を選ぶ</h1>';
-  html += '<p class="lead">ここまでの内容を参考に、いま一番近いものを選んでください。迷ったときは、下の説明文を参考にしてください。</p>';
+  html += '<p class="lead">ここまでの内容を参考に、当時、一番近いものを選んでください。迷ったときは、下の説明文を参考にしてください。</p>';
   LEVELS.forEach(function(lv){
     var sel = state.level===lv.key ? ' selected' : '';
     html += '<div class="option'+sel+'" data-level="'+lv.key+'">'+
@@ -377,8 +386,8 @@ function renderEvaluate(){
 }
 
 function renderComplete(){
-  var html = '<h1>「トイレ」についてはこれでおわりです。</h1>';
-  html += '<div class="option selected"><div class="option-title">トイレ</div><div>'+(state.level||'未選択')+'</div></div>';
+  var html = '<h1>「散歩」についてはこれでおわりです。</h1>';
+  html += '<div class="option selected"><div class="option-title">散歩</div><div>'+(state.level||'未選択')+'</div></div>';
   html += '<div class="handoff-box">ここまでの記録は、この端末に保存されています。次に開いたときも、続きから見られます。</div>';
   html += '<div class="chick-line">'+
       '<div class="opening-hiyoko">🐥</div>'+
@@ -471,9 +480,7 @@ function render(){
     window.location.href = NEXT_ITEM_URL + '?from=hub';
   }); }
   if(closeBtn){ closeBtn.addEventListener('click', function(){
-    // 「次へすすむ」と同じパターン：保存してから直接ハブへ遷移する
-    // （以前は「とじた後」の着地画面を経由していたが、その画面からハブへ戻るための
-    // 導線が無く行き止まりになっていたため、2026-07-25に直接遷移する形に変更した）。
+    // 「次へすすむ」と同じパターン：保存してから直接ハブへ遷移する。
     writeHandoff();
     window.location.href = 'hub.html';
   }); }
