@@ -29,7 +29,8 @@ const SHARED_DIR = path.join(ROOT, 'shared');
 // マーカー名 -> shared/ 内のファイル名
 const SHARED_FILES = {
   chick_widget: 'chick_widget.js',
-  opening_screen: 'opening_screen.js'
+  opening_screen: 'opening_screen.js',
+  chat_origin: 'chat_origin.js'
 };
 
 // マーカー名 -> shared/ 内のCSSファイル名（hub.htmlはopening_screen.cssを使わないなど、

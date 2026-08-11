@@ -36,7 +36,7 @@ header.tasks{padding:16px 20px 4px;}
 .task-pill{flex:1;text-align:center;font-size:11px;padding:6px 4px;border-radius:8px;background:var(--card);border:1px solid var(--line);color:var(--ink-soft);}
 .task-pill.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-strong);font-weight:500;}
 .task-pill.done{color:var(--good);}
-main{flex:1;padding:8px 20px 24px;}
+main{flex:1;padding:8px 20px 120px;}
 .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px 20px;}
 h1{font-size:20px;font-weight:500;margin:0 0 8px;}
 h2{font-size:17px;font-weight:500;margin:0 0 12px;}
@@ -47,15 +47,22 @@ p.lead{color:var(--ink-soft);font-size:14px;margin:0 0 20px;}
 p.optional-notice{color:var(--ink);font-size:14px;font-weight:700;margin:-2px 0 16px;}
 .hint{background:var(--accent-soft);color:var(--accent-strong);font-size:13px;padding:10px 14px;border-radius:10px;margin:12px 0;}
 .chip-group{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
-.chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:8px 14px;font-size:14px;color:var(--ink);cursor:pointer;}
+.chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:8px 14px;font-size:14px;color:var(--ink);cursor:pointer;scroll-margin-bottom:110px;}
 .chip-selected{background:var(--accent);border-color:var(--accent);color:#fff;}
 .option-block{display:flex;flex-direction:column;gap:10px;margin-bottom:16px;}
-.option{border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-size:15px;cursor:pointer;background:var(--card);}
+/* ch2Adl（会話形式）の4択だけに使う2列グリッド版。他画面の.option-block（はい/いいえ・
+   就労状況・帯サイズ等、件数や文言長がまちまちな一覧）には影響させないよう、
+   .option-blockとは別の専用クラスとして追加した（後から着いた方が優先されるよう
+   スタイルシート内の並び順もこの位置にしている）。ADL_LEVELSは常にちょうど4件、
+   かつ「できる→まあできる→援助があれば→できない」という一直線の尺度なので、
+   2列×2行でも読み順（左上→右上→左下→右下）が尺度の順序と一致する。 */
+.option-block-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.option{border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-size:15px;cursor:pointer;background:var(--card);scroll-margin-bottom:110px;}
 .option.selected{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-strong);font-weight:500;}
 label.field-label{display:block;font-size:13px;color:var(--ink-soft);margin:16px 0 6px;}
-input[type=text],input[type=number]{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:15px;background:#fff;color:var(--ink);}
+input[type=text],input[type=number]{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:15px;background:#fff;color:var(--ink);scroll-margin-bottom:110px;}
 input[type=text]::placeholder,input[type=number]::placeholder,textarea::placeholder{color:#b0b0ac;}
-textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:15px;min-height:80px;font-family:inherit;}
+textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:15px;min-height:80px;font-family:inherit;scroll-margin-bottom:110px;}
 .row{display:flex;gap:10px;}
 .row > *{flex:1;}
 .adl-item{margin-bottom:18px;}
@@ -67,7 +74,10 @@ textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius
 .conv-bot-sub{align-self:flex-start;font-size:12px;color:var(--ink-soft);margin:-2px 2px 0;max-width:92%;}
 .conv-user{align-self:flex-end;max-width:85%;background:var(--accent);color:#fff;border-radius:14px 14px 4px 14px;padding:9px 14px;font-size:14px;}
 .conv-user.skip{background:transparent;border:1px dashed var(--line);color:var(--ink-soft);font-style:italic;}
-.conv-current{margin-top:4px;}
+.conv-user-toggle{align-self:flex-end;display:flex;gap:6px;}
+.conv-user-toggle-btn{border:1px solid var(--line);border-radius:14px;padding:7px 14px;font-size:14px;cursor:pointer;background:var(--card);color:var(--ink-soft);}
+.conv-user-toggle-btn.selected{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-strong);font-weight:500;}
+.conv-current{margin-top:4px;scroll-margin-bottom:110px;}
 .conv-current .chip-group{margin-bottom:0;}
 .check-row{display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;}
 .check-box{width:18px;height:18px;border:1px solid var(--line);border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:#fff;}
@@ -78,6 +88,7 @@ button.btn{flex:1;padding:14px;border-radius:12px;border:none;font-size:15px;fon
 button.btn-primary{background:var(--accent);color:#fff;}
 button.btn-primary:disabled{background:#C9C4B6;cursor:not-allowed;}
 button.btn-secondary{background:var(--card);border:1px solid var(--line);color:var(--ink);}
+button.btn-secondary.btn-alone{flex:0 0 auto;min-width:120px;}
 .timeline-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px;}
 .timeline-row.gap{color:var(--ink-soft);border-bottom:1px dashed var(--line);font-style:italic;}
 .badge{font-size:12px;padding:3px 10px;border-radius:999px;white-space:nowrap;}
@@ -88,6 +99,10 @@ button.btn-secondary{background:var(--card);border:1px solid var(--line);color:v
 .center{text-align:center;}
 .small{font-size:13px;color:var(--ink-soft);}
 .link-btn{background:none;border:none;color:var(--accent-strong);font-size:14px;text-decoration:underline;cursor:pointer;padding:0;display:block;margin-top:4px;}
+/* optional-notice内の「まだ答えていない人」向けインラインリンク（②：冒頭側） */
+.inline-skip-link{color:var(--accent-strong);font-weight:700;}
+/* スレッド末尾の「もう十分な人」向けスキップリンク（②：右寄せ／③：太字で目立たせる） */
+.link-btn.skip-all-link{margin-top:14px;text-align:right;font-weight:700;width:100%;}
 button:focus-visible, .option:focus-visible, .chip:focus-visible, [role="button"]:focus-visible{outline:2px solid var(--accent-strong);outline-offset:2px;}
 .edit-section{margin-top:24px;padding-top:16px;border-top:1px solid var(--border);}
 .edit-section-label{font-size:12px;color:var(--ink-soft);margin:0 0 10px;}
@@ -936,9 +951,12 @@ const CH_LABELS = ["就労状況","日常生活状況","出来事カード収集
 // どちらかに追加すること。どちらにも無いとtest_step_chapter_map.jsの網羅テストが落ちる。
 const STEP_CHAPTER_MAP = {
   // 第1章：就労状況（就労の有無＋職種等の詳細＋働いていない理由。2026-08-02に職種等をch2から移設）
-  ch1_work_status: 1, ch2_intro: 1, ch2_work_detail: 1, ch2_notwork_reason: 1,
-  // 第2章：日常生活状況（ADL＋その他）
-  ch2_adl: 2, ch2_other: 2,
+  ch1_work_status: 1, ch2_work_detail: 1, ch2_notwork_reason: 1,
+  // 第2章：日常生活状況（ADL＋その他）。ch2_introは2026-08-08にここへ移設
+  // （元は第1章側、ch1_work_statusの直後にあったが、文面が「日常生活について」なのに
+  // 実際に次に聞かれるのは就労状況だったため混乱を招きやすく、日常生活状況の直前
+  // （ch2_adlの直前）へ位置を移した。stepCh2Intro()のコメントも参照）。
+  ch2_intro: 2, ch2_adl: 2, ch2_other: 2,
   // 第3章：出来事カード収集
   ch3_intro: 3, ch3_events: 3, ch3_done: 3,
   // 第4章：通院の記録
@@ -1119,8 +1137,7 @@ const OTHER_DIFFICULTIES = [
   '音・光に敏感',
   '予定変更が苦手',
   '長時間集中できない',
-  '自分を傷つけたくなることがある',
-  'その他'
+  '自分を傷つけたくなることがある'
 ];
 // 複数回起こりうる出来事（+追加形式で扱う）
 const REPEATABLE_EVENTS = [
@@ -1242,6 +1259,21 @@ function resetState(){
     returnTo:null,
     workStatusAtCh2Entry:null,
     workStatusJustChanged:false,
+    // 2026-08-08（決定#58）：ch2_adlの会話形式の最中に、姉妹アプリ（seikatsu-jokyo/）の
+    // 項目別ページへのリンクを一度でも踏んだら true にする。true になった後は、
+    // completed.ch2やreturnToと同じ扱いで「修正時」とみなし、以後ずっとch2_adlは
+    // 一覧フォーム（姉妹アプリからの取り込みUIがある方）で固定表示する
+    // （＝会話に戻らせない。stepCh2Adl()のshouldShowAdlForm()を参照）。
+    adlConvEnded:false,
+    // 2026-08-09追加：ch2_adlの会話形式を、姉妹アプリへ行かずに自分で最後まで終える
+    // （10問すべて回答、または「残りをとばす」を使う）と true にする。
+    // 【直した不具合】completed.ch2はch2_other自体の完了まで立たないため、10問答え終えて
+    // ch2_otherへ進んだ後に「戻る」でch2_adlに戻ると、completed.ch2・returnTo・adlConvEndedの
+    // どれもfalseのままで、会話が1問目からやり直しになっていた（データ自体は消えないが、
+    // 毎回10問タップし直す羽目になっていた）。adlConvEndedとは意図的に別のフラグにした
+    // （adlConvEndedは「姉妹アプリへ行って会話を打ち切った」、adlConvDoneは「アプリ内だけで
+    // 会話を完走・またはスキップした」で発生源が違うため、原因の切り分けがしやすいように分けている）。
+    adlConvDone:false,
     completed:{ch1:false, ch2:false, ch3:false, ch4:false, ch5:false},
 
     // ===== 過去編（続紙対応）永続state。Phase4仕様書4-1章 =====
@@ -2691,16 +2723,25 @@ function renderStringCheckList(containerId, items, selectedArr, helpTexts, onCha
 // 「迷ったときの例」の説明文自体はADL_HELP_TEXTSのキー（現在形のADL_LEVELS）で引く。
 // levelsが過去形でも、並び順（idx）でADL_LEVELSの対応するキーを引けば同じ説明文を再利用でき、
 // ADL_HELP_TEXTSを現在形・過去形で二重に持つ必要がない。
-function renderAdlItemHtml(key, label, containerIdPrefix, levels){
+// 「迷ったときの例」の折りたたみHTML（ADL用）を単独で組み立てる。
+// 2026-08-08: 会話形式（renderCh2AdlStep）からも同じ密度で使うため、renderAdlItemHtmlから
+// 抜き出して共通ヘルパー化した（出力するHTMLは従来と完全に同一）。
+function adlHelpDetailsHtml(key, levels){
   levels = levels || ADL_LEVELS;
   const help = ADL_HELP_TEXTS[key];
-  const helpHtml = help ? `
+  if(!help) return '';
+  return `
     <details style="margin-top:4px;">
       <summary class="small" style="cursor:pointer;color:var(--accent-strong);">迷ったときの例を見る</summary>
       <div class="small" style="margin-top:6px;line-height:1.6;">
         ${levels.map((level,idx)=>`<p style="margin:0 0 6px;"><strong style="font-weight:600;">${esc(level)}：</strong>${esc(help[ADL_LEVELS[idx]]||'')}</p>`).join('')}
       </div>
-    </details>` : '';
+    </details>`;
+}
+
+function renderAdlItemHtml(key, label, containerIdPrefix, levels){
+  levels = levels || ADL_LEVELS;
+  const helpHtml = adlHelpDetailsHtml(key, levels);
   return `<div class="adl-item"><div class="adl-label">${esc(label)}</div><div class="chip-group adl-options" id="${containerIdPrefix}${key}"></div>${helpHtml}</div>`;
 }
 
@@ -2727,7 +2768,12 @@ function setFooter(opts){
   footer.innerHTML = '';
   if(opts.secondaryLabel){
     const b = document.createElement('button');
-    b.className = 'btn btn-secondary';
+    // 2026-08-10（決定#65・案A）：「戻る」単独（primaryLabel無し）のときはflex:1で全幅に
+    // 伸びて「次へ」の定位置を占領してしまい違和感があるため、その場合だけ伸びないようにする。
+    // ch2_reason/ch2_adlの会話形式（1問ごとにタップした瞬間に進むため「次へ」を置かない）の
+    // ために導入したが、ch5_done等の他の「戻るのみ」画面にも同じCSSが自動的に効く（副次的に
+    // 直る。意図的な副作用）。
+    b.className = 'btn btn-secondary' + (opts.primaryLabel ? '' : ' btn-alone');
     b.textContent = opts.secondaryLabel;
     b.onclick = opts.secondaryFn;
     footer.appendChild(b);
@@ -2976,23 +3022,20 @@ function stepCh1WorkStatus(){
       // 終えた時点（stepCh2WorkDetail/stepCh2NotworkReason側）で立てるように変更した。
       // ここではまだ完了とせず、次の画面へ進むだけにする。
       //
-      // 2026-08-02追加：編集チップ経由（state.returnToがセット済み＝「年表ができました」
-      // 画面から来ている）の場合は、ch2_intro（「今の生活について、もう少し教えてください」
-      // という橋渡し画面）を省略し、職種／理由の入力画面へ直接進む。通常の初回入力フロー
-      // （returnToが無い）では、これまで通りch2_introを経由する。
-      if(state.returnTo){
-        goTo(state.work.status==='working' ? 'ch2_work_detail' : 'ch2_notwork_reason');
-      } else {
-        goTo('ch2_intro');
-      }
+      // 2026-08-08: ch2_intro（「今の生活について、もう少し教えてください」という橋渡し
+      // 画面）は、職種／理由の入力画面（ch2_work_detail/ch2_notwork_reason）の直前ではなく、
+      // ch2_adl（日常生活状況）の直前へ位置を移した（詳細はstepCh2Intro()のコメント参照）。
+      // そのため、ここでは常に職種／理由の入力画面へ直接進む（editチップ経由か否かで
+      // 分岐する必要が無くなった）。
+      goTo(state.work.status==='working' ? 'ch2_work_detail' : 'ch2_notwork_reason');
     }
   });
 }
 
 // 2026-08-02: 就労状況変更時の「もう一度確認してください」通知。
-// 元々はch2_introだけで表示していたが、編集時にch2_introを省略するようになったため、
-// ch2_intro／ch2_work_detail／ch2_notwork_reasonのどこが最初に表示されても
-// 正しく通知できるよう共通関数化した。呼ばれた時点でフラグを消費（false化）する。
+// 2026-08-08追記：ch2_introは日常生活状況（ch2_adl）の直前へ位置を移したため、
+// 以後はch2_work_detail／ch2_notwork_reasonのどちらか（常にこちらが最初に表示される）
+// でこの通知を出す。呼ばれた時点でフラグを消費（false化）する。
 function workStatusChangedNoticeHtml(){
   const html = state.workStatusJustChanged
     ? `<p class="small" style="margin-top:-8px;margin-bottom:16px;color:var(--warn);">就労状況が変更されたため、この先の内容をもう一度確認してください。</p>`
@@ -3062,7 +3105,7 @@ function stepCh3Events(){
   document.getElementById('screen').innerHTML = `
     <div class="card">
       <h2>当時の生活を思い出す手がかり</h2>
-      <p class="optional-notice">入力しなくても進めます</p>
+      <p class="optional-notice">答えなくても次に進めます</p>
       <p class="lead">経験した出来事を選んでください。日付はあとで通院記録を思い出すときに使うので、ここでは選ぶだけで大丈夫です。</p>
       <div class="small" style="margin-bottom:8px;">仕事・結婚・転居などの出来事（複数回ある場合は何度でも追加できます）</div>
       <div id="evRepeatable">${buildRepeatableListHtml()}</div>
@@ -3153,7 +3196,7 @@ function stepCh4HospitalName(){
   document.getElementById('screen').innerHTML = `
     <div class="card">
       <h2>${isFirst ? '今、通っている病院・クリニックの名前は？' : 'この病院・クリニックの名前は？'}</h2>
-      <p class="optional-notice">入力しなくても進めます</p>
+      <p class="optional-notice">答えなくても次に進めます</p>
       <input type="text" id="hospName" placeholder="病院名" />
       <div class="hint">わからなくても進められます</div>
       <button type="button" class="link-btn" id="dontKnowBtn">名前がわからない →</button>
@@ -3214,7 +3257,7 @@ function stepCh4MemoryDig(){
   document.getElementById('screen').innerHTML = `
     <div class="card">
       <h2>病院を思い出す</h2>
-      <p class="optional-notice">入力しなくても進めます</p>
+      <p class="optional-notice">答えなくても次に進めます</p>
       <p class="hint">覚えていなくても大丈夫です。一緒に思い出しましょう。</p>
       <label class="field-label">当時住んでいた市区町村は？</label>
       <input type="text" id="loc" />
@@ -3253,7 +3296,7 @@ function stepCh4Period(){
   document.getElementById('screen').innerHTML = `
     <div class="card">
       <h2>いつからいつまで通いましたか？</h2>
-      <p class="optional-notice">入力しなくても進めます</p>
+      <p class="optional-notice">答えなくても次に進めます</p>
       <label class="field-label">いつから（西暦）</label>
       <div class="row"><input type="number" id="fromYear" placeholder="例：2020" /><input type="number" id="fromMonth" placeholder="月" min="1" max="12" /></div>
       ${estHint}
@@ -3294,7 +3337,7 @@ function stepCh4Confidence(){
   document.getElementById('screen').innerHTML = `
     <div class="card">
       <h2>この日付はどのくらい確かですか？</h2>
-      <p class="optional-notice">入力しなくても進めます</p>
+      <p class="optional-notice">答えなくても次に進めます</p>
       <div class="chip-group" id="confChips"></div>
       <label class="field-label" style="margin-top:18px;">状況の補足（任意）</label>
       <textarea id="hospMemo" placeholder="転院した理由、診断のこと、通院の頻度など"></textarea>
@@ -3525,7 +3568,7 @@ function stepCh4GapReview(){
       ${progressHtml}
       <p class="hint">${esc(target.fromLabel)} から ${esc(target.toLabel)} までの間は、通院の記録がありませんでした。</p>
       <h2>この時期のことを少し教えてください</h2>
-      <p class="optional-notice">入力しなくても進めます</p>
+      <p class="optional-notice">答えなくても次に進めます</p>
       <div id="gapReasons"></div>
       <p class="small" style="margin-top:14px;">どんな理由も審査の参考になります。正直に選んで大丈夫です。</p>
     </div>`;
@@ -4318,14 +4361,30 @@ const NOTWORK_REASON_DISPLAY = [
   ['エ','働きたかったが適切な職場がなかったから'],
   ['オ','その他']
 ];
+// 2026-08-09バグ修正：UI側8択のうち「外に出られない」「人と関わるのがつらい」
+// 「集中力・記憶力の問題」はオ（その他）に縮約されるが、以前はここで
+// notWorkReasonOther（「その他」チェック時の自由記述欄）しか見ていなかったため、
+// これらを選んでいてもプレビューには「具体的な理由を記入してください」という
+// 空欄プロンプトが出てしまっていた（実際の申立書出力exportToOfficialForm()側は
+// 選んだ理由の文言をそのままBC44セルに書き出しており、そちらは正しかった）。
+// exportToOfficialForm()のotherNoteParts構築（880〜888行目）と全く同じロジックに
+// 揃えることで、プレビューと実際の出力を一致させる。
 function renderPreviewReasonListHtml(selectedReasons, reasonOther){
-  const selectedLetters = new Set((selectedReasons||[]).map(r=>NOTWORK_REASON_MAP[r]).filter(Boolean));
+  const reasons = selectedReasons || [];
+  const selectedLetters = new Set(reasons.map(r=>NOTWORK_REASON_MAP[r]).filter(Boolean));
+  const otherNoteParts = [];
+  reasons.forEach(reason=>{
+    const letter = NOTWORK_REASON_MAP[reason] || 'オ';
+    if(letter==='オ' && reason!=='その他') otherNoteParts.push(reason);
+  });
+  if(reasons.includes('その他') && reasonOther) otherNoteParts.push(reasonOther);
+
   const items = NOTWORK_REASON_DISPLAY.map(([letter,label])=>{
     const selected = selectedLetters.has(letter);
     let extra = '';
     if(letter==='オ' && selected){
-      extra = reasonOther
-        ? `（理由：${esc(reasonOther)}）`
+      extra = otherNoteParts.length
+        ? `（理由：${esc(otherNoteParts.join('・'))}）`
         : '（理由：<span class="pp-blank">具体的な理由を記入してください</span>）';
     }
     return `<div class="pp-reason-item${selected?' pp-selected':''}"><span class="pp-reason-letter">${letter}</span>${esc(label)}${extra}</div>`;
@@ -4744,17 +4803,26 @@ function stepCh7FragmentBoard(){
 // 廃止された（ch5_place_再設計_画面仕様書.md 12.2節）。新しいch5_place自体が「配置しながら
 // 何度でも置き直せる」画面になったため、ch5_doneからの導線もch5_placeへ一本化している。
 
+// 2026-08-08: ch2_introは日常生活状況（ch2_adl）の直前へ位置を移した。
+// 元々は「今、仕事をしていますか？」（ch1_work_status）の直後・ch2_work_detail/
+// ch2_notwork_reasonの直前にあったが、文面が「日常生活について」なのに実際に次に聞かれるのは
+// 就労状況（仕事の内容・仕事をしていない理由）だったため、文面と内容がずれて混乱を招きやすい
+// という指摘を受けての変更。ch2_work_detail/ch2_notwork_reasonが会話形式化した際に
+// 自前の見出し・導入文を持つようになった（決定#52）ため、両者の直前にあるこの画面の
+// 存在意義自体が薄れていたが、位置を日常生活状況の直前に移すことで、文面通りの
+// 「これから日常生活について聞く」橋渡し画面として活きるようにした。
+// これに伴い、就労状況変更時の「もう一度確認してください」通知
+// （workStatusChangedNoticeHtml()）はch2_work_detail／ch2_notwork_reason側だけで
+// 出せば十分になった（就労状況の変更で影響を受けるのはそちらの項目であり、
+// state.adlはクリアされないため）ので、ここでは呼ばない。
 function stepCh2Intro(){
-  const changedNotice = workStatusChangedNoticeHtml();
   document.getElementById('screen').innerHTML = `
     <div class="card">
       <h2>今の生活について、もう少し教えてください</h2>
-      <p class="lead">今の仕事や日常生活についての詳しい状況を教えてください。</p>
-      ${changedNotice}
+      <p class="lead">今の日常生活についての詳しい状況を教えてください。</p>
     </div>`;
   setFooter({secondaryLabel:'戻る', secondaryFn:goBack, primaryLabel:'はじめる', primaryEnabled:true, primaryFn:()=>{
-    if(state.work.status==='working') goTo('ch2_work_detail');
-    else goTo('ch2_notwork_reason');
+    goTo('ch2_adl');
   }});
 }
 
@@ -4787,7 +4855,7 @@ function renderCh2WorkDetailForm(){
   document.getElementById('screen').innerHTML = `
     <div class="card">
       <h2>仕事の内容を教えてください</h2>
-      <p class="optional-notice">入力しなくても進めます</p>
+      <p class="optional-notice">答えなくても次に進めます</p>
       ${changedNotice}
       <label class="field-label">職種・仕事の内容（短くでOK）</label>
       <input type="text" id="jobType" placeholder="例：事務職、清掃業、接客業" />
@@ -4810,9 +4878,19 @@ function renderCh2WorkDetailForm(){
   renderChipGroup('commuteTimeChips', COMMUTE_TIME, state.work.commuteTime ? [state.work.commuteTime] : [], false, v=>{ state.work.commuteTime = v; });
   renderChipGroup('conditionChips', WORK_CONDITION, state.work.condition, true, ()=>{});
   // 2026-08-02: 職種等の入力（就労状況の一部）が終わったここで第1章の完了フラグを立てる
-  setFooter({secondaryLabel:'戻る', secondaryFn:goBack, primaryLabel:'次へ', primaryEnabled:true, primaryFn:()=>finishChapter('ch1', 'ch2_adl')});
+  setFooter({secondaryLabel:'戻る', secondaryFn:goBack, primaryLabel:'次へ', primaryEnabled:true, primaryFn:()=>finishChapter('ch1', 'ch2_intro')});
 }
 
+// 2026-08-10追記（決定#65）：optional-noticeの文言をフォーム版・会話形式版で「答えなくても
+// 次に進めます」に統一した（以前は会話形式だけ「ひとつずつお聞きします。〜」という異なる文言で、
+// スキップして戻った後にフォーム版の「入力しなくても進めます」に変わり、表現の一貫性が
+// なかったため）。あわせて、この文言の末尾に「残りをとばす」リンクをインラインで追加
+// （冒頭側＝まだ答えていない人向け）。スレッド末尾の同機能リンク（下部側＝数問答えた後で
+// 「もう十分」と思った人向け）はそのまま残し、太字・右寄せにして見つけやすくした（同じく決定#65）。
+// 2026-08-10追記（決定#67）：直後の続報で、上記の統一が3画面（仕事の内容・仕事をしていない
+// 理由・ADL）にしか及んでいなかったことが判明。「入力しなくても進めます」がindex.html内の
+// 他の画面（通院記録・当時の生活手がかり・ch2_other等）に7箇所残っていたため、全て同じ
+// 「答えなくても次に進めます」へ統一した（アプリ全体での表現統一）。
 // 初回入力用の会話形式（1問ずつ）。質問は既存フォームと同じ5項目・同じ選択肢を使う。
 const CH2_WORK_DETAIL_STEPS = [
   {key:'jobType', type:'text', q:'今の仕事の内容を教えてください', sub:'職種やお仕事の内容を、短くで大丈夫です。', placeholder:'例：事務職、清掃業、接客業'},
@@ -4829,16 +4907,19 @@ function renderCh2WorkDetailConversation(){
   document.getElementById('screen').innerHTML = `
     <div class="card">
       <h2>仕事の内容を教えてください</h2>
-      <p class="optional-notice">ひとつずつお聞きします。答えなくても次に進めます</p>
+      <p class="optional-notice">答えなくても次に進めます　<a href="#" id="ch2ConvSkipTop" class="inline-skip-link">日常生活状況へ進む →</a></p>
       ${changedNotice}
       <div class="conv-thread" id="ch2ConvThread"></div>
       <div class="conv-current" id="ch2ConvCurrent"></div>
-      <button type="button" class="link-btn" id="ch2ConvSkipAll" style="margin-top:14px;">残りの質問はとばして、日常生活状況へ →</button>
+      <button type="button" class="link-btn skip-all-link" id="ch2ConvSkipAll">残りの質問はとばして、日常生活状況へ →</button>
     </div>`;
-  document.getElementById('ch2ConvSkipAll').onclick = ()=>{
+  const ch2ConvSkipHandler = (e)=>{
+    if(e) e.preventDefault();
     ch2ConvCommitCurrentTextValue(); // 入力途中の値を消さずに確定してから抜ける
-    finishChapter('ch1', 'ch2_adl');
+    finishChapter('ch1', 'ch2_intro');
   };
+  document.getElementById('ch2ConvSkipTop').onclick = ch2ConvSkipHandler;
+  document.getElementById('ch2ConvSkipAll').onclick = ch2ConvSkipHandler;
   renderCh2ConvStep();
 }
 
@@ -4906,7 +4987,7 @@ function ch2ConvCommitCurrentTextValue(){
 }
 
 // 「次へ」：現在の質問の回答をstate.workへ確定し、回答の吹き出しをスレッドに積んでから次の質問へ。
-// 最後の質問まで終えたら、フォーム版と同じくfinishChapter('ch1','ch2_adl')で第1章を完了する。
+// 最後の質問まで終えたら、フォーム版と同じくfinishChapter('ch1','ch2_intro')で第1章を完了する。
 function ch2ConvNext(){
   const step = CH2_WORK_DETAIL_STEPS[ch2WorkDetailConvIndex];
   ch2ConvCommitCurrentTextValue();
@@ -4932,7 +5013,7 @@ function ch2ConvNext(){
     renderCh2ConvStep();
   } else {
     // 2026-08-04: 会話形式でも、5問目の回答確定と同時に第1章の完了フラグを立てる（フォーム版と同じタイミング）
-    finishChapter('ch1', 'ch2_adl');
+    finishChapter('ch1', 'ch2_intro');
   }
 }
 
@@ -4954,13 +5035,26 @@ function ch2ConvGoBack(){
   }
 }
 
+// 2026-08-06: stepCh2WorkDetail()と同じ判定基準で、初回入力は会話形式、修正時は
+// 従来の一覧フォームのまま（判定理由の詳細はstepCh2WorkDetail()のコメント参照）。
 function stepCh2NotworkReason(){
+  if(state.workStatusJustChanged){
+    renderCh2NotworkReasonConversation();
+  } else if(state.returnTo || state.completed.ch1){
+    renderCh2NotworkReasonForm();
+  } else {
+    renderCh2NotworkReasonConversation();
+  }
+}
+
+// 修正時に使う、従来からの一覧フォーム（挙動は変更なし）
+function renderCh2NotworkReasonForm(){
   const changedNotice = workStatusChangedNoticeHtml();
   const showOtherNote = state.notWorkReasons.includes('その他');
   document.getElementById('screen').innerHTML = `
     <div class="card">
       <h2>仕事をしていない理由を教えてください</h2>
-      <p class="optional-notice">入力しなくても進めます</p>
+      <p class="optional-notice">答えなくても次に進めます</p>
       ${changedNotice}
       <div id="reasonList"></div>
       <div id="notWorkReasonOtherBlock" style="display:${showOtherNote?'':'none'};margin-top:10px;">
@@ -4977,7 +5071,223 @@ function stepCh2NotworkReason(){
   otherTextEl.value = state.notWorkReasonOther;
   otherTextEl.oninput = e=>state.notWorkReasonOther = e.target.value;
   // 2026-08-02: 働いていない理由の入力（就労状況の一部）が終わったここで第1章の完了フラグを立てる
-  setFooter({secondaryLabel:'戻る', secondaryFn:goBack, primaryLabel:'次へ', primaryEnabled:true, primaryFn:()=>finishChapter('ch1', 'ch2_adl')});
+  setFooter({secondaryLabel:'戻る', secondaryFn:goBack, primaryLabel:'次へ', primaryEnabled:true, primaryFn:()=>finishChapter('ch1', 'ch2_intro')});
+}
+
+// ---- 初回入力用の会話形式（2026-08-06） ----
+// 案A〜Dを検討した末に決定した方式：8つの理由を、既存のNOTWORK_REASONSと同じ順番で
+// 1つずつ、「思い出す」ではなく「今どうか」を聞く単純な一文にし、はい/いいえをタップした
+// 瞬間に（別途「次へ」を押させず）次の質問へ進む。対象者の多くが複数の理由に該当する
+// ことを踏まえ、「選んだ数が少ない前提でのタップ数比較」は行わない（当初はタップ数だけを
+// 理由に8問Yes/No形式を退けたが、対象者像を踏まえると前提が誤りだった。詳細は
+// セッションまとめ参照）。
+const NOTWORK_REASON_QUESTIONS = {
+  '体力・気力に自信がない': '体力や気力に、自信がないですか',
+  '医師から働くことを止められている': '医師から、働くことを止められていますか',
+  '外に出られない': '家から外に出るのが、難しいですか',
+  '人と関わるのがつらい': '人と関わることが、つらいですか',
+  '集中力・記憶力の問題': '集中したり、覚えておいたりするのが、難しいですか',
+  '働く意欲がわかない': '仕事をする気持ちが、わかないですか',
+  '合う仕事が見つからない': '自分に合う仕事が、見つからないですか',
+  'その他': 'ここまでにない理由も、当てはまりますか'
+};
+const CH2_NOTWORK_STEPS = NOTWORK_REASONS.map(reason=>({reason, q:NOTWORK_REASON_QUESTIONS[reason], sub:NOTWORK_REASON_HELP_TEXTS[reason]}));
+let ch2NotworkConvIndex = 0;
+// 「その他」で「はい」を選んだ直後、自由記述の入力段階に入っているかどうか。
+// この段階だけは（自由記述のため）タップ即次へではなく、明示的な「次へ」を必要とする。
+let ch2NotworkConvOtherStep = false;
+
+function renderCh2NotworkReasonConversation(){
+  ch2NotworkConvIndex = 0;
+  ch2NotworkConvOtherStep = false;
+  const changedNotice = workStatusChangedNoticeHtml();
+  document.getElementById('screen').innerHTML = `
+    <div class="card">
+      <h2>仕事をしていない理由を教えてください</h2>
+      <p class="optional-notice">答えなくても次に進めます　<a href="#" id="ch2ReasonSkipTop" class="inline-skip-link">日常生活状況へ進む →</a></p>
+      ${changedNotice}
+      <div class="conv-thread" id="ch2ReasonThread"></div>
+      <div class="conv-current" id="ch2ReasonCurrent"></div>
+      <button type="button" class="link-btn skip-all-link" id="ch2ReasonSkipAll">残りの質問はとばして、日常生活状況へ →</button>
+    </div>`;
+  const ch2ReasonSkipHandler = (e)=>{
+    if(e) e.preventDefault();
+    if(ch2NotworkConvOtherStep){
+      const ta = document.getElementById('ch2ReasonOtherText');
+      if(ta) state.notWorkReasonOther = ta.value.trim();
+    }
+    finishChapter('ch1', 'ch2_intro');
+  };
+  document.getElementById('ch2ReasonSkipTop').onclick = ch2ReasonSkipHandler;
+  document.getElementById('ch2ReasonSkipAll').onclick = ch2ReasonSkipHandler;
+  renderCh2ReasonStep();
+}
+
+// 現在の質問の吹き出し（ラベル・本文・補足）をスレッドに積み、回答用のはい/いいえを表示する
+function renderCh2ReasonStep(){
+  const step = CH2_NOTWORK_STEPS[ch2NotworkConvIndex];
+  const thread = document.getElementById('ch2ReasonThread');
+  const label = document.createElement('div');
+  label.className = 'conv-step-label';
+  label.textContent = (ch2NotworkConvIndex+1) + ' / ' + CH2_NOTWORK_STEPS.length;
+  thread.appendChild(label);
+  const bubble = document.createElement('div');
+  bubble.className = 'conv-bot';
+  bubble.textContent = step.q;
+  thread.appendChild(bubble);
+  if(step.sub){
+    const sub = document.createElement('div');
+    sub.className = 'conv-bot-sub';
+    sub.textContent = step.sub;
+    thread.appendChild(sub);
+  }
+  renderCh2ReasonCurrentControl();
+}
+
+// 「はい」「いいえ」の2択を表示する。戻ってきて同じ質問を再表示するときも
+// （吹き出しを重複させないよう）これだけを単独で呼ぶ。
+function renderCh2ReasonCurrentControl(){
+  const cur = document.getElementById('ch2ReasonCurrent');
+  cur.innerHTML = '';
+  const optsEl = document.createElement('div');
+  optsEl.className = 'option-block';
+  cur.appendChild(optsEl);
+  [['yes','はい'],['no','いいえ']].forEach(([val,lbl])=>{
+    const div = document.createElement('div');
+    div.className = 'option';
+    div.textContent = lbl;
+    const handler = ()=>ch2ReasonAnswer(val);
+    div.onclick = handler;
+    makeFocusable(div, handler);
+    optsEl.appendChild(div);
+  });
+  setFooter({secondaryLabel:'戻る', secondaryFn:ch2ReasonGoBack});
+}
+
+// はい/いいえの回答をstate.notWorkReasonsへ反映する（新規回答時・過去の回答の
+// トグルボタンで選び直したとき、どちらからも呼ぶ共通処理）。
+function applyReasonAnswer(reason, isYes){
+  if(isYes){
+    if(!state.notWorkReasons.includes(reason)) state.notWorkReasons.push(reason);
+  } else {
+    state.notWorkReasons = state.notWorkReasons.filter(r=>r!==reason);
+  }
+}
+
+// 「はい」「いいえ」をタップした瞬間の処理。選んだ内容をstate.notWorkReasonsへ確定し、
+// 回答の吹き出しを積んだうえで、即座に次の質問（または完了）へ進む。
+// 「次へ」の別タップを挟まないのが、この会話形式の要（8/6の検討で決定）。
+//
+// 2026-08-06追加：過去に答えた質問は、はい/いいえの吹き出しをタップで反転…ではなく、
+// 「はい」「いいえ」を常に2つ並べて表示し、選んでいる方だけ色を反転させる方式にした
+// （単一の吹き出しをタップして反転させる案は「今どちらを選んでいるか・タップで何が
+// 変わったか」が分かりにくいとの指摘を受けて変更。詳細はセッションまとめ参照）。
+// 「その他」だけは自由記述欄の出し引きが絡み、その場での変更だと整合が崩れるため対象外とし、
+// 従来通り「戻る」（ch2ReasonGoBack）での訂正に一本化している。
+function ch2ReasonAnswer(val){
+  const step = CH2_NOTWORK_STEPS[ch2NotworkConvIndex];
+  const isYes = val==='yes';
+  applyReasonAnswer(step.reason, isYes);
+  const thread = document.getElementById('ch2ReasonThread');
+  if(step.reason === 'その他'){
+    const answerBubble = document.createElement('div');
+    answerBubble.className = 'conv-user';
+    answerBubble.textContent = isYes ? 'はい' : 'いいえ';
+    thread.appendChild(answerBubble);
+  } else {
+    thread.appendChild(buildReasonAnswerToggle(step.reason));
+  }
+
+  if(step.reason==='その他' && isYes){
+    renderCh2ReasonOtherTextStep();
+    return;
+  }
+  ch2ReasonAdvance();
+}
+
+// 過去に答えた質問を、「はい」「いいえ」の2つのボタンとして表示する。選んでいる方だけ
+// 色を反転させ、もう一方をタップすればその場で選び直せる（戻る操作は不要）。
+function buildReasonAnswerToggle(reason){
+  const wrap = document.createElement('div');
+  wrap.className = 'conv-user-toggle';
+  const yesBtn = document.createElement('button');
+  yesBtn.type = 'button';
+  yesBtn.textContent = 'はい';
+  const noBtn = document.createElement('button');
+  noBtn.type = 'button';
+  noBtn.textContent = 'いいえ';
+  function refresh(){
+    const isYes = state.notWorkReasons.includes(reason);
+    yesBtn.className = 'conv-user-toggle-btn' + (isYes ? ' selected' : '');
+    noBtn.className = 'conv-user-toggle-btn' + (!isYes ? ' selected' : '');
+  }
+  yesBtn.onclick = ()=>{ applyReasonAnswer(reason, true); refresh(); };
+  noBtn.onclick = ()=>{ applyReasonAnswer(reason, false); refresh(); };
+  refresh();
+  wrap.appendChild(yesBtn);
+  wrap.appendChild(noBtn);
+  return wrap;
+}
+
+// 次の質問へ進む。最後の質問（その他を含む）まで終えたら、フォーム版と同じく
+// finishChapter('ch1','ch2_intro')で第1章を完了する。
+function ch2ReasonAdvance(){
+  if(ch2NotworkConvIndex < CH2_NOTWORK_STEPS.length - 1){
+    ch2NotworkConvIndex++;
+    renderCh2ReasonStep();
+  } else {
+    finishChapter('ch1', 'ch2_intro');
+  }
+}
+
+// 「その他」で「はい」を選んだ直後だけ現れる、自由記述の入力段階。
+// テキスト入力なので、他の質問と違い明示的な「次へ」で確定してから完了する。
+function renderCh2ReasonOtherTextStep(){
+  ch2NotworkConvOtherStep = true;
+  const thread = document.getElementById('ch2ReasonThread');
+  const bubble = document.createElement('div');
+  bubble.className = 'conv-bot';
+  bubble.textContent = '具体的に教えてください';
+  thread.appendChild(bubble);
+  const cur = document.getElementById('ch2ReasonCurrent');
+  cur.innerHTML = '';
+  const textarea = document.createElement('textarea');
+  textarea.id = 'ch2ReasonOtherText';
+  textarea.placeholder = '具体的な理由を記入してください';
+  textarea.value = state.notWorkReasonOther;
+  textarea.oninput = e=>state.notWorkReasonOther = e.target.value;
+  cur.appendChild(textarea);
+  setTimeout(()=>textarea.focus(), 0);
+  setFooter({secondaryLabel:'戻る', secondaryFn:ch2ReasonGoBack, primaryLabel:'次へ', primaryEnabled:true, primaryFn:()=>{
+    ch2NotworkConvOtherStep = false;
+    ch2ReasonAdvance();
+  }});
+}
+
+// 「戻る」：自由記述の段階なら「その他」の質問（はい/いいえ）に戻り、その他の選択も
+// 取り消す。それ以外は1つ前の質問に戻って答え直せるようにする。1問目まで戻ったら、
+// 通常のgoBack()（画面を出る）に委ねる。
+function ch2ReasonGoBack(){
+  const thread = document.getElementById('ch2ReasonThread');
+  if(ch2NotworkConvOtherStep){
+    ch2NotworkConvOtherStep = false;
+    thread.lastElementChild.remove(); // 「具体的に教えてください」の吹き出し
+    thread.lastElementChild.remove(); // 直前の「はい」回答の吹き出し
+    state.notWorkReasons = state.notWorkReasons.filter(r=>r!=='その他');
+    renderCh2ReasonCurrentControl(); // 「その他」の質問（はい/いいえ）を再表示
+    return;
+  }
+  if(ch2NotworkConvIndex > 0){
+    const curStep = CH2_NOTWORK_STEPS[ch2NotworkConvIndex];
+    if(curStep.sub) thread.lastElementChild.remove(); // 現在の質問の補足
+    thread.lastElementChild.remove(); // 現在の質問の本文
+    thread.lastElementChild.remove(); // 現在の質問のラベル（N/8）
+    thread.lastElementChild.remove(); // ひとつ前の質問への回答吹き出し
+    ch2NotworkConvIndex--;
+    renderCh2ReasonCurrentControl();
+  } else {
+    goBack();
+  }
 }
 
 // =====================================================================
@@ -5099,7 +5409,38 @@ function getAdlHandoffNinteibiPreviewItems(){
   return items;
 }
 
+// 2026-08-08: 初回入力は会話形式（4択・タップで即次へ）、修正時は従来の一覧フォーム。
+// stepCh2WorkDetail/stepCh2NotworkReasonと同じ考え方（決定#54〜57）だが、判定条件は
+// completed.ch1ではなくcompleted.ch2を使う。理由：STEP_CHAPTER_MAP上ch2_adlとch2_otherは
+// 同じ第2章に属し、finishChapter('ch2', ...)はch2_otherを抜ける時にしか呼ばれない
+// （finishChapter('ch1','ch2_intro')は「ch2_introに入る直前」に完了フラグを立てるため、
+// ch2_intro自身がその後ch2_adlへ橋渡しする形になっており、ch2_adl自身の中では使えない）。
+// workStatusJustChanged相当の「状況変更直後は強制的に会話形式」という分岐は不要
+// （ch1_work_statusでの変更時にクリアされるのはstate.work関連のみで、state.adlは影響を受けない）。
+//
+// 2026-08-08追記（決定#58）：姉妹アプリの項目別ページへのリンクを一度でも踏んだら
+// （state.adlConvEnded=true）、それ以降もずっと一覧フォームに固定する。この判定は
+// visibilitychangeリスナー側でも同じ考え方で使うため、共通のshouldShowAdlForm()に括り出した。
+//
+// 2026-08-09追記：以前は「completed.ch2が第2章全体の完了フラグ」であるため、
+// ch2_adl→ch2_otherへ進んだ後に「戻る」でch2_adlへ戻ってきた場合（＝まだ第2章は未完了）に、
+// 会話形式が最初からやり直しになる不具合があった。ch2_adl自身の完了だけを表す
+// state.adlConvDone（10問完走、または「残りをとばす」で立つ）を導入し、判定に加えることで解消した。
+function shouldShowAdlForm(){
+  return !!(state.returnTo || state.completed.ch2 || state.adlConvEnded || state.adlConvDone);
+}
+
 function stepCh2Adl(){
+  if(shouldShowAdlForm()){
+    renderCh2AdlForm();
+  } else {
+    renderCh2AdlConversation();
+  }
+}
+
+// 修正時に使う、従来からの一覧フォーム（挙動は変更なし。姉妹アプリへの導線・取り込みUIも
+// ここに残す＝決定#54の方針により、今回（単体版）は姉妹アプリ連携を会話形式には持ち込まない）。
+function renderCh2AdlForm(){
   const handoffItems = getAdlHandoffPreviewItems();
   const hasOverwrite = handoffItems.some(it=>it.currentLevel && !it.same);
   // 「生活状況をふりかえる」導線ボタンと「取り込む」ボタンを見た目で揃えるための共通スタイル
@@ -5131,7 +5472,7 @@ function stepCh2Adl(){
       <summary class="small" style="cursor:pointer;color:var(--accent-strong);">選ぶときのヒントを見る</summary>
       <p class="small hint" style="margin-top:6px;">${esc(ADL_HELP_NOTICE)}</p>
     </details>`;
-  let html = `<div class="card"><h2>最近の日常生活について教えてください</h2><p class="optional-notice">入力しなくても進めます</p>${helpNoticeHtml}${handoffBlockHtml}`;
+  let html = `<div class="card"><h2>最近の日常生活について教えてください</h2><p class="optional-notice">答えなくても次に進めます</p>${helpNoticeHtml}${handoffBlockHtml}`;
   ADL_ITEMS.forEach(([key,label])=>{
     html += renderAdlItemHtml(key, label, 'adl_');
   });
@@ -5170,20 +5511,235 @@ function stepCh2Adl(){
   setFooter({secondaryLabel:'戻る', secondaryFn:goBack, primaryLabel:'次へ', primaryEnabled:true, primaryFn:()=>goTo('ch2_other')});
 }
 
+// ---- 初回入力用の会話形式（2026-08-08、決定#54〜57。姉妹アプリ連携は決定#58〜59で追加）----
+// stepCh2NotworkReason()の「タップした瞬間に次へ進む」エンジン（決定#52）を、2択→4択に
+// 一般化して踏襲したもの。個別スキップは許さず（4択のどれかを必ずタップする）、
+// 「残りをとばす」リンクだけを抜け道として用意する（決定#55）。
+// 姉妹アプリ（seikatsu-jokyo/）の項目別ページへのリンクを質問ごとに設置し（決定#59）、
+// 踏んだ瞬間に会話モードを終了する（決定#58。renderCh2AdlCurrentControl内・
+// state.adlConvEnded参照）。
+// ADL_ITEMSの各キー→姉妹アプリ（seikatsu-jokyo/pages/genzai/）の項目別ページのファイル名。
+// seikatsu-jokyo/src/genzai/hub.src.htmlのADL_ITEMS配列（3列目）と完全に一致させること
+// （washingFace→washing_face.htmlのように、キー名とファイル名が一致しない項目があるため
+// 単純な文字列変換では作れない。決定#58〜59）。
+const ADL_SISTER_APP_URLS = {
+  dressing: 'dressing.html',
+  toilet: 'toilet.html',
+  eating: 'eating.html',
+  cooking: 'cooking.html',
+  cleaning: 'cleaning.html',
+  washingFace: 'washing_face.html',
+  bathing: 'bathing.html',
+  walking: 'walking.html',
+  laundry: 'laundry.html',
+  shopping: 'shopping.html'
+};
+
+const CH2_ADL_STEPS = ADL_ITEMS.map(([key,label])=>({key, label}));
+let ch2AdlConvIndex = 0;
+
+function renderCh2AdlConversation(){
+  ch2AdlConvIndex = 0;
+  document.getElementById('screen').innerHTML = `
+    <div class="card">
+      <h2>最近の日常生活について教えてください</h2>
+      <p class="optional-notice">答えなくても次に進めます　<a href="#" id="ch2AdlSkipTop" class="inline-skip-link">その他の項目へ進む →</a></p>
+      <details style="margin-bottom:14px;">
+        <summary class="small" style="cursor:pointer;color:var(--accent-strong);">選ぶときのヒントを見る</summary>
+        <p class="small hint" style="margin-top:6px;">${esc(ADL_HELP_NOTICE)}</p>
+      </details>
+      <div class="conv-thread" id="ch2AdlThread"></div>
+      <div class="conv-current" id="ch2AdlCurrent"></div>
+      <button type="button" class="link-btn skip-all-link" id="ch2AdlSkipAll">残りの質問はとばして、その他の項目へ →</button>
+    </div>`;
+  // 決定#55：個別スキップは無し。抜け道はこの「残りをとばす」リンクのみで、ch2_otherへ直行する
+  // （すでに第1章は完了済みのため、finishChapterではなく素のgoToでよい＝フォーム版の「次へ」と同じ）。
+  // 2026-08-09：こちらも完走扱いとしてstate.adlConvDone=trueにする（ch2AdlAdvance()と同じ理由）。
+  // 2026-08-10：冒頭にも同じ行き先のリンクを追加（決定#65）。まだ1問も答えていない人が
+  // スレッドを読み進めなくても最初から離脱できるようにするため。下部のリンクは、数問
+  // 答えたあとで「もう十分」と思った人向けに残す（用途が異なるため両方残す）。
+  const ch2AdlSkipHandler = (e)=>{ if(e) e.preventDefault(); state.adlConvDone = true; goTo('ch2_other'); };
+  document.getElementById('ch2AdlSkipTop').onclick = ch2AdlSkipHandler;
+  document.getElementById('ch2AdlSkipAll').onclick = ch2AdlSkipHandler;
+  renderCh2AdlStep();
+}
+
+// 現在の質問の吹き出し（ラベル・項目名・「迷ったときの例」）をスレッドに積み、回答用の4択を表示する。
+// 質問文言は既存のラベル（「着替え」等）をそのまま使い、疑問文への言い換えはしない（設計案「4.決定事項一覧」直後の注記）。
+// 決定#56：「迷ったときの例」はフォーム版（renderAdlItemHtml）と同じ密度で、質問ごとに表示する。
+function renderCh2AdlStep(){
+  const step = CH2_ADL_STEPS[ch2AdlConvIndex];
+  const thread = document.getElementById('ch2AdlThread');
+  const label = document.createElement('div');
+  label.className = 'conv-step-label';
+  label.textContent = (ch2AdlConvIndex+1) + ' / ' + CH2_ADL_STEPS.length;
+  thread.appendChild(label);
+  const bubble = document.createElement('div');
+  bubble.className = 'conv-bot';
+  bubble.textContent = step.label;
+  thread.appendChild(bubble);
+  const helpHtml = adlHelpDetailsHtml(step.key);
+  if(helpHtml){
+    const helpWrap = document.createElement('div');
+    helpWrap.innerHTML = helpHtml;
+    thread.appendChild(helpWrap.firstElementChild);
+  }
+  renderCh2AdlCurrentControl();
+}
+
+// ADL_LEVELS（できる／まあできる／援助があれば／できない）の4択を表示する。
+// 戻ってきて同じ質問を再表示するときも（吹き出しを重複させないよう）これだけを単独で呼ぶ。
+function renderCh2AdlCurrentControl(){
+  const cur = document.getElementById('ch2AdlCurrent');
+  cur.innerHTML = '';
+  const optsEl = document.createElement('div');
+  optsEl.className = 'option-block option-block-grid2';
+  cur.appendChild(optsEl);
+  const step = CH2_ADL_STEPS[ch2AdlConvIndex];
+  ADL_LEVELS.forEach(levelLabel=>{
+    const div = document.createElement('div');
+    div.className = 'option';
+    div.textContent = levelLabel;
+    const handler = ()=>ch2AdlAnswer(levelLabel);
+    div.onclick = handler;
+    makeFocusable(div, handler);
+    optsEl.appendChild(div);
+  });
+  // 姉妹アプリ（seikatsu-jokyo/）の該当項目ページへの導線（決定#58〜59）。
+  // ハブではなく、今の質問の項目ページへ直接?from=chat付きで飛ぶ。踏んだ瞬間に
+  // state.adlConvEnded=trueにして会話モードを終了する（決定#58）。これによって、
+  // 姉妹アプリ側で回答して本体タブに戻ってきたときは一覧フォーム（取り込みUIがある方）に
+  // 固定表示されるので、会話の続きの位置をstateへ保持する仕組み（設計案②③）は不要になる。
+  const sisterUrl = ADL_SISTER_APP_URLS[step.key];
+  if(sisterUrl){
+    // 2026-08-10追記（決定#66）：以前は案内文（緑背景の.hint）とリンクが別要素の兄弟で、
+    // リンクが枠の外に出てしまい「案内文とは無関係な、踏んでよいか分からないリンク」に
+    // 見えるとの指摘を受けた。案内文とリンクを同じ.hint箱の中にまとめることで、
+    // 「この案内文に対応するリンクです」と一目で分かるようにした
+    // （枠外に置いていたときの見た目はスクリーンショット参照＝ユーザー添付画像）。
+    const hintBox = document.createElement('div');
+    hintBox.className = 'hint';
+    hintBox.style.margin = '10px 0 4px';
+    const hintText = document.createElement('p');
+    hintText.className = 'small';
+    hintText.style.margin = '0 0 6px';
+    hintText.textContent = '選ぶのが難しいときは、場面をひとつずつ思い出しながら考えられる画面もあります。';
+    hintBox.appendChild(hintText);
+    const link = document.createElement('a');
+    link.className = 'link-btn';
+    link.id = 'ch2AdlSisterLink';
+    link.href = 'seikatsu-jokyo/pages/genzai/' + sisterUrl + '?from=chat';
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.textContent = `「${step.label}」を詳しくふりかえる →`;
+    link.onclick = ()=>{
+      state.adlConvEnded = true;
+      saveStateToStorage();
+    };
+    hintBox.appendChild(link);
+    cur.appendChild(hintBox);
+  }
+  setFooter({secondaryLabel:'戻る', secondaryFn:ch2AdlGoBack});
+}
+
+// 4択の回答をstate.adlへ反映する（新規回答時・過去の回答のトグルボタンで選び直したとき、
+// どちらからも呼ぶ共通処理）。
+function applyAdlAnswer(key, levelLabel){
+  state.adl[key] = levelLabel;
+}
+
+// 4択のどれかをタップした瞬間の処理。選んだ内容をstate.adlへ確定し、回答の吹き出し（トグル）を
+// 積んだうえで、即座に次の質問（または完了）へ進む（決定#55、「次へ」の別タップを挟まない）。
+function ch2AdlAnswer(levelLabel){
+  const step = CH2_ADL_STEPS[ch2AdlConvIndex];
+  applyAdlAnswer(step.key, levelLabel);
+  const thread = document.getElementById('ch2AdlThread');
+  thread.appendChild(buildAdlAnswerToggle(step.key));
+  ch2AdlAdvance();
+}
+
+// 過去に答えた質問を、ADL_LEVELSの4つのボタンとして表示する。選んでいる方だけ色を反転させ、
+// 他のボタンをタップすればその場で選び直せる（reason版のbuildReasonAnswerToggleと同じ考え方を
+// 2択→4択に一般化したもの）。
+function buildAdlAnswerToggle(key){
+  const wrap = document.createElement('div');
+  wrap.className = 'conv-user-toggle';
+  const btns = ADL_LEVELS.map(levelLabel=>{
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = levelLabel;
+    btn.onclick = ()=>{ applyAdlAnswer(key, levelLabel); refresh(); };
+    wrap.appendChild(btn);
+    return btn;
+  });
+  function refresh(){
+    btns.forEach(btn=>{
+      btn.className = 'conv-user-toggle-btn' + (state.adl[key]===btn.textContent ? ' selected' : '');
+    });
+  }
+  refresh();
+  return wrap;
+}
+
+// 次の質問へ進む。最後の質問まで終えたら、フォーム版の「次へ」と同じくch2_otherへ進む
+// （第1章はすでに完了済みのため、finishChapterではなく素のgoToでよい）。
+// 2026-08-09：完走した時点でstate.adlConvDone=trueにする（shouldShowAdlForm()参照。
+// ch2_otherから「戻る」してきたときに会話をやり直させないため）。
+function ch2AdlAdvance(){
+  if(ch2AdlConvIndex < CH2_ADL_STEPS.length - 1){
+    ch2AdlConvIndex++;
+    renderCh2AdlStep();
+  } else {
+    state.adlConvDone = true;
+    goTo('ch2_other');
+  }
+}
+
+// 「戻る」：会話の途中（2問目以降）なら1つ前の質問に戻って答え直せるようにする。
+// 1問目まで戻ったら、通常のgoBack()（画面を出る）に委ねる。
+function ch2AdlGoBack(){
+  const thread = document.getElementById('ch2AdlThread');
+  if(ch2AdlConvIndex > 0){
+    const curStep = CH2_ADL_STEPS[ch2AdlConvIndex];
+    if(adlHelpDetailsHtml(curStep.key)) thread.lastElementChild.remove(); // 現在の質問の「迷ったときの例」
+    thread.lastElementChild.remove(); // 現在の質問の本文（項目名）
+    thread.lastElementChild.remove(); // 現在の質問のラベル（N/10）
+    thread.lastElementChild.remove(); // ひとつ前の質問への回答トグル
+    ch2AdlConvIndex--;
+    renderCh2AdlCurrentControl();
+  } else {
+    goBack();
+  }
+}
+
+// 2026-08-10（決定#68）：様式02裏面E55/56「その他日常生活で不便に感じていることがありましたら
+// 記入してください。」は、仕事をしていない理由（ア〜オ）やADL（1〜4）と違い、様式側に選択肢が
+// 一切ない完全な自由記述欄。他の3画面のような1問1答（はい/いいえ）化は見送り、代わりに
+// 自由記述（textarea）を主役として冒頭へ、10項目チェックリストは「書きにくい人向けの補助」
+// として自由記述の下に配置する構成に変更した。理由：この欄の役割は「他の欄で拾いきれない、
+// その人固有の困りごと」を拾うことであり、有限の項目リストで先に埋めさせると、本来一番
+// 大事なはずの自由記述が形だけになりかねない（10問答え終えた達成感で読み飛ばされる等）。
+// チェックリスト内の「その他」項目は、自由記述欄そのものが受け皿になるため削除した
+// （OTHER_DIFFICULTIESは stepCh5RecognitionOther() とも共有しているため、認定日欄側の
+// チェックリストからも同じ理由で「その他」が消える。認定日欄のレイアウト自体は今回のスコープ外
+// のため変更していない）。
 function stepCh2Other(){
   document.getElementById('screen').innerHTML = `
     <div class="card">
       <h2>その他、生活で困っていることは？</h2>
-      <p class="optional-notice">入力しなくても進めます</p>
-      <div id="otherList"></div>
-      <label class="field-label">補足（任意）</label>
+      <p class="optional-notice">答えなくても次に進めます　<a href="#" id="ch2OtherSkipTop" class="inline-skip-link">第3章へ進む →</a></p>
+      <p class="lead">日常生活で他に困っていることがあれば、自由に書いてください。書きにくいときは、下のチェックから選ぶだけでも大丈夫です。</p>
       <textarea id="otherNote" placeholder="${esc(OTHER_NOTE_PLACEHOLDER)}"></textarea>
       ${renderHelpListHtml(OTHER_NOTE_HELP_ITEMS)}
+      <label class="field-label" style="font-size:14px;font-weight:700;color:var(--ink);margin-top:24px;padding-top:16px;border-top:1px solid var(--line);">気になるものがあれば、チェックするだけでも大丈夫です</label>
+      <div id="otherList"></div>
     </div>`;
   renderStringCheckList('otherList', OTHER_DIFFICULTIES.map(l=>[l,l]), state.otherChips);
   const noteEl = document.getElementById('otherNote');
   noteEl.value = state.otherNote;
   noteEl.oninput = e=>state.otherNote = e.target.value;
+  const ch2OtherSkipHandler = (e)=>{ if(e) e.preventDefault(); finishChapter('ch2', 'ch3_intro'); };
+  document.getElementById('ch2OtherSkipTop').onclick = ch2OtherSkipHandler;
   setFooter({secondaryLabel:'戻る', secondaryFn:goBack, primaryLabel:'第3章へ進む', primaryEnabled:true, primaryFn:()=>{
     finishChapter('ch2', 'ch3_intro');
   }});
@@ -5625,9 +6181,23 @@ function showScreen(){
 // 導線がある画面）を表示中の場合に限り、その場で再描画して最新のふりかえり結果を反映する。
 // どちらの関数もチップ選択をstateから復元して描画するため、この再描画で入力中の内容が
 // 失われることはない（「取り込む」ボタン自身が同じ関数を呼んで丸ごと再描画しているのと同じ仕組み）。
+//
+// 2026-08-08追記：ch2_adlが「初回=会話形式／修正時=一覧フォーム」に分岐するようになった
+// （決定#54〜57）ため、上記の前提（「再描画しても入力中の内容は失われない」）が一覧フォーム
+// 限定の話になった。会話形式（renderCh2AdlConversation）は呼ばれるたびに1問目から描画し直す
+// ため、ここでstepCh2Adl()を無条件に呼ぶと、会話の途中でタブを切り替えて戻ってきただけで
+// 進捗が1問目にリセットされてしまう。一覧フォームが表示されるとき（=shouldShowAdlForm()が
+// true）に限定して再描画する（stepCh2Adl()自身の分岐条件と完全に同じにするため、
+// 同じ関数を共有している）。
+//
+// 2026-08-08追記2（決定#58〜59）：姉妹アプリの項目別ページへのリンクを会話形式の質問ごとに
+// 設置した。リンクを踏むとstate.adlConvEnded=trueになり、shouldShowAdlForm()がtrueを返す
+// ようになるため、姉妹アプリ側で回答して本体タブに戻ってきたときは、このリスナーによって
+// 自動的に一覧フォーム（姉妹アプリからの取り込みUIがある方）が再描画される
+// （シナリオ全体は設計案「5. シナリオ」参照）。
 document.addEventListener('visibilitychange', function(){
   if(document.visibilityState !== 'visible') return;
-  if(current === 'ch2_adl'){
+  if(current === 'ch2_adl' && shouldShowAdlForm()){
     stepCh2Adl();
   } else if(current === 'ch5_recognition_adl'){
     stepCh5RecognitionAdl();

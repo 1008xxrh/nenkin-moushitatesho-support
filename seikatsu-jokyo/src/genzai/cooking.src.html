@@ -165,6 +165,7 @@ var COMPLETE_STEP = TOTAL_CHECK_SCREENS+3; // 完了画面のstep番号（結果
 var OPENING_MESSAGE = 'ようこそ。\nあなたの普段の生活の詰まりを少しずつ見つけていけます。';
 // SHARED_JS: chick_widget
 // SHARED_JS: opening_screen
+// SHARED_JS: chat_origin
 
 var PENSION_FOCUS_TEXT = 'うまく作れたかどうかではなく、一人で生活したとして、食事の準備を自力で続けられるかを確認します。今誰かが手伝ってくれていても、一人ならどうなるかを思い浮かべながら進めてください。';
 var INTRO_CHICK_LINE = '今日は「炊事」について、一緒に進めてみよう。';
@@ -367,10 +368,14 @@ function render(){
 }
 
 // ハブ画面（hub.html）経由、または他の項目からの「次へすすむ」経由で来た場合
-// （?from=hub）は、直前の画面で既に「ようこそ」を見ているので、ここでは重ねて
-// 出さず「はじめに」画面から直接始める。
+// （?from=hub）、または本体index.html（申立書サポート）の会話形式から?from=chatで
+// 直接来た場合は、直前の画面で既に「ようこそ」を見ている（?from=hub）か、
+// そもそも会話形式の続きとして開いている（?from=chat）ので、ここでは重ねて
+// 出さず「はじめに」画面から直接始める。?from=chatのときはあわせて、本体の会話形式
+// から来たことをlocalStorageに軽く記録する（決定#58〜61。バナー表示はhub.src.html側）。
 var urlParams = new URLSearchParams(window.location.search);
-if(urlParams.get('from') === 'hub'){
+if(urlParams.get('from') === 'chat'){ recordChatOrigin(); }
+if(urlParams.get('from') === 'hub' || urlParams.get('from') === 'chat'){
   render();
 } else {
   renderOpening();
