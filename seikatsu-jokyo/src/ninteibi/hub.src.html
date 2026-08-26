@@ -108,8 +108,9 @@ function renderItemList(){
   // 本体index.htmlのADL_LEVEL_TO_NUMと同じ数字を使う（genzai側のhub.src.htmlと同じ理由）。
   // 2026-08-01：実テンプレート02.xlsxの認定日欄が過去形表記だったため、各項目のLEVELSも
   // 過去形（できた/できたが援助が必要だった/できないが援助があればできた/できなかった）に
-  // 変更した。ここもそれに合わせて更新（本体側ADL_LEVEL_TO_NUMの過去形キーと同じ対応）。
-  var LEVEL_TO_NUM = {'できた':1, 'できたが援助が必要だった':2, 'できないが援助があればできた':3, 'できなかった':4};
+  // 変更した。2026-08-16：現在形（genzai）と文体を揃えるため、短縮版（できた/まあできた/
+  // 援助があれば/できなかった）に再変更（本体側ADL_LEVEL_TO_NUM・各項目LEVELSと同じ対応）。
+  var LEVEL_TO_NUM = {'できた':1, 'まあできた':2, '援助があれば':3, 'できなかった':4};
 
   var html = '<div class="progress-note">10項目中 '+doneCount+'項目 完了（'+doneCount+'/'+ADL_ITEMS.length+'）</div>';
   html += '<p class="hub-permission-note">一度に全部やらなくても大丈夫です。気になるものだけ、途中まででも大丈夫です。</p>';
