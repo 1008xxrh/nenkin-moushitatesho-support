@@ -3308,7 +3308,10 @@ function stepStart(){
         </ul>
       </div>
 
-      <p class="small" style="margin-top:14px;">入力内容はこの端末のブラウザに保存されます。サーバーには送信しません。</p>
+      <div class="edit-section">
+        <p class="small">入力内容はこの端末のブラウザに保存されます。サーバーには送信しません。</p>
+        <p class="small" style="margin-top:10px;">なお、端末やブラウザの設定によっては、しばらく開かない期間が続いたときや、履歴を消したとき、機種を変えたときなどに、保存内容が消えてしまうことがあります。また、プライベートブラウズ（InPrivate・シークレットモードなど）でご利用の場合、ウィンドウを閉じると内容は残りません。</p>
+      </div>
     </div>`;
   setFooter({primaryLabel:'はじめる', primaryEnabled:true, primaryFn:()=>goTo('profile_birth')});
 }
