@@ -31,6 +31,14 @@
   --neutral-soft:#EFEBE2;
   --border:var(--line);
   --surface-raised:var(--neutral-soft);
+  /* 【2026-09-12新設】ヘルプ小窓（？ボタン＋ポップアップ）用。仕様: ヘルプ小窓_仕様書_20260912.md。
+     指定色は既存変数の値と一致するため、数値を書き写さずvar()で参照する
+     （配色を見直す際、この小窓だけ古い色のまま取り残されないようにするため）。
+     --help-nav-disabled-text（#B4B2A9）だけは既存のどの変数の値とも一致しないため新規に定義する。 */
+  --help-btn-fill: var(--warn);
+  --help-btn-x-size: 30px;
+  --help-btn-nav-size: 24px;
+  --help-nav-disabled-text: #B4B2A9;
 }
 *{box-sizing:border-box;}
 body{
@@ -50,7 +58,12 @@ header.tasks{padding:16px 20px 4px;}
 .task-pill.reached{cursor:pointer;border-color:var(--ink-soft);}
 .task-pill.reached:hover{background:var(--neutral-soft);border-color:var(--accent);color:var(--accent-strong);}
 .task-pill.reached:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
-main{flex:1;padding:8px 20px 120px;}
+/* 【2026-09-11変更】フッターが「戻る/DL保存/次へ」の3枠構成になり、長い文言のボタンは
+   折り返して2〜3段になった（4-3参照）。1段のフッターを前提にした固定値(120px)のままだと、
+   段数が増える画面だけ余白が足りず、決定#53（会話形式の選択肢がフッターの裏に隠れる不具合）
+   が再発する。setFooter()実行後にフッターの実測高さから算出したCSS変数へ差し替える
+   （updateFooterSpaceVar()参照）。変数未設定時（jsdomの実測前など）は従来値120pxを使う。 */
+main{flex:1;padding:8px 20px var(--footer-space, 120px);}
 .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px 20px;}
 h1{font-size:20px;font-weight:500;margin:0 0 8px;}
 h2{font-size:17px;font-weight:500;margin:0 0 12px;}
@@ -61,7 +74,7 @@ p.lead{color:var(--ink-soft);font-size:14px;margin:0 0 20px;}
 p.optional-notice{color:var(--ink);font-size:14px;font-weight:700;margin:-2px 0 16px;}
 .hint{background:var(--accent-soft);color:var(--accent-strong);font-size:13px;padding:10px 14px;border-radius:10px;margin:12px 0;}
 .chip-group{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
-.chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:8px 14px;font-size:14px;color:var(--ink);cursor:pointer;scroll-margin-bottom:110px;}
+.chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:8px 14px;font-size:14px;color:var(--ink);cursor:pointer;scroll-margin-bottom:var(--footer-scroll-margin, 110px);}
 .chip-selected{background:var(--accent);border-color:var(--accent);color:#fff;}
 .option-block{display:flex;flex-direction:column;gap:10px;margin-bottom:16px;}
 /* ch2Adl（会話形式）の4択だけに使う2列グリッド版。他画面の.option-block（はい/いいえ・
@@ -71,16 +84,16 @@ p.optional-notice{color:var(--ink);font-size:14px;font-weight:700;margin:-2px 0 
    かつ「できる→まあできる→援助があれば→できない」という一直線の尺度なので、
    2列×2行でも読み順（左上→右上→左下→右下）が尺度の順序と一致する。 */
 .option-block-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
-.option{border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-size:15px;cursor:pointer;background:var(--card);scroll-margin-bottom:110px;}
+.option{border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-size:15px;cursor:pointer;background:var(--card);scroll-margin-bottom:var(--footer-scroll-margin, 110px);}
 .option.selected{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-strong);font-weight:500;}
 label.field-label{display:block;font-size:13px;color:var(--ink-soft);margin:16px 0 6px;}
-input[type=text],input[type=number]{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:16px;background:#fff;color:var(--ink);scroll-margin-bottom:110px;}
+input[type=text],input[type=number]{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:16px;background:#fff;color:var(--ink);scroll-margin-bottom:var(--footer-scroll-margin, 110px);}
 input[type=text]::placeholder,input[type=number]::placeholder,textarea::placeholder{color:#b0b0ac;}
 /* 【H-1対応・2026-09-04】input[type=text]・input[type=number]・textareaのfont-sizeを
    15px→16pxに変更。16px未満だとiOS Safariが入力欄タップ時に自動でページをズームインする
    仕様があり、生年月日欄など全ての入力欄でこれが発生していた（select要素はこのアプリには無い）。
    見た目上の文字サイズの違いはごくわずかで、レイアウトへの影響は無い。 */
-textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:16px;min-height:80px;font-family:inherit;scroll-margin-bottom:110px;}
+textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:16px;min-height:80px;font-family:inherit;scroll-margin-bottom:var(--footer-scroll-margin, 110px);}
 .row{display:flex;gap:10px;}
 .row > *{flex:1;}
 .adl-item{margin-bottom:18px;}
@@ -95,18 +108,53 @@ textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius
 .conv-user-toggle{align-self:flex-end;display:flex;gap:6px;}
 .conv-user-toggle-btn{border:1px solid var(--line);border-radius:14px;padding:7px 14px;font-size:14px;cursor:pointer;background:var(--card);color:var(--ink-soft);}
 .conv-user-toggle-btn.selected{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-strong);font-weight:500;}
-.conv-current{margin-top:4px;scroll-margin-bottom:110px;}
+.conv-current{margin-top:4px;scroll-margin-bottom:var(--footer-scroll-margin, 110px);}
 .conv-current .chip-group{margin-bottom:0;}
 .check-row{display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;}
 .check-box{width:18px;height:18px;border:1px solid var(--line);border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:#fff;}
 .check-box.on{background:var(--accent);}
 .check-box span{color:#fff;font-size:12px;}
-.footer-nav{position:sticky;bottom:0;background:linear-gradient(to top, var(--bg) 75%, transparent);padding:16px 20px 20px;display:flex;gap:10px;max-width:480px;margin:0 auto;width:100%;}
+/* 【2026-09-11変更・DL保存ボタン新設】以前は「戻る」「次へ」の最大2個を横並びにするだけの
+   flexコンテナだった。「戻る／DL保存／次へ」を常に3等分し、DL保存を常に中央に置くため、
+   縦方向（状態メッセージ行→3枠の行）のflexコンテナに変え、3枠自体は.footer-slotsが担う。 */
+.footer-nav{position:sticky;bottom:0;background:linear-gradient(to top, var(--bg) 75%, transparent);padding:16px 20px 20px;display:flex;flex-direction:column;gap:8px;max-width:480px;margin:0 auto;width:100%;}
+/* DL保存直後の「ファイルをダウンロードしました。」等（5章②）。中身が無いときも高さ0のまま
+   残ってよい（min-heightは指定しない。空文字なら行自体が潰れる）。 */
+.footer-status{font-size:13px;color:var(--accent-strong);text-align:center;}
+.footer-slots{display:flex;gap:10px;}
+/* 常に3枠。中身が無い枠もdivとして残し幅を均等に保つ（「保存は常に中央」を満たすため）。
+   min-width:0は、長い文言が折り返さずコンテナを押し広げるのを防ぐ（flexアイテムの既定値
+   min-width:autoを打ち消す）。 */
+.footer-slot{flex:1;display:flex;min-width:0;}
+.footer-slot .btn{font-size:14px;}
 button.btn{flex:1;padding:14px;border-radius:12px;border:none;font-size:15px;font-weight:500;cursor:pointer;}
 button.btn-primary{background:var(--accent);color:#fff;}
 button.btn-primary:disabled{background:#C9C4B6;cursor:not-allowed;}
 button.btn-secondary{background:var(--card);border:1px solid var(--line);color:var(--ink);}
-button.btn-secondary.btn-alone{flex:0 0 auto;min-width:120px;}
+button.btn-secondary:disabled{color:var(--ink-soft);border-color:var(--line);opacity:.6;cursor:not-allowed;}
+/* 【2026-09-18追加・DL保存ボタン円形化】誤タップ防止のための暫定対応（根本対応ではない）。
+   DL保存は押すだけでファイルが増える（09-15発見「DL保存ファイルが上書きされず蓄積し続ける
+   問題」）ため、常設ボタンとしては押しやすすぎた。円を小さくすることで①ボタン自体の面積が
+   減る、②margin-inline:autoで3等分の枠の中央に寄り左右ボタンとの間隔が広がる、の2点で
+   誤タップを減らす。button.btnより後ろに置く（同じ詳細度なら後勝ちのため。padding・
+   border-radiusの上書きに必要）。後から「小さくて押しにくい」という理由だけでサイズを
+   戻すと、この対応の意図が失われるため注意（Opus・ユーザーとの検討結果）。
+   47px＝左右ボタンの高さ（14px＋padding14px×2≒47px）に合わせてあり、フッター全体の
+   高さ・上下位置は変わらない想定（updateFooterSpaceVar()が実測値で自動追従するため、
+   決定#53＝選択肢がフッターの裏に隠れる不具合の再発は無い想定）。line-height:0.9は
+   実機確認が必要（接触して見える場合は0.95〜1.0に）。 */
+button.btn#dlSaveBtn{
+  flex:0 0 auto;
+  width:47px;height:47px;
+  padding:0;
+  border-radius:50%;
+  margin-inline:auto;
+  display:flex;align-items:center;justify-content:center;
+  text-align:center;
+  line-height:0.9;
+  font-weight:400;
+}
+.footer-slot .btn#dlSaveBtn{font-size:12px;}
 .timeline-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px;}
 .timeline-row.gap{color:var(--ink-soft);border-bottom:1px dashed var(--line);font-style:italic;}
 .badge{font-size:12px;padding:3px 10px;border-radius:999px;white-space:nowrap;}
@@ -307,6 +355,73 @@ button:focus-visible, .option:focus-visible, .chip:focus-visible, [role="button"
   font-size:20px;line-height:1.4;font-weight:700;color:var(--ink-soft);opacity:0.5;
 }
 
+/* ============================================================
+   ヘルプ小窓（？ボタン＋ポップアップ）。仕様: ヘルプ小窓_仕様書_20260912.md
+   このアプリで初めて作る「ユーザーが『これは何だろう』と思ったときの場所」。
+   既存の入力を引き出すためのUI（アコーディオン等）とはあえて見た目を分けている。
+   2026-09-12時点：入れ物のみ実装。？ボタンの設置・中身の文章は画面ごとに別途行う。
+   ============================================================ */
+.help-overlay{
+  display:none;position:fixed;inset:0;z-index:1000;
+  background:rgba(43,43,40,0.45); /* --inkの45%透過 */
+  align-items:center;justify-content:center;
+}
+.help-overlay.open{display:flex;}
+.help-box{
+  position:relative;background:var(--card);border-radius:16px;
+  height:284px;width:100%;max-width:448px;margin:0 16px;padding:20px;
+  display:flex;flex-direction:column;
+}
+.help-close-btn{
+  position:absolute;top:12px;right:12px;
+  width:36px;height:36px;border-radius:999px;border:none;
+  background:var(--help-btn-fill);color:#FFFFFF;
+  font-size:var(--help-btn-x-size);line-height:1;cursor:pointer;
+  padding:4px;margin:-4px; /* 押せる範囲だけ44pxに広げる */
+  display:flex;align-items:center;justify-content:center;
+}
+.help-body{
+  flex:1;overflow:hidden;padding-right:28px;padding-top:4px;
+  font-size:15px;line-height:1.7;color:var(--ink);white-space:pre-wrap;
+}
+.help-footer{display:flex;align-items:center;justify-content:space-between;margin-top:12px;}
+.help-nav-btn{
+  width:42px;height:36px;border-radius:999px;border:none;
+  background:var(--help-btn-fill);color:#FFFFFF;
+  font-size:var(--help-btn-nav-size);line-height:1;cursor:pointer;
+  padding:4px;margin:-4px; /* 押せる範囲だけ44pxに広げる */
+  display:flex;align-items:center;justify-content:center;
+}
+/* 端のページ（それ以上進めない側）は薄くする。消さない
+   （消すと点々の位置がずれて画面が揺れるため。仕様書より） */
+.help-nav-btn:disabled{
+  background:var(--neutral-soft);color:var(--help-nav-disabled-text);cursor:default;
+}
+.help-dots{display:flex;gap:6px;}
+.help-dot{width:7px;height:7px;border-radius:999px;background:var(--line);}
+.help-dot.active{background:var(--accent-strong);}
+
+/* 【2026-09-12】？バッジ（ヘルプ小窓を開くトリガー）。仕様: 位置は対象の文言の直後・同じ行
+   （2026-09-12セッションの設計相談で決定。A-1・A-2・A-3・B-3・13件目①の5箇所すべてに
+   同じ位置パターンを使う）。リンクや文中に混ぜて置くため、×やナビボタンより小さくする。
+   【2026-09-12修正】当初はpadding+負のmarginで「見た目は小さく、押せる範囲だけ広げる」
+   つもりだったが、このアプリは*{box-sizing:border-box}のため、指定したwidth/heightが
+   そのまま見た目の大きさ＝クリック領域になり、paddingは中身の余白を削るだけで領域は増えない。
+   さらに負のmargin-left（-2px）が対象文言との間隔を潰し、「→」と？がくっついて見える
+   不具合になっていた（実機で発見）。押せる範囲の拡張は諦め、margin-leftで対象文言との
+   間隔をきちんと確保することを優先する。 */
+.help-hint-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:20px;height:20px;border-radius:999px;border:none;
+  background:var(--help-btn-fill);color:#FFFFFF;
+  font-size:12px;line-height:1;cursor:pointer;
+  padding:0;margin-left:8px;flex-shrink:0;
+  vertical-align:middle;
+}
+/* 【2026-09-13】A-2対応。医療機関名は可変長で折り返るため、対象文言の「直後」ではなく
+   「直前」に固定する（唯一の例外。折り返す文言に対しては、先頭に置く方が？の位置が
+   ぶれない。実機・Visualizerモックアップで比較の上、ユーザー確認済み）。 */
+.help-hint-btn.prefix{margin-left:0;margin-right:6px;}
 
 </style>
 <script>
@@ -362,6 +477,22 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   <header class="tasks" id="taskHeader"></header>
   <main id="screen"></main>
   <div class="footer-nav" id="footerNav"></div>
+</div>
+
+<!-- 【2026-09-12新設】ヘルプ小窓（？ボタン＋ポップアップ）。仕様: ヘルプ小窓_仕様書_20260912.md
+     app-shellの外側に置く（position:fixedで画面全体を覆うオーバーレイのため、
+     app-shellのmax-width:480pxに影響されない独立した層にする）。
+     中身（本文・矢印の有効/無効・点々）はopenHelp()がJSで書き換える。 -->
+<div class="help-overlay" id="helpOverlay">
+  <div class="help-box" role="dialog" aria-modal="true">
+    <button type="button" class="help-close-btn" id="helpCloseBtn" aria-label="閉じる">×</button>
+    <div class="help-body" id="helpBody"></div>
+    <div class="help-footer" id="helpFooter">
+      <button type="button" class="help-nav-btn" id="helpPrevBtn" aria-label="前へ">＜</button>
+      <div class="help-dots" id="helpDots"></div>
+      <button type="button" class="help-nav-btn" id="helpNextBtn" aria-label="次へ">＞</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -740,7 +871,7 @@ function buildPeriodsForForm(modeOverride){
     const phase1Rows = phase1Segs.map((seg, i)=>{
       const chunk = phase1Chunks[i];
       const related = eventRanges.filter((r,ri) => eventWinnerChunk.get(ri) === chunk).map(r=>r.label);
-      const { hospitalName, note } = buildPhase1SegmentNote(seg, birth, related);
+      const { hospitalName, note, overlapCount } = buildPhase1SegmentNote(seg, birth, related);
       return {
         sortKey: birth + seg.startAge,
         fromY: birth + seg.startAge, fromM: null,
@@ -748,6 +879,7 @@ function buildPeriodsForForm(modeOverride){
         toIsNow: false,
         visited: !!hospitalName,
         hospitalName,
+        hospitalMultiple: overlapCount > 1,
         note
       };
     });
@@ -1180,11 +1312,10 @@ const NOTWORK_REASON_HELP_TEXTS = {
 // 追記：「援助があれば」の範囲（家族の声かけ・準備・見守りも含む）と、
 // 「頑張ればできるか」ではなく「普段どのくらいできていたか」で選ぶ旨も明示する。
 const ADL_HELP_NOTICE = 'あくまで選ぶ目安です。申立書にそのまま書く文ではありません。一番調子がよかった日ではなく、その時期の「普段の状態」に近いものを選んでください。家族の声かけ・準備・見守りがあってできていた場合は、「援助があればできる」を選んで大丈夫です。「頑張ればできるか」ではなく、そのころ普段どのくらいできていたかで選んでください。';
-// 2026-08-16追加。ch5_recognition_adl（認定日欄）の会話形式専用（ch2_adlは対象外・現状維持）。
-// 実機テストで「1問目が『選ぶときのヒントを見る』と『迷ったときの例を見る』の2つのアコーディオンに
-// 挟まれて分かりにくい」との指摘があったため、画面共通の開閉式ヒント（ADL_HELP_NOTICE全文）を廃止し、
-// その要点1文だけを常時表示に短縮した（ADL_HELP_NOTICEからの抜粋）。
-const ADL_HELP_NOTICE_SHORT = '一番調子がよかった日ではなく、その時期の「普段の状態」に近いものを選んでください。';
+// 【2026-09-17削除】ADL_HELP_NOTICE_SHORT（2026-08-16追加、ch5_recognition_adl会話形式の
+// 画面共通ヒントを一時的に短縮表示していた版）。2026-09-04のD-3対応で常時表示化自体が
+// アコーディオン＋ADL_HELP_NOTICE全文へ戻され、以後どこからも参照されない未使用定数に
+// なっていたため削除した。経緯の詳細は00_索引.md・2026-09-04セッションまとめ参照。
 
 // ---- 各章トップ画面（ch2_intro/ch3_intro/ch4_intro/ch5_intro）向けの離脱許可メッセージ ----
 // 2026-09-05追加（F-3/J-8/C-1が共有する論点への対応）。「あとから何度でも修正できます」は
@@ -1218,23 +1349,16 @@ const WORK_LEAVE_NOTICE_PAST = '「休職中だった」は、会社に籍は残
 // stepCh5RecognitionAdl()（認定日ごろの日常生活について）で、前半だけ常時表示・後半はアコーディオン内に
 // 移すためにINTRO/FLEXへ分割した（のちにADLのアコーディオンは廃止、下記2026-08-16の注記参照）。
 const RECOGNITION_PERIOD_NOTICE_MAIN_INTRO = 'ここは「今の状態」ではなく、「初診から１年６か月ごろ（認定日ごろ）」の状態を入力する画面です。';
-// 【2026-09-05注記：現在このconstは表示に一切使われていない（未使用）】
-// 2026-09-04のD-3対応で、ch5_recognition_adl（認定日ごろの生活状況）の一覧フォームのヒント表示を
-// 現在編（ch2_adl）と同じアコーディオン＋ADL_HELP_NOTICE全文に統一した結果、下記の文言を
-// 表示していた箇所が無くなった。削除はせず、下記コメントに残る過去の検討経緯（2026-08-16の
-// 実機テストでの文言調整）を残す目的でそのまま置いている。再利用の予定は無い。
-const RECOGNITION_PERIOD_NOTICE_MAIN_FLEX = '今とまったく同じでなくても大丈夫です。当時のことを思い出せる範囲で選んでください。今と違っていた点だけ入力する形でもかまいません。';
-// 2026-08-16追加。stepCh5Recognition（就労状況・3択）専用。RECOGNITION_PERIOD_NOTICE_MAIN_FLEXの
-// 末尾「今と違っていた点だけ入力する形でもかまいません。」は、3択のどれかを必ず選ばないと
-// 次へ進めないこの画面には合わない（部分入力ができる画面向けの文言のため）と実機テストで
-// 指摘があり削除。当時はRECOGNITION_PERIOD_NOTICE_MAIN_FLEX自体を
-// ch5_recognition_adlのヒント文と共用していたため変更しなかった（このconstだけがこの画面専用の表示
-// だった。共用先が無くなった経緯は上記2026-09-05注記の通り）。
-// （以前あったRECOGNITION_PERIOD_NOTICE_MAIN＝INTRO+FLEXの結合定数はこの画面専用だったが、
-// この変更で置き換えられて未使用になったため削除した）
-// 2026-08-16（2回目の実機テスト）：「今とまったく同じでなくても大丈夫です。」も削除。
-// この画面は3択が必須で、「今と同じでなくても」という言い回しが逆に気になる、との指摘のため。
-// 残すのは「当時のことを思い出せる範囲で選んでください。」の1文のみ。
+// 【2026-09-17削除】RECOGNITION_PERIOD_NOTICE_MAIN_FLEX（'今とまったく同じでなくても
+// 大丈夫です。当時のことを思い出せる範囲で選んでください。今と違っていた点だけ入力する形
+// でもかまいません。'）。2026-08-16追加、元はstepCh5Recognition（就労状況・3択）と
+// ch5_recognition_adlのヒント文で共用していたが、2026-08-16の実機テストで3択必須画面には
+// 「今と違っていた点だけ入力する形でもかまいません」が合わないと判明しstepCh5Recognition側は
+// 削除（末尾の「当時のことを思い出せる範囲で選んでください」1文のみ残し、下記MAIN_WORKへ
+// 引き継いだ）。残るch5_recognition_adl側の参照も2026-09-04のD-3対応で無くなり未使用定数に
+// なっていたため、今回削除した。経緯の詳細は00_索引.md参照。
+// 2026-08-16：stepCh5Recognition（就労状況・3択）は3択必須のため部分入力を示唆する文言と
+// 相性が悪く、「当時のことを思い出せる範囲で選んでください。」の1文だけを残す方針にした。
 const RECOGNITION_PERIOD_NOTICE_MAIN_WORK = RECOGNITION_PERIOD_NOTICE_MAIN_INTRO + '当時のことを思い出せる範囲で選んでください。';
 const RECOGNITION_PERIOD_NOTICE_SHORT = '以下は、初診から１年６か月ごろの状態として答えてください。今の生活ではなく、当時の状態を思い出して選んでください。';
 
@@ -1280,14 +1404,12 @@ const REPEATABLE_EVENTS = [
   ['koko_nyugaku','高校入学'],['koko_sotsugyo','高校卒業'],
   ['daigaku_nyugaku','大学入学'],['daigaku_sotsugyo','大学卒業']
 ];
-const REPEATABLE_KEYS = new Set(REPEATABLE_EVENTS.map(e=>e[0]));
 
 const EVENT_GROUPS = {
   life:[['shibetsu','死別'],['ryunen','留年']],
   impact:[['futoko','不登校'],['hikikomori','引きこもり'],['choukiketsukin','長期欠勤'],['kansho','退職勧奨を受けた'],['harassment','ハラスメントを受けた'],['kazoku','家族とのトラブル'],['fukushi','福祉サービスを利用開始した'],['techo','障害者手帳を取得した']]
 };
 const EVENT_GROUP_LABELS = {life:'その他の出来事', impact:'症状が生活に影響した出来事'};
-const SEASONS = ['春','夏','秋','冬'];
 const CONFIDENCE = [['certain','資料で確認した'],['approximate','たぶん合っている'],['unknown','覚えていない']];
 // 【2026-08-23】小児科・発達外来が無く「その他」の自由記述も無かったため、発達障害の
 // 診断歴などが正確に選べない問題があった（2026-08-09セッションのUXシミュレーションで
@@ -1350,8 +1472,6 @@ const GAP_REASONS = ['お金がなかった','怖くて行けなかった','症�
 //   isUnknownFallback: boolean
 // }
 
-const TIME_BUCKETS = ['child','student','working','unknown'];
-const TIME_BUCKET_LABELS = {child:'子供のころ', student:'学生時代', working:'働いてから', unknown:'わからない'};
 // 【病院データ一本化】以前はここにPAST_HOSPITAL_CONFIDENCE（3値目'unsure'）を定義していたが、
 // 病院データがstate.hospitals（第4章、3値目'unknown'）に一本化されたため削除した。
 // migrateAppState()のversion6移行では、旧データの'unsure'を'unknown'へ変換して引き継いでいる。
@@ -2219,6 +2339,7 @@ function buildCurrentPeriodRows(){
       toLabel,
       visited: !!period.visited,
       hospitalName: period.hospitalName || undefined,
+      hospitalMultiple: !!period.hospitalMultiple,
       note: period.note || '',
       fromKind,
       fromYear: period.fromY || undefined,
@@ -2614,7 +2735,9 @@ function writeDisabilityNotebookToBack(back, nb){
 }
 
 function esc(s){
-  return (s===undefined||s===null?'':s).toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  // 【2026-09-11修正】"と'を未エスケープのまま返していたため、病院名等に半角の
+  // ダブルクォートが入ると年表の通院バーのtitle属性が壊れる不具合があった（付録参照）。
+  return (s===undefined||s===null?'':s).toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 function toggleArray(arr, val){
   const i = arr.indexOf(val);
@@ -2815,6 +2938,11 @@ function buildDevelopmentalGapNote(seg, relatedOverride){
   return noteParts.join('');
 }
 
+// 【2026-09-13】A-2対応。overlapCount（区分内の重複件数）を追加で返す。区分内に医療機関が
+// 2件以上重なる場合のみ、医療機関名欄の先頭に？バッジを出す（1件だけの区分では出さない）。
+// 呼び出し元のbuildPeriodsForForm()・buildCurrentPeriodRows()の両方で、この値を
+// hospitalMultipleとして最終的なrowオブジェクトまで運ぶ必要がある（値を作り直す関数が
+// 間に入っているため、自動的には伝播しない）。
 function buildPhase1SegmentNote(seg, birth, relatedOverride){
   const overlapping = hospitalsOverlappingSegment(seg, birth);
   const primary = overlapping.length ? overlapping[0] : null; // 決定#29（決定#22・#28の再修正）：最初（区分内で一番古い）を医療機関名欄に使う
@@ -2842,7 +2970,7 @@ function buildPhase1SegmentNote(seg, birth, relatedOverride){
     noteParts.push(`${a.hospitalType}${a.name || '（病院名不明）'}（${label}）に転院。`);
   });
 
-  return { hospitalName, note: noteParts.join('') };
+  return { hospitalName, note: noteParts.join(''), overlapCount: overlapping.length };
 }
 
 function renderChipGroup(containerId, items, selectedArr, multi, onToggle){
@@ -2991,29 +3119,91 @@ function renderHelpListHtml(items){
     </details>`;
 }
 
+// 【2026-09-11変更・DL保存ボタン新設（依頼メモ3-1・4-2）】
+// 以前は「戻る」単独のときだけflex:1で伸びないようにする特別扱い（2026-08-10・決定#65）が
+// あったが、常に3等分（.footer-slot）にする今回の変更でその特別扱いは不要になった
+// （ボタンが無い枠は空のdivのまま幅だけ確保される）。btn-aloneクラス・CSSは削除済み。
+//
+// 中央のDL保存は「常時表示」（依頼メモ3-1）だが、再開確認画面（stepResumeCheck）だけは
+// hideSaveButton:trueを渡して隠す（4-4。resumeDecisionPending中はstateが空のプレース
+// ホルダのため、DL保存を押せると空のファイルが書き出されてしまう）。それ以外の呼び出し元
+// （46箇所）は何も変更していない＝このオプションを渡さない＝既定でDL保存が出る。
 function setFooter(opts){
   const footer = document.getElementById('footerNav');
   footer.innerHTML = '';
+
+  const statusEl = document.createElement('div');
+  statusEl.className = 'footer-status';
+  statusEl.id = 'footerStatus';
+  footer.appendChild(statusEl);
+
+  const slots = document.createElement('div');
+  slots.className = 'footer-slots';
+  footer.appendChild(slots);
+
+  const leftSlot = document.createElement('div');
+  leftSlot.className = 'footer-slot';
   if(opts.secondaryLabel){
     const b = document.createElement('button');
-    // 2026-08-10（決定#65・案A）：「戻る」単独（primaryLabel無し）のときはflex:1で全幅に
-    // 伸びて「次へ」の定位置を占領してしまい違和感があるため、その場合だけ伸びないようにする。
-    // ch2_reason/ch2_adlの会話形式（1問ごとにタップした瞬間に進むため「次へ」を置かない）の
-    // ために導入したが、ch5_done等の他の「戻るのみ」画面にも同じCSSが自動的に効く（副次的に
-    // 直る。意図的な副作用）。
-    b.className = 'btn btn-secondary' + (opts.primaryLabel ? '' : ' btn-alone');
+    b.className = 'btn btn-secondary';
     b.textContent = opts.secondaryLabel;
     b.onclick = opts.secondaryFn;
-    footer.appendChild(b);
+    leftSlot.appendChild(b);
   }
+  slots.appendChild(leftSlot);
+
+  const centerSlot = document.createElement('div');
+  centerSlot.className = 'footer-slot';
+  if(opts.hideSaveButton !== true){
+    const b = document.createElement('button');
+    b.className = 'btn btn-secondary';
+    b.id = 'dlSaveBtn';
+    // 【2026-09-18変更・円形化】表示は2段（DL/保存）にするが、textContentは'DL保存'のまま
+    // 保たれる（<br>はテキストノードを持たないため）。既存テスト（disabled/中央の枠に
+    // あるか等）はtextContentを見ていないため影響なし。<br>があると読み上げソフトが
+    // 「ディーエル」「ほぞん」を区切って読む場合があるため、aria-labelで補正する。
+    b.innerHTML = 'DL<br>保存';
+    b.setAttribute('aria-label', 'DL保存');
+    // 押せる条件（依頼メモ3-1）：空の状態（isInitialState）では空のファイルができるため押せない。
+    b.disabled = isInitialState(state);
+    b.onclick = handleDlSaveClick;
+    centerSlot.appendChild(b);
+  }
+  slots.appendChild(centerSlot);
+
+  const rightSlot = document.createElement('div');
+  rightSlot.className = 'footer-slot';
   if(opts.primaryLabel){
     const b = document.createElement('button');
     b.className = 'btn btn-primary';
     b.textContent = opts.primaryLabel;
     b.disabled = !opts.primaryEnabled;
     b.onclick = opts.primaryFn;
-    footer.appendChild(b);
+    rightSlot.appendChild(b);
   }
+  slots.appendChild(rightSlot);
+
+  updateFooterSpaceVar(footer);
+}
+
+// 【2026-09-11追加（依頼メモ4-3・最重要）】フッターが2〜3段になる画面が生まれたため、
+// 1段のフッターを前提にした固定値（main側のpadding-bottom、選択肢/入力欄のscroll-margin-
+// bottom）のままだと、段数が増える画面だけ余白が足りず、決定#53（会話形式の選択肢がフッター
+// の裏に隠れてタップが効かなくなる不具合）が画面によって再発する。setFooter()で組み立てた
+// 直後に実際の高さ（offsetHeight。パディング込み）を測り、CSS変数へ反映する。
+// +38pxは、従来固定値（padding-bottom:120px）と1段フッター実測時の高さの差分を踏襲した
+// 余白（影のグラデーション領域・safe-area分の余裕）。scroll-marginをpaddingより10px
+// 小さくする比率も従来値（120px/110px）を踏襲した。実機での最終調整が必要（4-3参照）。
+function updateFooterSpaceVar(footerEl){
+  if(!footerEl) return;
+  const h = footerEl.offsetHeight;
+  // jsdom等、実レイアウトを計算しない環境ではoffsetHeightが常に0になる。その場合はCSS側の
+  // 既定値（120px/110px）に任せ、変数は上書きしない。
+  if(!h) return;
+  const space = h + 38;
+  const root = document.documentElement;
+  root.style.setProperty('--footer-space', space + 'px');
+  root.style.setProperty('--footer-scroll-margin', (space - 10) + 'px');
 }
 
 function getChapterNum(stepId){
@@ -3103,6 +3293,10 @@ function goTo(id){
 // 章へいつでも移動できるため、戻り先を自動判定する必要が無いという判断による）。
 function finishChapter(chKey, nextScreen){
   state.completed[chKey] = true;
+  // 【2026-09-18追加】就労状況変更後の再確認は、第1章を実際に完了した時点で済んだとみなす。
+  // workStatusChangedNoticeHtml()側で描画時に消すと、途中で離脱したときに二度と会話形式へ
+  // 戻れなくなるため、消すタイミングをここへ移した（Opus提案）。
+  if(chKey === 'ch1') state.workStatusJustChanged = false;
   goTo(nextScreen);
 }
 // 【2026-09-03追加・2026-09-06に固定化】章境界のボタン文言。
@@ -3230,9 +3424,360 @@ function clearStateStorage(){
   cancelDebouncedSave();
   try{
     localStorage.removeItem(STORAGE_KEY);
+    // 【2026-09-18追加】DL保存の「変化なし」判定マーカーも消す。別の内容に対する古い
+    // 記録が残ったままにしないため（isInitialState()のガードで実害は出ないが、記録の
+    // 意味を合わせておく。Opusレビュー指摘）。
+    localStorage.removeItem(DL_SAVE_MARKER_KEY);
   }catch(err){
     console.warn('保存データの削除に失敗しました', err);
   }
+}
+
+// =====================================================================
+// 【2026-09-11追加】DL保存（端末保存）・復元機能一式。
+// 「index_html向け：端末保存（DL保存）ボタン設置の依頼メモ（確定版rev3）」に基づく実装。
+// 背景（あきらめ1・2）：File System Access API（1個のファイルへの上書き保存）はSafari・
+// Safari on iOSともにベンダーが明確に反対の立場で対応の見込みが無いため、使えるのは
+// downloadXlsxBuffer()と同じ<a download>方式のみ。押すたびに新しいファイルが1個増える
+// 「スナップショット」方式にならざるを得ない。また、Excel出力ボタンは第1〜5章を終えた
+// 人しか押せないため、7日ルールで消える「途中で離脱した人」には届かない。そのため
+// 常設の「DL保存」ボタンを新設する。
+// =====================================================================
+
+// ファイルの中身のアプリ識別子・器のバージョン（依頼メモ3-4）。
+// fileFormatはstateの中のstateVersionとは別物（器の形そのものの版）。
+const BACKUP_APP_ID = 'shinritsusho-support';
+const BACKUP_FILE_FORMAT = 1;
+
+// 2026-09-15新設：13件目③（「DL」が略語のまま）対応。ボタン名自体は変えず（フッター折り返しへの
+// 影響を実機確認する前に決められないため）、開始画面は常時表示の地の文で、再開確認画面は？小窓で
+// 説明する（【2026-09-15再修正】当初は開始画面側も？小窓に入れていたが、フッター常設ボタンの
+// 名称という全画面共通の最重要語彙を「気になった人だけ？を開く」任せにするのは非プログラマ向け
+// という目的に対して弱いと判断し、開始画面は必ず1回読む地の文（stepStart）に埋め込む方式に変更。
+// 再開確認画面（stepResumeCheck）は開始画面を通らない人向けの画面のため、引き続き？小窓で持つ）。
+// 「端末のダウンロードフォルダへ」のように保存先を具体的に言い切らないのは、iOS Safariで
+// 実際にファイルとしてダウンロードされるかが00_索引.md記載のとおりまだ実機未確認のため。
+const DL_ABBREVIATION_HELP_PAGE = 'DL保存とは？\nダウンロード保存の略です。\n端末にデータをダウンロードできます。';
+// 2026-09-15新設：「DL保存したファイルから戻す／再開する」が何をするかの説明。開始画面
+// （restoreLinkStartHelp）・再開確認画面（restoreLinkResumeHelp）の？小窓1枚目で共有する。
+const DL_RESTORE_WHAT_IT_DOES_HELP_PAGE = '「DL保存」で端末にダウンロードしておいたファイルがあれば、ここから読み込んで復元できます。使ったことがなければ、ファイルはありません。';
+
+// 姉妹アプリ（生活状況をふりかえる画面）とのlocalStorageキーの接頭辞。
+// adl_chat_origin_v1だけは対象外（どの画面から来たかの一時的な記録で、復元すると
+// 古い戻り先を指す可能性があるため。依頼メモ3-2）。
+const ADL_SUB_KEY_PREFIX = 'adl_';
+const ADL_CHAT_ORIGIN_KEY = 'adl_chat_origin_v1';
+
+// 決め打ちの22件リストではなく、localStorageを走査してadl_で始まるキーを拾う
+// （依頼メモ3-3。姉妹アプリの項目が将来増えても本体を直さず自動で拾えるようにするため）。
+function collectAdlSubData(){
+  const sub = {};
+  try{
+    for(let i=0;i<localStorage.length;i++){
+      const key = localStorage.key(i);
+      if(key && key.indexOf(ADL_SUB_KEY_PREFIX)===0 && key!==ADL_CHAT_ORIGIN_KEY){
+        sub[key] = localStorage.getItem(key);
+      }
+    }
+  }catch(err){
+    console.warn('姉妹アプリのデータの書き出しに失敗しました', err);
+  }
+  return sub;
+}
+
+// 復元側。「上書き」ではなく「削除してから書き戻す（完全置換）」にする（依頼メモ3-2）。
+// 新旧比較は原理的にできない（savedAtは本体用の1個しか無く、adl_系キー側に個別の
+// 日時が無い）ため、部分的なマージはしない。
+function replaceAdlSubData(sub){
+  try{
+    const toDelete = [];
+    for(let i=0;i<localStorage.length;i++){
+      const key = localStorage.key(i);
+      if(key && key.indexOf(ADL_SUB_KEY_PREFIX)===0 && key!==ADL_CHAT_ORIGIN_KEY) toDelete.push(key);
+    }
+    toDelete.forEach(k=>localStorage.removeItem(k));
+    // 利用者が用意したファイルの中身を全面的には信用しない：sub内にadl_以外や
+    // chat_originが紛れ込んでいても書き込まない最低限の防御。
+    Object.keys(sub||{}).forEach(k=>{
+      if(k.indexOf(ADL_SUB_KEY_PREFIX)===0 && k!==ADL_CHAT_ORIGIN_KEY){
+        localStorage.setItem(k, sub[k]);
+      }
+    });
+  }catch(err){
+    console.warn('姉妹アプリのデータの復元に失敗しました', err);
+  }
+}
+
+function buildBackupFilename(){
+  const d = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  return `申立書サポート_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}.json`;
+}
+
+// 書き出す中身一式（依頼メモ3-3・3-4）。
+function buildBackupPayload(){
+  // DL保存を押したときはsaveStateToStorage()も一緒に走らせ、ファイルとlocalStorageの
+  // 内容を一致させる（依頼メモ3-4）。結果としてexportedAtとmain.savedAtはほぼ同時刻になる。
+  saveStateToStorage();
+  let mainPayload = null;
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) mainPayload = JSON.parse(raw);
+  }catch(err){
+    mainPayload = null;
+  }
+  if(!mainPayload){
+    // localStorageが使えない環境等のフォールバック。メモリ上の値をそのまま使う。
+    mainPayload = { state: state, current: current, historyStack: historyStack, savedAt: Date.now() };
+  }
+  return {
+    app: BACKUP_APP_ID,
+    fileFormat: BACKUP_FILE_FORMAT,
+    exportedAt: new Date().toISOString(),
+    main: mainPayload,
+    sub: collectAdlSubData()
+  };
+}
+
+// downloadXlsxBuffer()と同じ<a download>方式（あきらめ1参照。Safariで使えるのはこの
+// 古典的な方式のみ）。
+function downloadJsonFile(obj, filename){
+  const json = JSON.stringify(obj);
+  const blob = new Blob([json], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// フッター中央「DL保存」ボタンのハンドラ（依頼メモ3-1・5-②）。
+// ダウンロードが実際に成功したかはアプリ側から確認できないため（禁止事項4）、
+// 「バックアップ完了」のような言い切りはせず、既存のExcel出力と同程度の控えめな
+// 表現（「ファイルをダウンロードしました。」）に揃える。
+// =====================================================================
+// 【2026-09-18新設】DL保存「変化なし」判定（タップ時判定方式。Opus・ユーザーとの検討結果）。
+// 09-15発見の「DL保存ファイルが上書きされず蓄積し続ける問題」への根本対応候補。
+//
+// 判定は render 時（setFooter()でボタンをdisabledにする方式）ではなく、
+// tap時（handleDlSaveClick()の中）で行う。render時判定だと、同じ画面に留まったまま
+// oninputで新しく入力しても、次の画面遷移までボタンの見た目が「変化なし」のまま
+// 更新されない（ずれ・ボタンが実態より遅れて見える）。tap時に判定すれば、押した瞬間の
+// 最新のstateと比較するのでこのずれは原理的に発生しない。
+//
+// マーカーはstate本体ではなく別のlocalStorageキーに持つ（historyStackと同じ考え方。
+// CURRENT_STATE_VERSIONを上げる対象にしない）。中身をそのまま保存すると、年表・通院記録が
+// 増えた人ほどlocalStorageの消費が実質2倍になるため、djb2程度の簡易ハッシュ（32bit）に
+// 縮めて保存する。衝突しても実害は「保存が1回スキップされ、もう一度押せば保存される」
+// だけなので、これで十分。
+const DL_SAVE_MARKER_KEY = 'shinritsusho_dl_save_marker_v1';
+
+function djb2Hash(str){
+  let hash = 5381;
+  for(let i=0; i<str.length; i++){
+    hash = ((hash << 5) + hash + str.charCodeAt(i)) | 0; // hash*33 + c
+  }
+  return hash >>> 0; // 符号なし32bit化
+}
+
+// 比較材料はstateとcollectAdlSubData()の2つだけ（Opusレビュー指摘）。
+// buildBackupPayload()は内部でsaveStateToStorage()を呼ぶ副作用があるため、判定専用には
+// 使わず、メモリ上のstateから直接組み立てる。exportedAt/savedAt/current/historyStackの
+// ような「入力していなくても変わる値」は含めない（含めると画面を移動しただけで
+// 「変化あり」になり、機能が意味を失う）。
+function buildDlSaveFingerprint(){
+  return djb2Hash(JSON.stringify({ state: state, sub: collectAdlSubData() }));
+}
+// DL保存・DL復元の直後に呼び、「今の中身は保存済み」の記録を更新する。
+function markDlSaveDone(){
+  try{
+    localStorage.setItem(DL_SAVE_MARKER_KEY, String(buildDlSaveFingerprint()));
+  }catch(err){
+    // 記録できなくても実害は「次回また同じ確認が出るだけ」なので握りつぶす
+  }
+}
+// 前回の記録から中身が変わっているか。記録が無ければ（一度もDL保存していなければ）
+// 「変化あり」扱いにする。判定できない場合も安全側（保存させる）に倒す。
+function hasDlSaveContentChanged(){
+  try{
+    const last = localStorage.getItem(DL_SAVE_MARKER_KEY);
+    if(last === null) return true;
+    return String(buildDlSaveFingerprint()) !== last;
+  }catch(err){
+    return true;
+  }
+}
+// 「変化なし」の通知を出した直後にもう一度押されたら、確認なしで保存する
+// （本人が分かった上で欲しがっている、という扱い。Opus提案）。
+let dlSaveConfirmPending = false;
+// =====================================================================
+
+function handleDlSaveClick(){
+  if(!dlSaveConfirmPending && !hasDlSaveContentChanged()){
+    dlSaveConfirmPending = true;
+    const statusEl = document.getElementById('footerStatus');
+    if(statusEl){
+      statusEl.textContent = '前回の保存から内容は変わっていません。ファイルは増やしていません。もう一度押すと保存します。';
+      updateFooterSpaceVar(document.getElementById('footerNav'));
+    }
+    return;
+  }
+  dlSaveConfirmPending = false;
+  try{
+    const payload = buildBackupPayload();
+    downloadJsonFile(payload, buildBackupFilename());
+    markDlSaveDone();
+    const statusEl = document.getElementById('footerStatus');
+    if(statusEl){
+      statusEl.textContent = 'ファイルをダウンロードしました。';
+      updateFooterSpaceVar(document.getElementById('footerNav'));
+    }
+  }catch(err){
+    console.error(err);
+    const statusEl = document.getElementById('footerStatus');
+    if(statusEl){
+      statusEl.textContent = '保存に失敗しました。もう一度お試しください。';
+      updateFooterSpaceVar(document.getElementById('footerNav'));
+    }
+  }
+}
+
+function formatBackupDateLabel(isoOrTimestamp){
+  const d = new Date(isoOrTimestamp);
+  if(isNaN(d.getTime())) return '';
+  return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+// ファイル検証はapp→fileFormat→stateVersionの順で行う（依頼メモ3-4）。fileFormatは
+// 器の形そのものを表すので、これを確かめる前にmainの中を読みにいくことが成り立たない。
+// {ok:true} または {ok:false, message} を返す。
+function validateBackupFile(parsed){
+  if(!parsed || typeof parsed !== 'object'){
+    return {ok:false, message:'このファイルは読み取れませんでした。'};
+  }
+  if(parsed.app !== BACKUP_APP_ID){
+    return {ok:false, message:'このアプリのファイルではないようです。'};
+  }
+  // 欠落・数値でない・既知の値（現在1）より大きい、のいずれも「新しい版」扱い。
+  // 自分の知っている値以下なら読める（<=。===1ではない。stateVersionに対する
+  // migrateAppState()と同じ考え方。将来fileFormat:2が増えても、1のファイルは読める）。
+  if(typeof parsed.fileFormat !== 'number' || parsed.fileFormat > BACKUP_FILE_FORMAT){
+    return {ok:false, message:'新しい版で作られたファイルです。'};
+  }
+  if(!parsed.main || typeof parsed.main !== 'object' || typeof parsed.main.state !== 'object' || parsed.main.state===null){
+    return {ok:false, message:'このファイルは読み取れませんでした。'};
+  }
+  const sv = parsed.main.state.stateVersion;
+  if(typeof sv === 'number' && sv > CURRENT_STATE_VERSION){
+    return {ok:false, message:'新しい版で作られたファイルです。'};
+  }
+  return {ok:true};
+}
+
+// 復元の手順②〜⑧（依頼メモ3-2）。①の検証は呼び出し元（handleRestoreFileSelected）で
+// 実施済みの前提。⑥（currentの実在確認）はshowScreen()側に統一している（バグC対応と
+// 共通処理にするため。4-6参照）。
+function applyRestorePayload(parsed){
+  // ②③ adl_系キーの完全置換。
+  replaceAdlSubData(parsed.sub || {});
+  // ④ 本体をmigrateAppState()に通す（既存の互換性の受け皿。4-8）。
+  state = migrateAppState(parsed.main.state);
+  // 【2026-09-18追加】復元直後は「今しがた読み込んだファイルと完全に同じ中身」なので、
+  // その場でもう一度DL保存を押すと同じ中身のファイルが増えるだけになる。マーカーを
+  // ここで更新し、「変化なし」から始まるようにする（Opusレビュー指摘）。
+  markDlSaveDone();
+  // ⑤ state/current/historyStackへ代入。
+  historyStack = Array.isArray(parsed.main.historyStack) ? parsed.main.historyStack : [];
+  current = (typeof parsed.main.current === 'string' && parsed.main.current) ? parsed.main.current : 'start';
+  // ⑦
+  saveStateToStorage();
+  // ⑧（⑥のcurrent実在確認はこの中で行われる）
+  showScreen();
+}
+
+// 復元前の確認画面（依頼メモ3-2・5-④）。stepResumeCheckと同様、STEPSには登録しない
+// 一時的な画面（goTo/goBackの対象にしない）。
+function renderRestoreConfirmScreen(parsed, cameFromResumeCheck, resumeSavedPayload){
+  const dateLabel = formatBackupDateLabel(parsed.exportedAt);
+  // 【2026-09-12修正・不具合①②対応】以前はcameFromResumeCheck（どちらの画面から来たか）
+  // だけで警告の有無を決めていたため、次の2つの見落としがあった。
+  //   ①開始画面から来た場合、実際には本体データが残っているのに警告が一切出ない
+  //     （入力途中で「戻る」を繰り返し開始画面へ着地したケースなど）
+  //   ②「最初からやり直す」直後（本体データは消え、「生活状況をふりかえる」側だけ残る）に
+  //     開始画面から復元すると、ふりかえるのデータだけが警告なしに消える。削除ボタンの
+  //     確認文言「『生活状況をふりかえる』の内容は消えません」と矛盾する結果になる
+  // 「どの画面から来たか」ではなく「今、実際に消える中身があるか」を本体・ふりかえる
+  // それぞれ個別に判定し、警告文も独立して出し分ける。逆に、iOSの7日ルール等で本体・
+  // ふりかえるとも何も残っていない人に「置きかわります」と表示すると、事実と異なる警告で
+  // 復元をためらわせてしまうため、「無ければ何も言わない」を両方に適用する。
+  const hasMainData = !isInitialState(state) || !!localStorage.getItem(STORAGE_KEY);
+  const hasSubData = Object.keys(collectAdlSubData()).length > 0;
+  // ファイル側にふりかえるの中身が無ければ「置きかわる」のではなく「消える」が正確。
+  const fileHasSub = !!(parsed.sub && Object.keys(parsed.sub).length > 0);
+  let noticeText = '';
+  if(hasMainData){
+    noticeText += 'いま端末にある入力内容は、これで置きかわります。';
+  }
+  if(hasSubData){
+    noticeText += fileHasSub
+      ? '「生活状況をふりかえる」で入力した内容は、これで置きかわります。'
+      : '「生活状況をふりかえる」で入力した内容は、これで消えます。';
+  }
+  const replaceNotice = noticeText
+    ? `<p class="small" style="margin-top:8px;">${noticeText}</p>`
+    : '';
+  document.getElementById('screen').innerHTML = `
+    <div class="card center">
+      <h1>このファイルから戻しますか</h1>
+      <p class="lead">このファイルは ${esc(dateLabel)} に保存されたものです。</p>
+      ${replaceNotice}
+      <p class="small" style="margin-top:8px;">保存したときに開いていた画面が出ます。</p>
+    </div>`;
+  setFooter({
+    hideSaveButton: true,
+    secondaryLabel:'やめる',
+    secondaryFn:()=>{
+      if(cameFromResumeCheck){
+        stepResumeCheck(resumeSavedPayload);
+      }else{
+        stepStart();
+      }
+    },
+    primaryLabel:'この内容で戻す',
+    primaryEnabled:true,
+    primaryFn:()=>{
+      // 既存の2つのボタン（最初からやり直す／続きから再開する）と同じく、
+      // 先にresumeDecisionPending = falseを立てる（依頼メモ4-5。立てないと
+      // 復元後の入力が保存されない）。開始画面から来た場合はもともとfalseなので無害。
+      resumeDecisionPending = false;
+      applyRestorePayload(parsed);
+    }
+  });
+}
+
+// ファイル選択直後の読み込み・検証（依頼メモ3-2）。開始画面・再開確認画面の両方から
+// 同じ関数を使う。
+async function handleRestoreFileSelected(file, statusElId, cameFromResumeCheck, resumeSavedPayload){
+  const statusEl = document.getElementById(statusElId);
+  if(!file) return;
+  if(statusEl) statusEl.textContent = '';
+  let parsed;
+  try{
+    const text = await file.text();
+    parsed = JSON.parse(text);
+  }catch(err){
+    if(statusEl) statusEl.textContent = 'このファイルは読み取れませんでした。';
+    return;
+  }
+  const result = validateBackupFile(parsed);
+  if(!result.ok){
+    if(statusEl) statusEl.textContent = result.message;
+    return;
+  }
+  renderRestoreConfirmScreen(parsed, cameFromResumeCheck, resumeSavedPayload);
 }
 
 // 起動時：保存データがあれば「続きから / 最初から」の確認画面を出す。
@@ -3256,8 +3801,18 @@ function stepResumeCheck(savedPayload){
     <div class="card center">
       <h1>前回の続きがあります</h1>
       <p class="lead">この端末に、前回入力した内容が保存されています（${esc(dateLabel)}時点）。続きから再開しますか？</p>
+      <div style="display:flex;align-items:center;">
+        <button type="button" id="restoreLinkResume" class="link-btn">DL保存したファイルから戻す</button>
+        <button type="button" class="help-hint-btn" id="restoreLinkResumeHelp" aria-label="「DL保存したファイルから戻す」について">？</button>
+      </div>
+      <input type="file" id="restoreFileInputResume" style="display:none;">
+      <p class="small" id="restoreStatusResume" style="margin-top:4px;color:var(--danger);"></p>
     </div>`;
   setFooter({
+    // 【2026-09-11追加】この画面が出ている間はstate/currentがresetState()直後の空の
+    // プレースホルダのままで、本当のデータはまだ反映されていない（resumeDecisionPending
+    // 参照）。DL保存を押せると空のファイルが書き出されてしまうため出さない（依頼メモ4-4）。
+    hideSaveButton: true,
     secondaryLabel:'最初からやり直す',
     secondaryFn:()=>{
       resumeDecisionPending = false;
@@ -3278,6 +3833,28 @@ function stepResumeCheck(savedPayload){
       showScreen();
     }
   });
+  // 【2026-09-11追加・復元機能】「最初からやり直す」を経由させない（依頼メモ4-5）。
+  // 再開確認画面に直接、復元の入口を置く。
+  document.getElementById('restoreLinkResume').onclick = ()=>{
+    document.getElementById('restoreFileInputResume').click();
+  };
+  // 【2026-09-12】13件目①対応。文言はOpusとの相談で確定。見出しが要るページ（2・3枚目）は
+  // 専用の見出し機能を作らず、改行1つで先頭行に見出しを混ぜる形にする（2026-09-12設計相談で
+  // 決定。太字にしなくても自然に読める「名詞句」の見出しにすることで、openHelp()側の
+  // コード変更なしに実現できる）。1枚目は見出し不要（リンクの直後という文脈で十分）。
+  document.getElementById('restoreLinkResumeHelp').onclick = ()=>{
+    openHelp([
+      DL_RESTORE_WHAT_IT_DOES_HELP_PAGE,
+      DL_ABBREVIATION_HELP_PAGE,
+      '２つの再開方法の違い\n「DL保存したファイルから戻す」は、選んだファイルに保存されている内容から再開します。\n「続きから再開する」は、端末に残っている内容から再開します。',
+      '保存日時の確かめ方\nDL保存したファイルは、ファイル名の最後に日付と時刻が入っています（例：申立書サポート_20260912_1430）。端末に残っている内容の日時は、「前回の続きがあります」の画面に書いてあります。'
+    ]);
+  };
+  document.getElementById('restoreFileInputResume').onchange = (e)=>{
+    const file = e.target.files && e.target.files[0];
+    handleRestoreFileSelected(file, 'restoreStatusResume', true, savedPayload);
+    e.target.value = '';
+  };
 }
 
 function stepStart(){
@@ -3311,9 +3888,33 @@ function stepStart(){
       <div class="edit-section">
         <p class="small">入力内容はこの端末のブラウザに保存されます。サーバーには送信しません。</p>
         <p class="small" style="margin-top:10px;">なお、端末やブラウザの設定によっては、しばらく開かない期間が続いたときや、履歴を消したとき、機種を変えたときなどに、保存内容が消えてしまうことがあります。また、プライベートブラウズ（InPrivate・シークレットモードなど）でご利用の場合、ウィンドウを閉じると内容は残りません。</p>
+        <p class="small" style="margin-top:10px;">画面の下にある「DL保存」を押すと、ここまでの内容をファイルとして端末にダウンロードできます。「DL」は「ダウンロード」の略です。内容が消えてしまったときは、そのファイルから戻すことができます。</p>
+        <div style="display:flex;align-items:center;">
+          <button type="button" id="restoreLinkStart" class="link-btn">DL保存したファイルから再開する</button>
+          <button type="button" class="help-hint-btn" id="restoreLinkStartHelp" aria-label="「DL保存したファイルから再開する」について">？</button>
+        </div>
+        <input type="file" id="restoreFileInputStart" style="display:none;">
+        <p class="small" id="restoreStatusStart" style="margin-top:4px;color:var(--danger);"></p>
       </div>
     </div>`;
   setFooter({primaryLabel:'はじめる', primaryEnabled:true, primaryFn:()=>goTo('profile_birth')});
+  document.getElementById('restoreLinkStart').onclick = ()=>{
+    document.getElementById('restoreFileInputStart').click();
+  };
+  // 【2026-09-15再修正】13件目③対応（開始画面側）。「DL」の説明は上の地の文（常時表示）に
+  // 移したため、DL_ABBREVIATION_HELP_PAGEはここでは使わない（重複のため）。？の中身は
+  // 「このリンクは何をするか」（再開確認画面の？1枚目と共有）と「ファイル名の形式」の2枚。
+  document.getElementById('restoreLinkStartHelp').onclick = ()=>{
+    openHelp([
+      DL_RESTORE_WHAT_IT_DOES_HELP_PAGE,
+      '保存されたデータのファイル名は「申立書サポート_日付_時分」です（例：申立書サポート_20260912_1430）'
+    ]);
+  };
+  document.getElementById('restoreFileInputStart').onchange = (e)=>{
+    const file = e.target.files && e.target.files[0];
+    handleRestoreFileSelected(file, 'restoreStatusStart', false, null);
+    e.target.value = '';
+  };
 }
 
 function stepProfileBirth(){
@@ -3339,7 +3940,10 @@ function stepProfileBirth(){
 function stepProfileBandSize(){
   document.getElementById('screen').innerHTML = `
     <div class="card">
-      <h2>年表の区切り方を選んでください</h2>
+      <div style="display:flex;align-items:center;margin:0 0 12px;">
+        <h2 style="margin:0;">年表の区切り方を選んでください</h2>
+        <button type="button" class="help-hint-btn" id="bandSizeHelp" aria-label="「年表の区切り方」について">？</button>
+      </div>
       <p class="lead">これから出来事や通院の記録を、年齢で区切った年表に置いていきます。区切りの細かさを選んでください。</p>
       <div class="option-block" id="bandOpts"></div>
     </div>`;
@@ -3359,6 +3963,15 @@ function stepProfileBandSize(){
     primaryLabel:'次へ', primaryEnabled: !!state.profile.bandSize,
     primaryFn:()=>goTo('ch1_work_status')
   });
+  // 【2026-09-13】A-4対応。直接この画面に戻って選び直す手段は無く、「最初からやり直す」で
+  // 入力を全部消すことになる、という事実と、3年/5年に優劣は無いという安心材料をセットで示す。
+  document.getElementById('bandSizeHelp').onclick = ()=>{
+    openHelp([
+      '年表の区切りは、あとから変更できません。変更するには、入力した内容をすべて消して最初からやり直すことになります。',
+      'やり直すには、いったん閉じて開き直すか、ページを読み込み直します。「前回の続きがあります」という画面が出たら、「最初からやり直す」を押します。',
+      'どちらが正しいという決まりはありません。出来事を細かく分けておきたいなら3年ごと、大まかな流れで十分なら5年ごとです。'
+    ]);
+  };
 }
 
 function stepCh1WorkStatus(){
@@ -3414,23 +4027,45 @@ function stepCh1WorkStatus(){
 // 2026-08-02: 就労状況変更時の「もう一度確認してください」通知。
 // 2026-08-08追記：ch2_introは日常生活状況（ch2_adl）の直前へ位置を移したため、
 // 以後はch2_work_detail／ch2_notwork_reasonのどちらか（常にこちらが最初に表示される）
-// でこの通知を出す。呼ばれた時点でフラグを消費（false化）する。
+// でこの通知を出す。
+// 【2026-09-18変更】フラグの消費（false化）はここでは行わない。以前は「呼ばれた時点
+// （＝描画の瞬間）」で消していたため、状況変更後の再確認会話を完走せず離脱すると、
+// completed.ch1がtrueのまま戻らず、二度と会話形式に戻れなくなっていた（Opus発見・
+// 2026-09-18セッションまとめ参照）。消すタイミングをfinishChapter()側（第1章を実際に
+// 完了した時点）に移した。確認が済むまでは、再入場のたびにこの注意文が出続けるのが
+// 意図した挙動（なぜ会話形式が出ているかの説明にもなる）。
 function workStatusChangedNoticeHtml(){
-  const html = state.workStatusJustChanged
+  return state.workStatusJustChanged
     ? `<p class="small" style="margin-top:-8px;margin-bottom:16px;color:var(--warn);">就労状況が変更されたため、この先の内容をもう一度確認してください。</p>`
     : '';
-  state.workStatusJustChanged = false;
-  return html;
 }
 
 function stepCh3Intro(){
   document.getElementById('screen').innerHTML = `
     <div class="card">
       <h2>人生の大きな出来事を教えてください</h2>
-      <p class="lead">まずは、印象に残っている出来事を集めましょう。<br>出来事を手がかりにすると、初めて受診した時期を思い出しやすくなります。<br>通院については、次のブロックで確認します。</p>
+      <p class="lead">今は、思い出せる出来事を入れていくだけで大丈夫です。<br>進学・就職・転居・退職・結婚など、時期を思い出せそうなことを入れていきます。<br><br>ここで集めた出来事カードは、あとで年表に並べます。<button type="button" class="help-hint-btn" id="ch3EventTimelineHelp" aria-label="「年表」について">？</button><br>通院については、次のブロックで確認します。</p>
       <p class="optional-notice">答えなくても次に進めます</p>
       <p class="optional-notice" style="margin-top:14px;font-weight:400;">${CHAPTER_INTRO_REST_NOTICE}</p>
     </div>`;
+  // 【2026-09-14】C-1対応。当初の問題意識（次に何を聞かれるかの予告が弱い）に加え、
+  // 「なぜ出来事を集めるのか」への説明が画面に無い問題をGPTとの検討を経て解消。
+  // 因果を一気に説明すると保持すべき目的・時間軸が5つになり認知負荷が高いため、
+  // 「全体像は見せるが、今やることは一つ」の方針で常時表示を短く再構成した
+  // （病歴・時系列整理の説明までは踏み込まない）。「年表」という語がヘッダーの
+  // 章名（CH_LABELS）のどこにも出てこないため、迷った人向けに？で「出来事カード配置」
+  // という場所を案内する（唯一の目的：道案内。因果の説明はしない）。
+  // ？の位置は対象文言（「年表」を含む一文）の末尾＝同じ行（対象が独立ラベルではなく
+  // 地の文の途中のため、単語直後だと文が割れて読みにくくなる。A-2の例外と同じ考え方）。
+  // 【2026-09-14再修正】ユーザー確認により、常時表示の「進学・就職…」行と「ここで集めた
+  // 出来事カードは…」行の間に空行を追加（<br><br>。このコードベースに複数<p class="lead">
+  // を1画面に並べる前例が無いため、単一の<p>内での対応とした）。「年表を手がかりに、
+  // 病歴を整理していきます。」は常時表示から削除し、同内容を？の中に移設・統合した
+  // （常時表示は「今やることは一つ」に留め、「なぜ年表を作るか」まで踏み込む説明は
+  // ？側に置く、という前回の切り分け方針をより徹底したもの）。
+  document.getElementById('ch3EventTimelineHelp').onclick = ()=>{
+    openHelp(['年表はどこ？\n年表は、ヘッダーの「出来事カード配置」にあります。\n病歴を整理していくために出来事カードを使います。']);
+  };
   setFooter({secondaryLabel:'戻る', secondaryFn:goBack, primaryLabel:'はじめる', primaryEnabled:true, primaryFn:()=>goTo('ch3_events')});
 }
 
@@ -3522,10 +4157,29 @@ function stepCh4Intro(){
     document.getElementById('screen').innerHTML = `
       <div class="card">
         <h2>通院の記録を集めましょう</h2>
-        <p class="lead">まずは今通っている病院、または最後に通っていた病院から教えてください。後から過去の病院を追加できます。すべて正確でなくても大丈夫です。</p>
+        <p class="lead">まずは今通っている病院、または最後に通っていた病院から、1件だけ入力してみましょう。<br><br>残りは後から追加できます。<button type="button" class="help-hint-btn" id="ch4AddLaterHelp" aria-label="「後から追加できます」について">？</button><br>すべて正確でなくても大丈夫です。</p>
         <p class="optional-notice" style="margin-top:16px;">答えなくても次に進めます</p>
         <p class="optional-notice" style="margin-top:14px;font-weight:400;">${CHAPTER_INTRO_REST_NOTICE}</p>
       </div>`;
+    // 【2026-09-14】A-5対応。GPTとの検討（ユーザー経由）を経て、「休憩メッセージを
+    // 個別に増やす」方向ではなく「最初から全部入力しなくてよいと入口で伝える」方向に
+    // 変更した。ch4は病院1件ごとにhospital_name→period→confidenceを通り、保存後は
+    // 必ずch4_summary（一覧ハブ）に戻る構造で、ユーザーによって作業量が大きく変わる。
+    // 常時表示に「1件だけ入力してみましょう」を明示することで心理的ハードルを下げ、
+    // 「後から追加できます」の一文に？バッジを追加した。
+    // ？の中身は「ヘッダーのピルが到達済みになる条件（draftReachedやnum<numの判定）」
+    // というコード側の都合をそのままユーザー向けに説明しない（C-1と同じ「仕組みを
+    // 全部理解させる必要はない」という原則）。実際に到達するch4_summaryの見出し
+    // 「通院の記録が集まりました」をそのまま文中で示すことで、迷わず認識できるように
+    // した。見出しは「通院の追加いつできる？」（助詞を落とし、疑問形をそのまま出す
+    // 短い形。ユーザー希望）。修正・削除もch4_summaryで可能なため、本文側でカバーした。
+    // ？の位置は対象文言「残りは後から追加できます。」の末尾・同じ行（C-1と同じ、
+    // 地の文中の一文に対する？配置の考え方）。バッジ直後は？のCSSがmargin-rightを
+    // 持たないため、次の文（すべて正確でなくても大丈夫です）とバッジが視覚的に
+    // くっつかないよう、バッジの直後で改行した。
+    document.getElementById('ch4AddLaterHelp').onclick = ()=>{
+      openHelp(['通院の追加いつできる？\n年表を確認したあとで、ヘッダーの「通院の記録」をタップすることで追加できます。\n「通院の記録が集まりました」画面へ移動し、そこで追加・修正・削除がいつでもできます。']);
+    };
     setFooter({secondaryLabel:'戻る', secondaryFn:goBack, primaryLabel:'はじめる', primaryEnabled:true, primaryFn:()=>{
       state.draft = {};
       state.editingHospitalId = null;
@@ -3654,7 +4308,10 @@ function stepCh4Period(){
     <div class="card">
       <h2>いつからいつまで通いましたか？</h2>
       <p class="optional-notice">答えなくても次に進めます</p>
-      <label class="field-label">いつから（西暦）</label>
+      <div style="display:flex;align-items:center;margin:16px 0 6px;">
+        <label class="field-label" style="margin:0;">いつから（西暦）</label>
+        <button type="button" class="help-hint-btn" id="fromYearHelp" aria-label="「いつから」の年について">？</button>
+      </div>
       <div class="row"><input type="number" id="fromYear" placeholder="例：2020" /><input type="number" id="fromMonth" placeholder="月" min="1" max="12" /></div>
       <label class="field-label">いつまで（西暦）</label>
       <div class="row"><input type="number" id="toYear" placeholder="例：2021" /><input type="number" id="toMonth" placeholder="月" min="1" max="12" /></div>
@@ -3678,6 +4335,13 @@ function stepCh4Period(){
     state.draft.ongoing = e.target.checked;
     ty.disabled = e.target.checked;
     tm.disabled = e.target.checked;
+  };
+  // 【2026-09-13】A-1対応。文言はOpusとの相談で確定。？の位置は対象文言＝ラベル
+  // 「いつから（西暦）」の直後・同じ行（ch4_periodにはリンクが無いため、既存の
+  // 「？はリンクの直後」パターンをラベルに拡張した最初の例。ユーザー確認済み）。
+  // 1枚構成・見出しなし。
+  document.getElementById('fromYearHelp').onclick = ()=>{
+    openHelp(['「いつから」の年だけでも入れておくと、年表と申立書の下書きに通院の記録が表示されます。']);
   };
   setFooter({secondaryLabel:'戻る', secondaryFn:goBack, primaryLabel:'次へ', primaryEnabled:true, primaryFn:()=>goTo('ch4_confidence')});
 }
@@ -4533,7 +5197,10 @@ function stepCh5Done(){
       ${rowsHtml}
       ${gapHtml ? `<div style="margin-top:12px;">${gapHtml}</div>` : ''}
       <button type="button" class="link-btn" id="editPlacementBtn" style="margin-top:14px;">出来事の配置を直す →</button>
-      <button type="button" class="link-btn" id="addPastChip" style="margin-top:6px;">出来事カードを自作する${pastFragmentCount > 0 ? `（${pastFragmentCount}件あり）` : ''} →</button>
+      <div style="display:flex;align-items:center;margin-top:6px;">
+        <button type="button" class="link-btn" id="addPastChip" style="margin-top:0;">出来事カードを自作する${pastFragmentCount > 0 ? `（${pastFragmentCount}件あり）` : ''} →</button>
+        <button type="button" class="help-hint-btn" id="addPastChipHelp" aria-label="「出来事カードを自作する」について">？</button>
+      </div>
 
       <p class="small" style="margin-top:18px;">入力した内容は、何度でも修正できます。</p>
       <button type="button" id="goToPreviewBtn" style="width:100%;padding:12px;border-radius:8px;border:none;background:var(--accent-strong);color:#fff;font-size:15px;cursor:pointer;margin-top:8px;">申立書の下書きを確認する →</button>
@@ -4548,6 +5215,16 @@ function stepCh5Done(){
   document.getElementById('addPastChip').onclick = ()=>{
     goTo('ch6_past_intro');
   };
+  // 【2026-09-12】A-3対応。文言は2026-09-12セッションの設計相談で確定
+  // （「なにこれ」＝自作の意味にだけ答える。下書きへの反映は入れない。理由は
+  // コメント末尾参照）。1枚構成・見出しなし。
+  document.getElementById('addPastChipHelp').onclick = ()=>{
+    openHelp(['出来事カードを、自分で書いて作れます。年表に配置することもできます。']);
+  };
+  // 【検討の経緯】当初は「1枚目：自作の意味／2枚目：年表に置くと申立書の下書きに
+  // 反映される」という2枚構成が候補に上がったが、「自作カード→年表配置」（入力側の
+  // 仕組み）と「→下書き」（出力側の話）を同じヘルプの中で数珠つなぎにすると、
+  // 情報が多すぎて繋がらないとの判断により、下書きへの言及は外し1枚構成に確定した。
 
   // 西暦⇄元号切り替えボタン（4.6節。stepCh5Placeと同じstate.eraDisplayModeを共有する）
   const doneEraBtn = document.getElementById('doneEraToggle');
@@ -4625,7 +5302,10 @@ function renderPreviewPeriodRowsHtml(rows){
     const fromHtml = r.fromKind==='none' ? `<span class="pp-blank">${esc(r.fromLabel)}</span>` : `${renderPreviewEraHtml(r.fromYear)}　${r.fromYear?esc(yearToWareki(r.fromYear)[1]):''}年　${r.fromMonth||''}月から`;
     const toHtml = r.toKind==='none' ? `<span class="pp-blank">${esc(r.toLabel)}</span>` : `${renderPreviewEraHtml(r.toYear)}　${r.toYear?esc(yearToWareki(r.toYear)[1]):''}年　${r.toMonth||''}月まで`;
     const visitedHtml = r.fromKind==='none' ? '' : `<div style="margin-top:3px;">${renderPreviewCheckboxPairHtml('受診した', r.visited, '受診していない', !r.visited)}</div>`;
-    const hospitalHtml = r.hospitalName ? `<div class="pp-period-hospital">${esc(r.hospitalName)}</div>` : (r.fromKind==='none' ? '' : `<div class="pp-period-hospital pp-blank">医療機関名</div>`);
+    const helpBadge = r.hospitalMultiple
+      ? `<button type="button" class="help-hint-btn prefix hospital-multi-help" aria-label="医療機関名について">？</button>`
+      : '';
+    const hospitalHtml = r.hospitalName ? `<div class="pp-period-hospital">${helpBadge}${esc(r.hospitalName)}</div>` : (r.fromKind==='none' ? '' : `<div class="pp-period-hospital pp-blank">医療機関名</div>`);
     return `<div class="pp-period-row">
       <div class="pp-period-num">${i+1}</div>
       <div class="pp-period-body">
@@ -4873,7 +5553,10 @@ function stepCh5Preview(){
       <h2>申立書の下書き確認</h2>
 
       <div class="mode-switch-block">
-        <p class="mode-switch-caption">申立書の形式</p>
+        <div style="display:flex;align-items:center;margin:0 0 6px;">
+          <p class="mode-switch-caption" style="margin:0;">申立書の形式</p>
+          <button type="button" class="help-hint-btn" id="modeSwitchHelp" aria-label="「申立書の形式」について">？</button>
+        </div>
         <div class="mode-switch" role="group" aria-label="申立書の形式">
           <button type="button" class="mode-switch-option${mode==='standard' ? ' mode-switch-selected' : ''}" data-mode="standard">初診からの形式</button>
           <button type="button" class="mode-switch-option${mode==='developmental' ? ' mode-switch-selected' : ''}" data-mode="developmental">生年からの形式</button>
@@ -4946,6 +5629,15 @@ function stepCh5Preview(){
       stepCh5Preview(); // 決定#26通り、buildPeriodsForForm()経由でプレビュー・Excelが連動更新される
     };
   });
+  // 【2026-09-13】B-3対応。「初診からの形式」「生年からの形式」の仕組みだけを説明し、
+  // どちらを選ぶべきかの基準（診断名等）にはあえて触れない（法令上の対象範囲が
+  // ASD/ADHD等で実務上あいまいなため。詳細はヘルプ設置作業リストB-3行参照）。
+  document.getElementById('modeSwitchHelp').onclick = ()=>{
+    openHelp([
+      '申立書を「いつから」書き始めるかの切り替えです。「初診からの形式」は、記録した中でいちばん古い通院から今までを書きます。「生年からの形式」は、生まれた年から今までを書きます。',
+      'どちらを選んでも、あとから切り替えられます。'
+    ]);
+  };
   document.querySelectorAll('.preview-jump').forEach(btn=>{
     btn.onclick = ()=>{
       const target = document.getElementById(btn.getAttribute('data-jump'));
@@ -4958,6 +5650,16 @@ function stepCh5Preview(){
       const isOpen = !panel.hidden;
       panel.hidden = isOpen;
       btn.classList.toggle('accordion-trigger-open', !isOpen);
+    };
+  });
+  // 【2026-09-13】A-2対応。区分内に医療機関が2件以上重なる行にのみ出る？バッジ。
+  // 全行共通の同じ説明を開くだけなので、id個別採番ではなく共通クラスで一括配線する。
+  document.querySelectorAll('.hospital-multi-help').forEach(btn=>{
+    btn.onclick = ()=>{
+      openHelp([
+        '医療機関名は、この期間でいちばん最初に通ったところです。そのあとに通院した病院は、右の欄（状況欄）に名前と期間が書き出されています。',
+        'この下書きは、乳幼児期や小学校といった期間ごとに1行にまとめる形をとっています。'
+      ]);
     };
   });
   document.getElementById('previewExportFormBtn').onclick = async ()=>{
@@ -5280,6 +5982,78 @@ function renderCh2WorkDetailForm(){
 // 理由・ADL）にしか及んでいなかったことが判明。「入力しなくても進めます」がindex.html内の
 // 他の画面（通院記録・当時の生活手がかり・ch2_other等）に7箇所残っていたため、全て同じ
 // 「答えなくても次に進めます」へ統一した（アプリ全体での表現統一）。
+// =====================================================================
+// 【2026-09-18新設】会話形式・再開位置の共通ヘルパー（work_detail系・notebook系で使う）。
+// ADLの案A（findCh5AdlResumeIndex等、2026-09-17）と同じ考え方だが、ADLは
+// 「回答済みキーの有無」で機械的に判定できたのに対し、こちらは初期値そのものが
+// 空文字列／null／空配列で、「未回答」と「回答したが空欄でスキップ」が状態としては
+// 区別できない（Opusレビュー参照）。そのため「値がある最後の項目の次から再開する」
+// という近似方式を採る：実際に入力された内容の復元は完璧になる一方、末尾のほうの質問を
+// 空欄でスキップしていた場合はそこだけ再度聞かれることがある（データが消えて見えることはない）。
+//
+// 「値がある＝到達した」であって「確定した（次へを押した）」ではない点に注意。チップは
+// タップした瞬間に、テキスト・数値はoninputで即state反映されるため、最後の質問に触れただけで
+// 離脱してもそのフィールドには値が入る。そのままだとlastAnswered+1が配列の範囲外になり得るため、
+// steps.length-1で必ずクランプする（Opusレビュー指摘②・E-5）。
+function isConvFieldAnswered(step, dataObj){
+  const val = dataObj[step.key];
+  if(step.type==='chips-multi'){
+    return Array.isArray(val) && val.length > 0;
+  }
+  return !!val;
+}
+function findConvResumeIndex(steps, dataObj){
+  let lastAnswered = -1;
+  for(let i=0; i<steps.length; i++){
+    if(isConvFieldAnswered(steps[i], dataObj)) lastAnswered = i;
+  }
+  return Math.min(lastAnswered + 1, steps.length - 1);
+}
+// 現在の質問の吹き出し（ラベル・本文・補足）をスレッドに積む。通常の進行（render*Step）と
+// 再開時の履歴再構築の両方から呼ぶ共通処理（ADLのappend*QuestionBubbleと同じ役割）。
+function appendConvQuestionBubble(threadId, steps, index){
+  const step = steps[index];
+  const thread = document.getElementById(threadId);
+  const label = document.createElement('div');
+  label.className = 'conv-step-label';
+  label.textContent = (index+1) + ' / ' + steps.length;
+  thread.appendChild(label);
+  const bubble = document.createElement('div');
+  bubble.className = 'conv-bot';
+  bubble.textContent = step.q;
+  thread.appendChild(bubble);
+  if(step.sub){
+    const sub = document.createElement('div');
+    sub.className = 'conv-bot-sub';
+    sub.textContent = step.sub;
+    thread.appendChild(sub);
+  }
+}
+// 回答の吹き出しに出す文字列（元々ch2ConvNext/ch5WorkDetailNextに直書きされていた処理を
+// 共通化。手帳はフィールド型が異なるためnotebookAnswerText()を別途持つ）。
+function convFieldAnswerDisplay(step, dataObj){
+  const val = dataObj[step.key];
+  if(step.type==='text' || step.type==='number'){
+    return { display: val || '（今回はスキップ）', isSkip: !val };
+  }
+  const arr = Array.isArray(val) ? val : (val ? [val] : []);
+  return { display: arr.length ? arr.join('、') : '（今回はスキップ）', isSkip: arr.length===0 };
+}
+// state.work／snap.workを、想定した型に正規化する。migrateAppState()は
+// recognitionSnapshot／disabilityNotebookが丸ごと無い場合にしか既定値を作らず、
+// 個別フィールドの欠落（古いバックアップファイル・DL復元経由等）までは埋めない
+// （Opusレビュー指摘E-1）。renderChipGroup()はselectedArr.includes()を呼ぶため、
+// 配列でないと再開位置の導出以前にここで例外になる。findCh2AdlResumeIndex()が
+// state.adlに対して行っている防御と同じ考え方。
+function normalizeWorkFields(w){
+  if(typeof w.jobType !== 'string') w.jobType = '';
+  if(!Array.isArray(w.commute)) w.commute = [];
+  if(typeof w.commuteTime === 'undefined') w.commuteTime = null;
+  if(typeof w.workDays !== 'string' && typeof w.workDays !== 'number') w.workDays = '';
+  if(!Array.isArray(w.condition)) w.condition = [];
+}
+// =====================================================================
+
 // 初回入力用の会話形式（1問ずつ）。質問は既存フォームと同じ5項目・同じ選択肢を使う。
 const CH2_WORK_DETAIL_STEPS = [
   {key:'jobType', type:'text', q:'今の仕事の内容を教えてください', sub:'職種やお仕事の内容を、短くで大丈夫です。', placeholder:'例：事務職、清掃業、接客業'},
@@ -5291,7 +6065,10 @@ const CH2_WORK_DETAIL_STEPS = [
 let ch2WorkDetailConvIndex = 0;
 
 function renderCh2WorkDetailConversation(){
-  ch2WorkDetailConvIndex = 0;
+  // 【2026-09-18変更・5画面同型バグ対応】無条件の0固定をやめ、既存の回答データから
+  // 再開位置を導出する（詳細はfindConvResumeIndex()のコメント参照）。
+  normalizeWorkFields(state.work);
+  ch2WorkDetailConvIndex = findConvResumeIndex(CH2_WORK_DETAIL_STEPS, state.work);
   const changedNotice = workStatusChangedNoticeHtml();
   document.getElementById('screen').innerHTML = `
     <div class="card">
@@ -5302,6 +6079,18 @@ function renderCh2WorkDetailConversation(){
       <div class="conv-current" id="ch2ConvCurrent"></div>
       <button type="button" class="link-btn skip-all-link" id="ch2ConvSkipAll">残りの質問はとばして、${esc(chapterAdvanceLabel('日常生活状況へ'))} →</button>
     </div>`;
+  // 【2026-09-18追加】ch2WorkDetailConvIndexが0より大きい（＝一部回答済みの状態でこの
+  // 関数が呼ばれた）場合、その分の質問と回答をスレッドに履歴として再構築してから現在の
+  // 質問へ進む。ch2ConvGoBack()が削除する要素の数・順序（補足・本文・ラベル・直前の回答の
+  // 4つ）と完全に一致させるため、通常の進行（ch2ConvNext）と全く同じ手順で積む。
+  for(let i=0; i<ch2WorkDetailConvIndex; i++){
+    appendConvQuestionBubble('ch2ConvThread', CH2_WORK_DETAIL_STEPS, i);
+    const {display, isSkip} = convFieldAnswerDisplay(CH2_WORK_DETAIL_STEPS[i], state.work);
+    const answerBubble = document.createElement('div');
+    answerBubble.className = 'conv-user' + (isSkip ? ' skip' : '');
+    answerBubble.textContent = display;
+    document.getElementById('ch2ConvThread').appendChild(answerBubble);
+  }
   const ch2ConvSkipHandler = (e)=>{
     if(e) e.preventDefault();
     ch2ConvCommitCurrentTextValue(); // 入力途中の値を消さずに確定してから抜ける
@@ -5314,23 +6103,10 @@ function renderCh2WorkDetailConversation(){
 
 // 現在の質問の吹き出し（ラベル・本文・補足）をスレッドに積み、入力コントロールを表示する
 function renderCh2ConvStep(){
-  const step = CH2_WORK_DETAIL_STEPS[ch2WorkDetailConvIndex];
-  const thread = document.getElementById('ch2ConvThread');
-  const label = document.createElement('div');
-  label.className = 'conv-step-label';
-  label.textContent = (ch2WorkDetailConvIndex+1) + ' / ' + CH2_WORK_DETAIL_STEPS.length;
-  thread.appendChild(label);
-  const bubble = document.createElement('div');
-  bubble.className = 'conv-bot';
-  bubble.textContent = step.q;
-  thread.appendChild(bubble);
-  if(step.sub){
-    const sub = document.createElement('div');
-    sub.className = 'conv-bot-sub';
-    sub.textContent = step.sub;
-    thread.appendChild(sub);
-  }
-  renderCh2ConvCurrentControl(step);
+  // 【2026-09-18変更】吹き出し生成はappendConvQuestionBubble()へ切り出した
+  // （renderCh2WorkDetailConversation()の履歴再構築と共有するため）。内容は不変。
+  appendConvQuestionBubble('ch2ConvThread', CH2_WORK_DETAIL_STEPS, ch2WorkDetailConvIndex);
+  renderCh2ConvCurrentControl(CH2_WORK_DETAIL_STEPS[ch2WorkDetailConvIndex]);
   setFooter({secondaryLabel:'戻る', secondaryFn:ch2ConvGoBack, primaryLabel:'次へ', primaryEnabled:true, primaryFn:ch2ConvNext});
 }
 
@@ -5387,17 +6163,7 @@ function ch2ConvCommitCurrentTextValue(){
 function ch2ConvNext(){
   const step = CH2_WORK_DETAIL_STEPS[ch2WorkDetailConvIndex];
   ch2ConvCommitCurrentTextValue();
-  let display, isSkip;
-  if(step.type==='text' || step.type==='number'){
-    const val = state.work[step.key];
-    display = val || '（今回はスキップ）';
-    isSkip = !val;
-  } else {
-    const val = state.work[step.key];
-    const arr = Array.isArray(val) ? val : (val ? [val] : []);
-    display = arr.length ? arr.join('、') : '（今回はスキップ）';
-    isSkip = arr.length===0;
-  }
+  const {display, isSkip} = convFieldAnswerDisplay(step, state.work);
   const thread = document.getElementById('ch2ConvThread');
   const answerBubble = document.createElement('div');
   answerBubble.className = 'conv-user' + (isSkip ? ' skip' : '');
@@ -5488,13 +6254,34 @@ const NOTWORK_REASON_QUESTIONS = {
   'その他': 'ここまでにない理由も、当てはまりますか'
 };
 const CH2_NOTWORK_STEPS = NOTWORK_REASONS.map(reason=>({reason, q:NOTWORK_REASON_QUESTIONS[reason], sub:NOTWORK_REASON_HELP_TEXTS[reason]}));
+
+// 【2026-09-18新設・5画面同型バグ対応】notwork_reason（ch2・ch5共通）の再開位置ヘルパー。
+// work_detail系と違い「はい」＝配列に含む・「いいえ」＝含まない、という配列メンバーシップ
+// 方式のため、「配列にある最後の項目の次」から再開する（work_detail系のisConvFieldAnswered
+// とは判定方法が異なるため別関数にする）。
+// 【重要】最後の「その他」（配列の最終項目）が配列にある場合に限り、この関数の戻り値
+// （必ずsteps.length-1になる）だけでは「その他の質問（はい/いいえ）をまだ表示していない」のか
+// 「その他に、はいと答えて自由記述段階で離脱した」のかを区別できない。呼び出し側で
+// reasonsArr.includes('その他')を別途確認し、後者なら自由記述段階を復元すること
+// （Opusレビュー④で検証済み：8問目で「いいえ」を選んだ場合は必ず即座に完了処理へ進むため、
+// 「その他が配列にある」は「はいを選んだ直後、自由記述段階で離脱した」以外あり得ない）。
+function findNotworkResumeIndex(steps, reasonsArr){
+  let lastYes = -1;
+  for(let i=0; i<steps.length; i++){
+    if(reasonsArr.includes(steps[i].reason)) lastYes = i;
+  }
+  return Math.min(lastYes + 1, steps.length - 1);
+}
 let ch2NotworkConvIndex = 0;
 // 「その他」で「はい」を選んだ直後、自由記述の入力段階に入っているかどうか。
 // この段階だけは（自由記述のため）タップ即次へではなく、明示的な「次へ」を必要とする。
 let ch2NotworkConvOtherStep = false;
 
 function renderCh2NotworkReasonConversation(){
-  ch2NotworkConvIndex = 0;
+  // 【2026-09-18変更・5画面同型バグ対応】無条件の0固定をやめ、既存の回答データから
+  // 再開位置を導出する（findNotworkResumeIndex()のコメント参照）。
+  if(!Array.isArray(state.notWorkReasons)) state.notWorkReasons = [];
+  ch2NotworkConvIndex = findNotworkResumeIndex(CH2_NOTWORK_STEPS, state.notWorkReasons);
   ch2NotworkConvOtherStep = false;
   const changedNotice = workStatusChangedNoticeHtml();
   document.getElementById('screen').innerHTML = `
@@ -5506,6 +6293,14 @@ function renderCh2NotworkReasonConversation(){
       <div class="conv-current" id="ch2ReasonCurrent"></div>
       <button type="button" class="link-btn skip-all-link" id="ch2ReasonSkipAll">残りの質問はとばして、${esc(chapterAdvanceLabel('日常生活状況へ'))} →</button>
     </div>`;
+  // 【2026-09-18追加】ch2NotworkConvIndexぶんの質問・回答を履歴として再構築する。
+  // 「その他」（最終項目）は普段はトグルで復元するが、配列に含まれる場合だけは別扱いにする
+  // （findNotworkResumeIndex()のコメント参照：はいを選んだ直後の自由記述段階からの再開）。
+  const otherPending = state.notWorkReasons.includes('その他');
+  for(let i=0; i<ch2NotworkConvIndex; i++){
+    appendConvQuestionBubble('ch2ReasonThread', CH2_NOTWORK_STEPS, i);
+    document.getElementById('ch2ReasonThread').appendChild(buildReasonAnswerToggle(CH2_NOTWORK_STEPS[i].reason));
+  }
   const ch2ReasonSkipHandler = (e)=>{
     if(e) e.preventDefault();
     if(ch2NotworkConvOtherStep){
@@ -5516,27 +6311,25 @@ function renderCh2NotworkReasonConversation(){
   };
   document.getElementById('ch2ReasonSkipTop').onclick = ch2ReasonSkipHandler;
   document.getElementById('ch2ReasonSkipAll').onclick = ch2ReasonSkipHandler;
+  if(otherPending){
+    // 「その他」に「はい」と答えた直後、自由記述段階で離脱していたと断定できるケース。
+    // 質問（8/8）＋「はい」の吹き出し（プレーン、トグルではない）まで復元してから、
+    // 自由記述段階を再表示する（notWorkReasonOtherは同関数内で事前入力される）。
+    appendConvQuestionBubble('ch2ReasonThread', CH2_NOTWORK_STEPS, CH2_NOTWORK_STEPS.length - 1);
+    const yesBubble = document.createElement('div');
+    yesBubble.className = 'conv-user';
+    yesBubble.textContent = 'はい';
+    document.getElementById('ch2ReasonThread').appendChild(yesBubble);
+    renderCh2ReasonOtherTextStep();
+    return;
+  }
   renderCh2ReasonStep();
 }
 
 // 現在の質問の吹き出し（ラベル・本文・補足）をスレッドに積み、回答用のはい/いいえを表示する
 function renderCh2ReasonStep(){
-  const step = CH2_NOTWORK_STEPS[ch2NotworkConvIndex];
-  const thread = document.getElementById('ch2ReasonThread');
-  const label = document.createElement('div');
-  label.className = 'conv-step-label';
-  label.textContent = (ch2NotworkConvIndex+1) + ' / ' + CH2_NOTWORK_STEPS.length;
-  thread.appendChild(label);
-  const bubble = document.createElement('div');
-  bubble.className = 'conv-bot';
-  bubble.textContent = step.q;
-  thread.appendChild(bubble);
-  if(step.sub){
-    const sub = document.createElement('div');
-    sub.className = 'conv-bot-sub';
-    sub.textContent = step.sub;
-    thread.appendChild(sub);
-  }
+  // 【2026-09-18変更】吹き出し生成はappendConvQuestionBubble()へ切り出した。内容は不変。
+  appendConvQuestionBubble('ch2ReasonThread', CH2_NOTWORK_STEPS, ch2NotworkConvIndex);
   renderCh2ReasonCurrentControl();
 }
 
@@ -5937,11 +6730,59 @@ const ADL_SISTER_APP_URLS = {
   shopping: 'shopping.html'
 };
 
+// 2026-09-15新設：姉妹アプリへの導線（上記ADL_SISTER_APP_URLS）に添える説明文。
+// ch2_adl（genzai）・ch5_adl（ninteibi）の両方の？バッジ（ch2AdlSisterHelp／ch5AdlSisterHelp）
+// から共通で参照する。以前は常時表示の.hint箱の中身だったが、質問10問すべてで同じ文言が
+// 毎回表示され「説明の重複」になっていたため、？を開いたときだけ表示する形に変更した
+// （詳細はrenderCh2AdlCurrentControl内のコメント参照）。
+// 2026-09-15追記：実機確認を受けて2枚構成に変更。①？を開いて読む形になったため「〜画面も
+// あります」（並列的な言い方）を「〜画面です」（直接の説明）に修正、②姉妹アプリのオープニング
+// 画面（各項目ページのrenderIntro()、step===0で必ず最初に表示される）に🐥の吹き出しが出ることを
+// 確認済みのため追記（🐥は最初と、何か1つでもチェックが付いていれば最後にも短いセリフを話すのみで、
+// 画面遷移そのものを主導する機能は無いため「ナビゲートします」ではなく「話しかけてきます」とした）、
+// ③最後の安心用の1文（回答は消えない）は性質が異なるため2枚目に分離した。
+const ADL_SISTER_APP_HELP_TEXT = [
+  '選ぶのが難しいときに、場面をひとつずつ思い出しながら考えられる画面です。\n新しいタブが開き、暗めの画面に切り替わり、🐥が話しかけてきます。',
+  'ここまで答えた内容はそのまま残ります。'
+];
+
 const CH2_ADL_STEPS = ADL_ITEMS.map(([key,label])=>({key, label}));
 let ch2AdlConvIndex = 0;
 
+// 【2026-09-17新設・案A】ch5_recognition_adl（findCh5AdlResumeIndex()）と同じ設計を
+// 現在編にも適用したもの。詳細な経緯・検討過程は2026-09-17セッションまとめ参照
+// （ch5側の実装・「案A」という名称もそちらに由来）。state.adlを対象にする点だけが違う。
+function findCh2AdlResumeIndex(){
+  // applyAdlHandoff()の同種の防御と揃えてある。
+  if(!state.adl || typeof state.adl !== 'object'){ state.adl = {}; }
+  for(let i=0; i<CH2_ADL_STEPS.length; i++){
+    if(!Object.prototype.hasOwnProperty.call(state.adl, CH2_ADL_STEPS[i].key)){
+      return i;
+    }
+  }
+  return CH2_ADL_STEPS.length - 1;
+}
+
+// 【2026-09-17新設・案A】appendCh5AdlQuestionBubble()と同じ役割（ch2AdlThread・
+// ch2AdlConvIndex版）。renderCh2AdlStep()（現在の質問を表示するとき）と
+// renderCh2AdlConversation()（再開時に過去の質問を履歴として再構築するとき）の
+// 両方から呼ぶ共通処理として切り出した（renderCh2AdlStep()から移動しただけで、内容は不変）。
+function appendCh2AdlQuestionBubble(index){
+  const step = CH2_ADL_STEPS[index];
+  const thread = document.getElementById('ch2AdlThread');
+  const label = document.createElement('div');
+  label.className = 'conv-step-label';
+  label.textContent = (index+1) + ' / ' + CH2_ADL_STEPS.length;
+  thread.appendChild(label);
+  const bubble = document.createElement('div');
+  bubble.className = 'conv-bot';
+  bubble.textContent = step.label;
+  thread.appendChild(bubble);
+}
+
 function renderCh2AdlConversation(){
-  ch2AdlConvIndex = 0;
+  // 【2026-09-17変更・案A】無条件の0固定をやめ、既存の回答データから再開位置を導出する。
+  ch2AdlConvIndex = findCh2AdlResumeIndex();
   document.getElementById('screen').innerHTML = `
     <div class="card">
       <h2>最近の日常生活について教えてください</h2>
@@ -5954,6 +6795,13 @@ function renderCh2AdlConversation(){
       <div class="conv-current" id="ch2AdlCurrent"></div>
       <button type="button" class="link-btn skip-all-link" id="ch2AdlSkipAll">残りの質問はとばして、その他の項目へ →</button>
     </div>`;
+  // 【2026-09-17追加・案A】ch2AdlConvIndexが0より大きい（＝一部回答済みの状態で
+  // この関数が呼ばれた）場合、その分の質問と回答をスレッドに履歴として再構築してから
+  // 現在の質問へ進む。ch5側と同じ理由で、ch2AdlGoBack()が想定するDOM構造とも一致する。
+  for(let i=0; i<ch2AdlConvIndex; i++){
+    appendCh2AdlQuestionBubble(i);
+    document.getElementById('ch2AdlThread').appendChild(buildAdlAnswerToggle(CH2_ADL_STEPS[i].key));
+  }
   // 決定#55：個別スキップは無し。抜け道はこの「残りをとばす」リンクのみで、ch2_otherへ直行する
   // （すでに第1章は完了済みのため、finishChapterではなく素のgoToでよい＝フォーム版の「次へ」と同じ）。
   // 2026-08-09：こちらも完走扱いとしてstate.adlConvDone=trueにする（ch2AdlAdvance()と同じ理由）。
@@ -5973,16 +6821,9 @@ function renderCh2AdlConversation(){
 // 出していたが、質問と4択の間に挟まって選びにくいとの指摘を受け、renderCh2AdlCurrentControl側
 // （4択の下）へ移した。認定日欄（renderCh5AdlStep／2026-08-16）で先に行った同じ対応に揃えた。
 function renderCh2AdlStep(){
-  const step = CH2_ADL_STEPS[ch2AdlConvIndex];
-  const thread = document.getElementById('ch2AdlThread');
-  const label = document.createElement('div');
-  label.className = 'conv-step-label';
-  label.textContent = (ch2AdlConvIndex+1) + ' / ' + CH2_ADL_STEPS.length;
-  thread.appendChild(label);
-  const bubble = document.createElement('div');
-  bubble.className = 'conv-bot';
-  bubble.textContent = step.label;
-  thread.appendChild(bubble);
+  // 【2026-09-17変更】ラベル・吹き出し生成はappendCh2AdlQuestionBubble()へ切り出した
+  // （renderCh2AdlConversation()の履歴再構築と共有するため）。内容は不変。
+  appendCh2AdlQuestionBubble(ch2AdlConvIndex);
   renderCh2AdlCurrentControl();
 }
 
@@ -6021,24 +6862,17 @@ function renderCh2AdlCurrentControl(){
   // 固定表示されるので、会話の続きの位置をstateへ保持する仕組み（設計案②③）は不要になる。
   const sisterUrl = ADL_SISTER_APP_URLS[step.key];
   if(sisterUrl){
-    // 2026-08-10追記（決定#66）：以前は案内文（緑背景の.hint）とリンクが別要素の兄弟で、
-    // リンクが枠の外に出てしまい「案内文とは無関係な、踏んでよいか分からないリンク」に
-    // 見えるとの指摘を受けた。案内文とリンクを同じ.hint箱の中にまとめることで、
-    // 「この案内文に対応するリンクです」と一目で分かるようにした
-    // （枠外に置いていたときの見た目はスクリーンショット参照＝ユーザー添付画像）。
-    const hintBox = document.createElement('div');
-    hintBox.className = 'hint';
-    hintBox.style.margin = '10px 0 4px';
-    const hintText = document.createElement('p');
-    hintText.className = 'small';
-    hintText.style.margin = '0 0 6px';
-    hintText.textContent = '選ぶのが難しいときは、場面をひとつずつ思い出しながら考えられる画面もあります。';
-    hintBox.appendChild(hintText);
-    const noticeText = document.createElement('p');
-    noticeText.className = 'small';
-    noticeText.style.cssText = 'margin:0 0 6px;color:var(--ink-soft);';
-    noticeText.textContent = '新しいタブが開き、少し暗めの画面に切り替わります。ここまで答えた内容はそのまま残ります。';
-    hintBox.appendChild(noticeText);
+    // 2026-08-10追記（決定#66）：以前は案内文とリンクが別要素の兄弟で、リンクが枠の外に
+    // 出てしまい「案内文とは無関係な、踏んでよいか分からないリンク」に見えるとの指摘を
+    // 受け、常時表示の.hint箱に説明文とリンクをまとめていた。
+    // 【2026-09-15変更】ADL10項目すべてで同じ2文が毎回（会話1回につき10回）表示され、
+    // 「文字数が多い」「説明の重複」の主因になっていたことが判明（GPT・ユーザーとの設計
+    // 相談で特定）。決定#66当時は？ボタン＋小窓の仕組みが無く、常時表示で説明を埋め込む
+    // しか手段が無かったが、2026-09-13にその仕組みができたため載せ替える。リンク自体は
+    // 項目ごとに遷移先が変わる機能そのものなので毎回残すが、説明文は？を開いたときだけ
+    // 表示する（A-3・13件目①と同型の対応）。
+    const linkWrap = document.createElement('div');
+    linkWrap.style.cssText = 'display:flex;align-items:center;margin:10px 0 4px;';
     const link = document.createElement('a');
     link.className = 'link-btn';
     link.id = 'ch2AdlSisterLink';
@@ -6050,8 +6884,16 @@ function renderCh2AdlCurrentControl(){
       state.adlConvEnded = true;
       saveStateToStorage();
     };
-    hintBox.appendChild(link);
-    cur.appendChild(hintBox);
+    linkWrap.appendChild(link);
+    const helpBtn = document.createElement('button');
+    helpBtn.type = 'button';
+    helpBtn.className = 'help-hint-btn';
+    helpBtn.id = 'ch2AdlSisterHelp';
+    helpBtn.setAttribute('aria-label', '詳しくふりかえるについて');
+    helpBtn.textContent = '？';
+    helpBtn.onclick = ()=>{ openHelp(ADL_SISTER_APP_HELP_TEXT); };
+    linkWrap.appendChild(helpBtn);
+    cur.appendChild(linkWrap);
   }
   setFooter({secondaryLabel:'戻る', secondaryFn:ch2AdlGoBack});
 }
@@ -6489,7 +7331,9 @@ const CH5_RECOGNITION_WORK_DETAIL_STEPS = [
 let ch5WorkDetailConvIndex = 0;
 
 function renderCh5RecognitionWorkDetailConversation(){
-  ch5WorkDetailConvIndex = 0;
+  // 【2026-09-18変更・5画面同型バグ対応】ch2_work_detailと同じ対応（findConvResumeIndex()参照）。
+  normalizeWorkFields(state.recognitionSnapshot.work);
+  ch5WorkDetailConvIndex = findConvResumeIndex(CH5_RECOGNITION_WORK_DETAIL_STEPS, state.recognitionSnapshot.work);
   document.getElementById('screen').innerHTML = `
     <div class="card">
       <h2>仕事の内容を教えてください</h2>
@@ -6499,6 +7343,15 @@ function renderCh5RecognitionWorkDetailConversation(){
       <div class="conv-current" id="ch5WorkDetailCurrent"></div>
       <button type="button" class="link-btn skip-all-link" id="ch5WorkDetailSkipAll">残りの質問はとばして、日常生活状況へ →</button>
     </div>`;
+  // 【2026-09-18追加】ch2版と同じ理由の履歴再構築（appendConvQuestionBubble()参照）。
+  for(let i=0; i<ch5WorkDetailConvIndex; i++){
+    appendConvQuestionBubble('ch5WorkDetailThread', CH5_RECOGNITION_WORK_DETAIL_STEPS, i);
+    const {display, isSkip} = convFieldAnswerDisplay(CH5_RECOGNITION_WORK_DETAIL_STEPS[i], state.recognitionSnapshot.work);
+    const answerBubble = document.createElement('div');
+    answerBubble.className = 'conv-user' + (isSkip ? ' skip' : '');
+    answerBubble.textContent = display;
+    document.getElementById('ch5WorkDetailThread').appendChild(answerBubble);
+  }
   const skipHandler = (e)=>{
     if(e) e.preventDefault();
     ch5WorkDetailCommitCurrentTextValue(); // 入力途中の値を消さずに確定してから抜ける
@@ -6512,23 +7365,9 @@ function renderCh5RecognitionWorkDetailConversation(){
 
 // 現在の質問の吹き出し（ラベル・本文・補足）をスレッドに積み、入力コントロールを表示する
 function renderCh5WorkDetailStep(){
-  const step = CH5_RECOGNITION_WORK_DETAIL_STEPS[ch5WorkDetailConvIndex];
-  const thread = document.getElementById('ch5WorkDetailThread');
-  const label = document.createElement('div');
-  label.className = 'conv-step-label';
-  label.textContent = (ch5WorkDetailConvIndex+1) + ' / ' + CH5_RECOGNITION_WORK_DETAIL_STEPS.length;
-  thread.appendChild(label);
-  const bubble = document.createElement('div');
-  bubble.className = 'conv-bot';
-  bubble.textContent = step.q;
-  thread.appendChild(bubble);
-  if(step.sub){
-    const sub = document.createElement('div');
-    sub.className = 'conv-bot-sub';
-    sub.textContent = step.sub;
-    thread.appendChild(sub);
-  }
-  renderCh5WorkDetailCurrentControl(step);
+  // 【2026-09-18変更】吹き出し生成はappendConvQuestionBubble()へ切り出した。内容は不変。
+  appendConvQuestionBubble('ch5WorkDetailThread', CH5_RECOGNITION_WORK_DETAIL_STEPS, ch5WorkDetailConvIndex);
+  renderCh5WorkDetailCurrentControl(CH5_RECOGNITION_WORK_DETAIL_STEPS[ch5WorkDetailConvIndex]);
   setFooter({secondaryLabel:'戻る', secondaryFn:ch5WorkDetailGoBack, primaryLabel:'次へ', primaryEnabled:true, primaryFn:ch5WorkDetailNext});
 }
 
@@ -6583,17 +7422,7 @@ function ch5WorkDetailNext(){
   const snap = state.recognitionSnapshot;
   const step = CH5_RECOGNITION_WORK_DETAIL_STEPS[ch5WorkDetailConvIndex];
   ch5WorkDetailCommitCurrentTextValue();
-  let display, isSkip;
-  if(step.type==='text' || step.type==='number'){
-    const val = snap.work[step.key];
-    display = val || '（今回はスキップ）';
-    isSkip = !val;
-  } else {
-    const val = snap.work[step.key];
-    const arr = Array.isArray(val) ? val : (val ? [val] : []);
-    display = arr.length ? arr.join('、') : '（今回はスキップ）';
-    isSkip = arr.length===0;
-  }
+  const {display, isSkip} = convFieldAnswerDisplay(step, snap.work);
   const thread = document.getElementById('ch5WorkDetailThread');
   const answerBubble = document.createElement('div');
   answerBubble.className = 'conv-user' + (isSkip ? ' skip' : '');
@@ -6683,7 +7512,10 @@ let ch5ReasonConvIndex = 0;
 let ch5ReasonConvOtherStep = false;
 
 function renderCh5RecognitionNotworkReasonConversation(){
-  ch5ReasonConvIndex = 0;
+  // 【2026-09-18変更・5画面同型バグ対応】ch2版と同じ対応（findNotworkResumeIndex()参照）。
+  const snap = state.recognitionSnapshot;
+  if(!Array.isArray(snap.notWorkReasons)) snap.notWorkReasons = [];
+  ch5ReasonConvIndex = findNotworkResumeIndex(CH2_NOTWORK_STEPS, snap.notWorkReasons);
   ch5ReasonConvOtherStep = false;
   document.getElementById('screen').innerHTML = `
     <div class="card">
@@ -6694,41 +7526,43 @@ function renderCh5RecognitionNotworkReasonConversation(){
       <div class="conv-current" id="ch5ReasonCurrent"></div>
       <button type="button" class="link-btn skip-all-link" id="ch5ReasonSkipAll">残りの質問はとばして、日常生活状況へ →</button>
     </div>`;
+  // 【2026-09-18追加】ch2版と同じ理由の履歴再構築（renderCh2NotworkReasonConversationの
+  // コメント参照）。「その他」も同じロジックで判定する。
+  const otherPending = snap.notWorkReasons.includes('その他');
+  for(let i=0; i<ch5ReasonConvIndex; i++){
+    appendConvQuestionBubble('ch5ReasonThread', CH2_NOTWORK_STEPS, i);
+    document.getElementById('ch5ReasonThread').appendChild(buildCh5ReasonAnswerToggle(CH2_NOTWORK_STEPS[i].reason));
+  }
   const skipHandler = (e)=>{
     if(e) e.preventDefault();
     if(ch5ReasonConvOtherStep){
       const ta = document.getElementById('ch5ReasonOtherText');
-      if(ta) state.recognitionSnapshot.notWorkReasonOther = ta.value.trim();
+      if(ta) snap.notWorkReasonOther = ta.value.trim();
     }
     // 2026-08-16追加：work_detail(workDetailConvDone)・adl(adlConvDone)と同じく、
     // 飛ばした時点で完走扱いとしてnotworkReasonConvDone=trueにする。
     // これが無いと、戻ってきたときに一覧フォームへ切り替わらず会話が毎回やり直しになる。
-    state.recognitionSnapshot.notworkReasonConvDone = true;
+    snap.notworkReasonConvDone = true;
     goTo('ch5_recognition_adl');
   };
   document.getElementById('ch5ReasonSkipTop').onclick = skipHandler;
   document.getElementById('ch5ReasonSkipAll').onclick = skipHandler;
+  if(otherPending){
+    appendConvQuestionBubble('ch5ReasonThread', CH2_NOTWORK_STEPS, CH2_NOTWORK_STEPS.length - 1);
+    const yesBubble = document.createElement('div');
+    yesBubble.className = 'conv-user';
+    yesBubble.textContent = 'はい';
+    document.getElementById('ch5ReasonThread').appendChild(yesBubble);
+    renderCh5ReasonOtherTextStep();
+    return;
+  }
   renderCh5ReasonStep();
 }
 
 // 現在の質問の吹き出し（ラベル・本文・補足）をスレッドに積み、回答用のはい/いいえを表示する
 function renderCh5ReasonStep(){
-  const step = CH2_NOTWORK_STEPS[ch5ReasonConvIndex];
-  const thread = document.getElementById('ch5ReasonThread');
-  const label = document.createElement('div');
-  label.className = 'conv-step-label';
-  label.textContent = (ch5ReasonConvIndex+1) + ' / ' + CH2_NOTWORK_STEPS.length;
-  thread.appendChild(label);
-  const bubble = document.createElement('div');
-  bubble.className = 'conv-bot';
-  bubble.textContent = step.q;
-  thread.appendChild(bubble);
-  if(step.sub){
-    const sub = document.createElement('div');
-    sub.className = 'conv-bot-sub';
-    sub.textContent = step.sub;
-    thread.appendChild(sub);
-  }
+  // 【2026-09-18変更】吹き出し生成はappendConvQuestionBubble()へ切り出した。内容は不変。
+  appendConvQuestionBubble('ch5ReasonThread', CH2_NOTWORK_STEPS, ch5ReasonConvIndex);
   renderCh5ReasonCurrentControl();
 }
 
@@ -6988,8 +7822,51 @@ function renderCh5RecognitionAdlForm(){
 // 課題1のCH5_RECOGNITION_WORK_DETAIL_STEPSのような専用の質問文セットは不要。
 let ch5AdlConvIndex = 0;
 
+// 【2026-09-17新設・案A】会話形式の再開位置を、実際の回答データ（snap.adl）から導出する。
+// CH2_ADL_STEPSを順に見て最初に未回答のキーのインデックスを返す。呼び出し元
+// （renderCh5RecognitionAdlConversation）がこれを使ってch5AdlConvIndexを設定することで、
+// visibilitychange・ヘッダー往復・「続きから再開する」のどこから呼ばれても、常に
+// snap.adlの内容と矛盾しない位置から会話を再構築できる（背景・経緯は
+// 2026-09-17セッションまとめ参照。旧実装は無条件にch5AdlConvIndex=0していたため、
+// 上記いずれの経路でも1問目にリセットされてしまうバグがあった）。
+// 全10問回答済みなのにadlConvDone/adlConvEndedがまだ立っていない異常系
+// （手動編集された復元ファイル等）では、最後のインデックスを返して配列範囲外
+// アクセスを防ぐフォールバックとする。
+function findCh5AdlResumeIndex(){
+  const snap = state.recognitionSnapshot;
+  // snap.adlがオブジェクトであることを保証する（マイグレーションはrecognitionSnapshot
+  // が丸ごと無いときしかadl:{}を補わないため、recognitionSnapshotはあるがadlだけ
+  // 欠けている復元ファイル等ではundefinedになり得る。applyAdlHandoffNinteibi()の
+  // 同種の防御と揃えてある）。
+  if(!snap.adl || typeof snap.adl !== 'object'){ snap.adl = {}; }
+  for(let i=0; i<CH2_ADL_STEPS.length; i++){
+    if(!Object.prototype.hasOwnProperty.call(snap.adl, CH2_ADL_STEPS[i].key)){
+      return i;
+    }
+  }
+  return CH2_ADL_STEPS.length - 1;
+}
+
+// 【2026-09-17新設・案A】指定インデックスの質問について、進捗ラベル（N/10）と質問吹き出しを
+// スレッドに積む。renderCh5AdlStep()（現在の質問を表示するとき）と
+// renderCh5RecognitionAdlConversation()（再開時に過去の質問を履歴として再構築するとき）の
+// 両方から呼ぶ共通処理として切り出した（renderCh5AdlStep()から移動しただけで、内容は不変）。
+function appendCh5AdlQuestionBubble(index){
+  const step = CH2_ADL_STEPS[index];
+  const thread = document.getElementById('ch5AdlThread');
+  const label = document.createElement('div');
+  label.className = 'conv-step-label';
+  label.textContent = (index+1) + ' / ' + CH2_ADL_STEPS.length;
+  thread.appendChild(label);
+  const bubble = document.createElement('div');
+  bubble.className = 'conv-bot';
+  bubble.textContent = step.label;
+  thread.appendChild(bubble);
+}
+
 function renderCh5RecognitionAdlConversation(){
-  ch5AdlConvIndex = 0;
+  // 【2026-09-17変更・案A】無条件の0固定をやめ、既存の回答データから再開位置を導出する。
+  ch5AdlConvIndex = findCh5AdlResumeIndex();
   document.getElementById('screen').innerHTML = `
     <div class="card">
       <h2>障害認定日ごろの日常生活について</h2>
@@ -7003,6 +7880,16 @@ function renderCh5RecognitionAdlConversation(){
       <div class="conv-current" id="ch5AdlCurrent"></div>
       <button type="button" class="link-btn skip-all-link" id="ch5AdlSkipAll">残りの質問はとばして、その他の項目へ →</button>
     </div>`;
+  // 【2026-09-17追加・案A】ch5AdlConvIndexが0より大きい（＝一部回答済みの状態で
+  // この関数が呼ばれた）場合、その分の質問と回答をスレッドに履歴として再構築してから
+  // 現在の質問へ進む。通常の会話進行（ch5AdlAnswer()内でlabel+bubble+toggleを積む）
+  // と同じ3点セットを、既存のbuildCh5AdlAnswerToggle()を使って積むため、こうして
+  // 再構築したスレッドは、ライブで1問ずつ答えて積み上がったスレッドと構造上区別がつかない
+  // （ch5AdlGoBack()の「戻る」処理が想定するDOM構造とも一致する）。
+  for(let i=0; i<ch5AdlConvIndex; i++){
+    appendCh5AdlQuestionBubble(i);
+    document.getElementById('ch5AdlThread').appendChild(buildCh5AdlAnswerToggle(CH2_ADL_STEPS[i].key));
+  }
   // ch2AdlConversationと同じ理由：完走扱いとしてsnap.adlConvDone=trueにしてからch5_recognition_otherへ。
   const ch5AdlSkipHandler = (e)=>{ if(e) e.preventDefault(); state.recognitionSnapshot.adlConvDone = true; goTo('ch5_recognition_other'); };
   document.getElementById('ch5AdlSkipTop').onclick = ch5AdlSkipHandler;
@@ -7012,16 +7899,9 @@ function renderCh5RecognitionAdlConversation(){
 
 // 現在の質問の吹き出し（ラベル・項目名・「迷ったときの例」過去形版）をスレッドに積み、回答用の4択を表示する。
 function renderCh5AdlStep(){
-  const step = CH2_ADL_STEPS[ch5AdlConvIndex];
-  const thread = document.getElementById('ch5AdlThread');
-  const label = document.createElement('div');
-  label.className = 'conv-step-label';
-  label.textContent = (ch5AdlConvIndex+1) + ' / ' + CH2_ADL_STEPS.length;
-  thread.appendChild(label);
-  const bubble = document.createElement('div');
-  bubble.className = 'conv-bot';
-  bubble.textContent = step.label;
-  thread.appendChild(bubble);
+  // 【2026-09-17変更】ラベル・吹き出し生成はappendCh5AdlQuestionBubble()へ切り出した
+  // （renderCh5RecognitionAdlConversation()の履歴再構築と共有するため）。内容は不変。
+  appendCh5AdlQuestionBubble(ch5AdlConvIndex);
   // 2026-08-16変更：「迷ったときの例を見る」は以前ここ（質問吹き出しの直後・4択の手前）に
   // 出していたが、画面共通のヒント（ADL_HELP_NOTICE_SHORT）と合わせて2つのアコーディオンに
   // 挟まれて分かりにくいと実機テストで指摘があったため、renderCh5AdlCurrentControl側
@@ -7066,21 +7946,13 @@ function renderCh5AdlCurrentControl(){
   // src/genzai/*.src.htmlのみ対応）、「ようこそ」画面がひと手間増える程度の既知の制約だった。
   // genzai側と同じ仕組みをninteibi側10ファイルにも移植し解消済み（詳細はstepCh5RecognitionAdl()側の
   // コメント参照）。
+  // 【2026-09-15変更】常時表示の.hint箱（説明2文＋リンク）を、リンク＋？バッジに置き換え。
+  // 理由・経緯はch2_adl側（renderCh2AdlCurrentControl）の同箇所コメント参照（genzai/ninteibi
+  // で説明文言・対応方針とも共通）。
   const sisterUrl = ADL_SISTER_APP_URLS[step.key];
   if(sisterUrl){
-    const hintBox = document.createElement('div');
-    hintBox.className = 'hint';
-    hintBox.style.margin = '10px 0 4px';
-    const hintText = document.createElement('p');
-    hintText.className = 'small';
-    hintText.style.margin = '0 0 6px';
-    hintText.textContent = '選ぶのが難しいときは、場面をひとつずつ思い出しながら考えられる画面もあります。';
-    hintBox.appendChild(hintText);
-    const noticeText = document.createElement('p');
-    noticeText.className = 'small';
-    noticeText.style.cssText = 'margin:0 0 6px;color:var(--ink-soft);';
-    noticeText.textContent = '新しいタブが開き、少し暗めの画面に切り替わります。ここまで答えた内容はそのまま残ります。';
-    hintBox.appendChild(noticeText);
+    const linkWrap = document.createElement('div');
+    linkWrap.style.cssText = 'display:flex;align-items:center;margin:10px 0 4px;';
     const link = document.createElement('a');
     link.className = 'link-btn';
     link.id = 'ch5AdlSisterLink';
@@ -7092,8 +7964,16 @@ function renderCh5AdlCurrentControl(){
       state.recognitionSnapshot.adlConvEnded = true;
       saveStateToStorage();
     };
-    hintBox.appendChild(link);
-    cur.appendChild(hintBox);
+    linkWrap.appendChild(link);
+    const helpBtn = document.createElement('button');
+    helpBtn.type = 'button';
+    helpBtn.className = 'help-hint-btn';
+    helpBtn.id = 'ch5AdlSisterHelp';
+    helpBtn.setAttribute('aria-label', '詳しくふりかえるについて');
+    helpBtn.textContent = '？';
+    helpBtn.onclick = ()=>{ openHelp(ADL_SISTER_APP_HELP_TEXT); };
+    linkWrap.appendChild(helpBtn);
+    cur.appendChild(linkWrap);
   }
   setFooter({secondaryLabel:'戻る', secondaryFn:ch5AdlGoBack});
 }
@@ -7228,6 +8108,39 @@ const NOTEBOOK_STEPS = [
    sub:'補足があれば一緒に書いて大丈夫です。', placeholder:'例：うつ病、注意欠陥多動性障害'}
 ];
 let notebookConvIndex = 0;
+
+// 【2026-09-18新設・5画面同型バグ対応】手帳の再開位置ヘルパー。type/grade/disabilityNameは
+// work_detail系と同じ単純な真偽判定でよいが、交付年月日（date-ymd）だけは3つの下位フィールド
+// （acquiredYear/Month/Day）に分かれている。acquiredKindは年が空欄だと常に'none'のままなので
+// （notebookSyncAcquiredKind()参照）、「月だけ入力・年は空欄」を見落とさないよう、年・月・日
+// いずれかに値があるかで判定する（Opusレビュー確認済み）。
+function isNotebookStepAnswered(step, nb){
+  if(step.type==='date-ymd'){
+    return !!(nb.acquiredYear || nb.acquiredMonth || nb.acquiredDay);
+  }
+  return !!nb[step.key];
+}
+function findNotebookResumeIndex(steps, nb){
+  let lastAnswered = -1;
+  for(let i=0; i<steps.length; i++){
+    if(isNotebookStepAnswered(steps[i], nb)) lastAnswered = i;
+  }
+  return Math.min(lastAnswered + 1, steps.length - 1);
+}
+// disabilityNotebookを想定した型に正規化する（normalizeWorkFields()と同じ理由。Opusレビュー
+// 指摘E-1）。renderChipGroup()（type欄）はselectedArr.includes()相当の処理をしないため
+// 直接の例外リスクは無いが、acquiredKindが未知の値だとnotebookUpdateDateHint()の
+// 参照が undefined になり得るため、あわせて正規化しておく。
+function normalizeNotebookFields(nb){
+  if(typeof nb.type !== 'string') nb.type = '';
+  if(typeof nb.otherTypeName !== 'string') nb.otherTypeName = '';
+  if(typeof nb.grade !== 'string') nb.grade = '';
+  if(typeof nb.acquiredYear !== 'string' && typeof nb.acquiredYear !== 'number') nb.acquiredYear = '';
+  if(typeof nb.acquiredMonth !== 'string' && typeof nb.acquiredMonth !== 'number') nb.acquiredMonth = '';
+  if(typeof nb.acquiredDay !== 'string' && typeof nb.acquiredDay !== 'number') nb.acquiredDay = '';
+  if(!['none','y','ym','ymd'].includes(nb.acquiredKind)) nb.acquiredKind = 'none';
+  if(typeof nb.disabilityName !== 'string') nb.disabilityName = '';
+}
 
 function stepCh5Notebook(){
   const nb = state.disabilityNotebook;
@@ -7406,7 +8319,10 @@ function notebookEnteredList(){
 
 // ---- ch5_notebook：初回入力用の会話形式（二層構成の上の層） ----
 function renderNotebookConversation(){
-  notebookConvIndex = 0;
+  // 【2026-09-18変更・5画面同型バグ対応】無条件の0固定をやめ、既存の回答データから
+  // 再開位置を導出する（findNotebookResumeIndex()のコメント参照）。
+  normalizeNotebookFields(state.disabilityNotebook);
+  notebookConvIndex = findNotebookResumeIndex(NOTEBOOK_STEPS, state.disabilityNotebook);
   document.getElementById('screen').innerHTML = `
     <div class="card">
       <h2>障害者手帳の情報</h2>
@@ -7415,6 +8331,16 @@ function renderNotebookConversation(){
       <div class="conv-current" id="notebookCurrent"></div>
       <button type="button" class="link-btn skip-all-link" id="notebookSkipAll">残りの質問はとばして、入力した内容を確認する →</button>
     </div>`;
+  // 【2026-09-18追加】notebookConvIndexぶんの質問・回答を履歴として再構築する。
+  // 回答文字列は既存のnotebookAnswerText()をそのまま使う（型ごとの表示ルールを重複させない）。
+  for(let i=0; i<notebookConvIndex; i++){
+    appendConvQuestionBubble('notebookThread', NOTEBOOK_STEPS, i);
+    const ans = notebookAnswerText(NOTEBOOK_STEPS[i]);
+    const answerBubble = document.createElement('div');
+    answerBubble.className = 'conv-user' + (ans ? '' : ' skip');
+    answerBubble.textContent = ans || '（今回はスキップ）';
+    document.getElementById('notebookThread').appendChild(answerBubble);
+  }
   const skipHandler = (e)=>{
     if(e) e.preventDefault();
     notebookCommitCurrentValue(); // 入力途中の値を消さずに確定してから抜ける
@@ -7428,23 +8354,9 @@ function renderNotebookConversation(){
 
 // 現在の質問の吹き出し（ラベル・本文・補足）をスレッドに積み、入力コントロールを表示する
 function renderNotebookStep(){
-  const step = NOTEBOOK_STEPS[notebookConvIndex];
-  const thread = document.getElementById('notebookThread');
-  const label = document.createElement('div');
-  label.className = 'conv-step-label';
-  label.textContent = (notebookConvIndex+1) + ' / ' + NOTEBOOK_STEPS.length;
-  thread.appendChild(label);
-  const bubble = document.createElement('div');
-  bubble.className = 'conv-bot';
-  bubble.textContent = step.q;
-  thread.appendChild(bubble);
-  if(step.sub){
-    const sub = document.createElement('div');
-    sub.className = 'conv-bot-sub';
-    sub.textContent = step.sub;
-    thread.appendChild(sub);
-  }
-  renderNotebookCurrentControl(step);
+  // 【2026-09-18変更】吹き出し生成はappendConvQuestionBubble()へ切り出した。内容は不変。
+  appendConvQuestionBubble('notebookThread', NOTEBOOK_STEPS, notebookConvIndex);
+  renderNotebookCurrentControl(NOTEBOOK_STEPS[notebookConvIndex]);
   setNotebookConvFooter();
 }
 
@@ -7669,7 +8581,23 @@ const STEPS = {
   ch7_fragment_board: stepCh7FragmentBoard
 };
 
+// 【2026-09-11追加・バグC対応（依頼メモ4-6）】以前はSTEPS[current]を存在確認なしで
+// 呼んでおり、currentが未知の画面IDだと例外を投げて画面が真っ白になっていた
+// （2026-09-10に「発動条件がほぼ存在しない」として意図的に未対応としていたが、
+// 復元機能の追加で発動条件が現実的になったため対応が前提条件に格上げされた）。
+// historyStackを新しい順にさかのぼり、実在する直近の画面へ着地する。historyStackが
+// 尽きた（または最初から壊れていた）場合はstartへ。
+// 【重要】renderTasks()より前に置くこと。後ろだと壊れたcurrentのままヘッダーが組まれ、
+// 章ボタンが0個になる（2026-09-10の実測記録どおり）。
 function showScreen(){
+  if(typeof STEPS[current] !== 'function'){
+    let fallback = null;
+    while(historyStack.length){
+      const candidate = historyStack.pop();
+      if(typeof STEPS[candidate] === 'function'){ fallback = candidate; break; }
+    }
+    current = fallback || 'start';
+  }
   document.getElementById('taskHeader').style.display = '';
   renderTasks();
   STEPS[current]();
@@ -7741,6 +8669,88 @@ window.addEventListener('pagehide', function(){
 document.getElementById('screen').addEventListener('input', scheduleDebouncedSave);
 document.getElementById('screen').addEventListener('click', scheduleDebouncedSave);
 document.getElementById('screen').addEventListener('keydown', scheduleDebouncedSave);
+
+// ============================================================
+// ヘルプ小窓（？ボタン＋ポップアップ）。仕様: ヘルプ小窓_仕様書_20260912.md
+// 2026-09-12新設。ここでは入れ物のみを実装する。呼び出し側は
+// openHelp(['1枚目の文章','2枚目の文章', ...]) を呼ぶだけでよい
+// （？ボタンの設置・各項目の文言は、A-3等の対応時に画面ごとに行う）。
+// 1枚1要素、最大5枚、1枚あたり99文字までを目安にすること（仕様書参照）。
+// ============================================================
+let helpPages = [];
+let helpPageIndex = 0;
+
+function openHelp(pages){
+  helpPages = pages;
+  helpPageIndex = 0;
+  renderHelpPage();
+  document.getElementById('helpOverlay').classList.add('open');
+}
+
+function closeHelp(){
+  document.getElementById('helpOverlay').classList.remove('open');
+}
+
+function helpGoPrev(){
+  if(helpPageIndex <= 0) return;
+  helpPageIndex--;
+  renderHelpPage();
+}
+
+function helpGoNext(){
+  if(helpPageIndex >= helpPages.length - 1) return;
+  helpPageIndex++;
+  renderHelpPage();
+}
+
+function renderHelpPage(){
+  document.getElementById('helpBody').textContent = helpPages[helpPageIndex] || '';
+
+  // 【2026-09-12】＜＞・点々は、ページが2枚以上あるときだけ表示する。
+  // 仕様書の「端のページでは薄くする。消さない」は、開いたまま2枚目→3枚目と
+  // めくっていく途中でガタつかせないためのルールで、最初から1枚しかない場合は
+  // めくる動作自体が起きないため前提が成立しない（A-3の設計相談で決定）。
+  const footer = document.getElementById('helpFooter');
+  footer.style.display = (helpPages.length > 1) ? 'flex' : 'none';
+  if(helpPages.length <= 1) return;
+
+  document.getElementById('helpPrevBtn').disabled = (helpPageIndex === 0);
+  document.getElementById('helpNextBtn').disabled = (helpPageIndex === helpPages.length - 1);
+
+  const dots = document.getElementById('helpDots');
+  dots.innerHTML = '';
+  helpPages.forEach((_, i)=>{
+    const dot = document.createElement('span');
+    dot.className = 'help-dot' + (i === helpPageIndex ? ' active' : '');
+    dots.appendChild(dot);
+  });
+}
+
+document.getElementById('helpCloseBtn').onclick = closeHelp;
+document.getElementById('helpPrevBtn').onclick = helpGoPrev;
+document.getElementById('helpNextBtn').onclick = helpGoNext;
+
+// 背景タップで閉じる（仕様書の②）。押し始めと離した場所が両方とも背景（#helpOverlay自身）
+// のときだけ閉じる。小窓の中をタップしてもe.targetは子要素（.help-boxやその中身）になる
+// ため、ここでstopPropagation()を書かなくても自然に閉じない（＝仕様書が懸念する「素直に
+// 書くと小窓内を触っても背景まで届いて閉じてしまう」不具合を、target比較で回避している）。
+// 文字を選ぼうとして小窓の中から指を動かし背景で離す動きがあるため、pointerdownと
+// pointerupを別々に見て両方の一致を確認する（clickイベント1本ではこの区別ができない）。
+let helpPressStartedOnOverlay = false;
+const helpOverlayEl = document.getElementById('helpOverlay');
+helpOverlayEl.addEventListener('pointerdown', function(e){
+  helpPressStartedOnOverlay = (e.target === helpOverlayEl);
+});
+helpOverlayEl.addEventListener('pointerup', function(e){
+  if(helpPressStartedOnOverlay && e.target === helpOverlayEl){
+    closeHelp();
+  }
+  helpPressStartedOnOverlay = false;
+});
+// 【見送り確定・2026-09-12】端末の「戻る」ボタンでの閉じるには対応しない。このアプリは
+// popstate/pushState/hashchangeを一切使わない単一ページ構成で、物理的な「戻る」操作を
+// 検知する手段が無い（index.html単体で完結させる設計そのものに伴う、アプリ全体の既知の
+// 制約。この小窓に限った話ではない。詳細はヘルプ小窓_仕様書_20260912.md参照）。
 
 resetState();
 current = 'start';
