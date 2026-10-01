@@ -79,6 +79,10 @@ button.btn:disabled{opacity:.45;cursor:not-allowed;}
          本体index.html側（stepCh5Recognitionへの「取り込む」導線）との連携は未実装（次回以降の
          スコープ）であり、まだ存在しない機能をあるかのように書かないため（決定#44と同じ考え方）。
          「この端末に保存される」という、今回時点でも事実である部分だけを案内する。
+         【2026-09-27追記】本体側の取り込み（本体の「障害認定日ごろの日常生活について」画面の
+         「取り込む」ボタン、applyAdlHandoffNinteibi()）は2026-08-02に実装済みのため、hub-noteに
+         取り込みの案内を戻した（ユーザー決定。本体側の残タスクK-13の③）。genzai側のhub-noteと
+         同じ形で、画面の名前だけ認定日ごろの画面にしてある。上の「連携は未実装」は7/31時点の記述。
        ・「← 申立書サポートに戻る」の遷移先（../../../index.html）：無変更
          （pages/ninteibi/hub.html から見た相対階層はpages/genzai/hub.htmlと同じ深さのため）。 -->
 <script>
@@ -167,7 +171,8 @@ function renderItemList(){
 
   var html = '<div class="progress-note">10項目中 '+doneCount+'項目 完了（'+doneCount+'/'+ADL_ITEMS.length+'）</div>';
   html += '<p class="hub-permission-note">一度に全部やらなくても大丈夫です。気になるものだけ、途中まででも大丈夫です。</p>';
-  html += '<p class="hub-note">ここでの記録は、この端末に保存されます。次に開いたときも、続きから見られます。</p>';
+  // 2026-09-27：本体側の取り込み（2026-08-02実装）に合わせ、取り込みの案内を戻した（上の【2026-07-31】コメントの追記参照）
+  html += '<p class="hub-note">ここでの記録は、この端末に保存されます。申立書サポートアプリ（index.html）の「障害認定日ごろの日常生活について」画面に戻ると、この記録を確認したうえで取り込めます（自動では反映されません）。</p>';
   html += '<div class="item-list" id="hubItemList">';
   ADL_ITEMS.forEach(function(it){
     var key = it[0], label = it[1], url = it[2];
