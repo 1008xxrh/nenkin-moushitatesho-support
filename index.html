@@ -219,6 +219,14 @@ button:focus-visible, .option:focus-visible, .chip:focus-visible, [role="button"
 .accordion-trigger::after{content:'▼';font-size:10px;color:var(--ink-soft);transition:transform 0.15s;}
 .accordion-trigger-open::after{transform:rotate(180deg);}
 .accordion-panel{padding:0 4px 14px;}
+/* 【V-1・2026-10-03】最初の画面（stepStart）のアコーディオン用。流れの各段の2行目（小さい灰色の字）と、
+   「保存について」の見出しの2行目「（サーバーには送信しません）」（少し薄い色。ユーザー指定） */
+.start-flow-sub{display:block;font-size:12px;color:var(--ink-soft);line-height:1.5;}
+.start-save-note{color:var(--ink-soft);}
+/* 【V-1のあと・2026-10-03・ユーザー決定】「アプリの流れ」の番号付きの項目（1〜7）どうしの間を10pxあける
+   （動作確認用アーティファクトのコメントで「文字が詰まっていて読みにくいかも」。写しで10pxを見てもらって決定）。
+   各項目の中の行間（1行目と小さい灰色の2行目の間）は変えない。 */
+.start-flow-list > li + li{margin-top:10px;}
 
 /* ---- ch5_preview：紙を模した1枚の申立書（ch5_preview仕様書3章） ---- */
 .preview-status{background:var(--surface-raised);border-radius:10px;padding:12px 14px;margin-bottom:14px;}
@@ -334,10 +342,11 @@ button:focus-visible, .option:focus-visible, .chip:focus-visible, [role="button"
   padding:4px 12px;margin-bottom:10px;
 }
 /* 年表と手札の境目をはっきり分ける（4.7節確定） */
+/* 【V-3・2026-10-03】position:relativeは、右下の薄い文字（.place-hand-watermark）の位置の基準にするため */
 .place-hand{
   flex:var(--place-hand-flex);min-height:0;overflow-y:auto;
   background:var(--accent-soft);border:1px solid var(--accent);border-radius:14px;
-  padding:10px 12px;
+  padding:10px 12px;position:relative;
 }
 
 .place-band{padding:12px 0;border-bottom:1px solid var(--line);}
@@ -346,7 +355,15 @@ button:focus-visible, .option:focus-visible, .chip:focus-visible, [role="button"
 /* 帯本体：タップして配置先にできる領域（帯全体がタップ対象、6.3節と同じ考え方） */
 .place-band-body{border-radius:10px;padding:6px;cursor:pointer;min-height:12px;}
 .place-band-body:hover{background:var(--neutral-soft);}
-.place-band-body.place-target-active{background:var(--accent-soft);outline:2px dashed var(--accent);}
+/* 【V-2・イ・2026-10-02】押して置ける場所を、帯本体だけでなく帯まるごと（年の文字＋本体）にした（なりきりチャット2回目で、
+   年の文字を押して置けなかった人がいた。ユーザー決定）。以前はカードを選ぶと帯本体に点線の枠
+   （.place-band-body.place-target-active{background:var(--accent-soft);outline:2px dashed var(--accent);}）を付けていた。
+   今は帯（.place-band）に付け、枠は帯の後ろに重ねて描く（::before）。帯そのものの大きさ・余白・区切り線は変えないので、
+   カードを選んでいないときの見た目は以前と同じ（画素単位で確認）。帯に余白と角丸を付ける形は、区切り線の端が丸く伸びたので採らなかった。
+   z-index:0で帯の中に重なりの層を作り、枠（z-index:-1）を帯の中身の後ろ・年表の白い地の上に描く。左右は年表の内側の余白（12px）に6pxはみ出す。
+   .place-band は配置画面（stepCh5Place()）でしか使っていない */
+.place-band{position:relative;z-index:0;cursor:pointer;}
+.place-band.place-target-active::before{content:'';position:absolute;top:4px;bottom:4px;left:-6px;right:-6px;border-radius:10px;background:var(--accent-soft);border:2px dashed var(--accent);z-index:-1;}
 
 /* 通院バー・義務教育バー：背景情報、操作不可（4.4節） */
 /* 帯全体がその期間（3〜5年）を表す背景トラック。セグメントはこの中の実際の時期の位置に絶対配置する。 */
@@ -377,16 +394,21 @@ button:focus-visible, .option:focus-visible, .chip:focus-visible, [role="button"
 }
 
 .place-hand-label{font-size:12px;color:var(--accent-strong);font-weight:600;margin-bottom:6px;}
+/* 【V-2・ア・2026-10-02】手札の見出しの右の、次にすることの一言（renderPlaceHandLabel()が描く）。カードを選んでいるときは強める */
+.place-hand-hint{font-weight:400;color:var(--ink-soft);margin-left:10px;}
+.place-hand-hint.place-hand-hint-active{font-weight:600;color:var(--accent-strong);}
 .place-hand-body{border-radius:10px;min-height:60px;position:relative;}
 .place-hand-body.place-target-active{outline:2px dashed var(--accent-strong);background:rgba(255,255,255,0.4);}
 .place-hand-empty{font-size:12px;color:var(--ink-soft);}
-/* 「手札が残っていても先へ進めます」を手札エリア中央の透かし文字として表示する。
-   カード（.place-card-group）はz-indexで手前に重なる。 */
+/* 「手札が残っていても先へ進めます」を、手札の枠（.place-hand）の右下に、小さめの1行で表示する。
+   【V-3・2026-10-03・ユーザー決定】以前は手札エリアの中央に大きな2行（20px）の透かし文字で出していたが、カードの後ろに
+   隠れて読めなかった（なりきりチャット2回目。幅320では枠の下で切れてもいた）。今までどおり背景の扱いで、カード
+   （.place-card-group、z-index:1）が手前に重なる（カードが右下まで並べば隠れる）。色・太さ・薄さは今までのまま。
+   枠はスクロールする箱なので、この文字は中身と一緒に動く（中身が枠に収まっているときは枠の右下にある）。 */
 .place-hand-watermark{
-  position:absolute;top:0;left:0;right:0;bottom:0;
-  display:flex;align-items:center;justify-content:center;text-align:center;
-  padding:8px;pointer-events:none;
-  font-size:20px;line-height:1.4;font-weight:700;color:var(--ink-soft);opacity:0.5;
+  position:absolute;right:12px;bottom:8px;z-index:0;
+  white-space:nowrap;pointer-events:none;
+  font-size:12px;line-height:1.4;font-weight:700;color:var(--ink-soft);opacity:0.5;
 }
 
 /* ============================================================
@@ -609,12 +631,31 @@ const TEMPLATE_04_XLSX_BASE64 = "UEsDBBQABgAIAAAAIQAhjEY6cwEAAIwFAAATAAgCW0NvbnR
 // ============================================================
 
 // ---- 西暦→和暦変換（簡易版） ----
+// 年だけで元号を決める。年だけしか分からないとき（年表の帯の名前・拡大図の目盛り・月が空欄の記録）はこれを使う
+// （2019年は「令和1」、1989年は「平成1」。拡大図の目盛りの2019年を「令和1」とするのは2026-09-26の決定）。
 function yearToWareki(year){
   if(year===null || year===undefined || isNaN(year)) return [null, null];
   if(year >= 2019) return ['令和', year - 2018];
   if(year >= 1989) return ['平成', year - 1988];
   if(year >= 1926) return ['昭和', year - 1925];
   return [null, null];
+}
+// 【2026-10-03・残タスクN-8・ユーザー決定（C）】月・日まで分かる日付は、改元前の日付を前の元号で書く。
+// 以前はどこでもyearToWareki()（年だけ）で元号を決めていたため、たとえば交付年月日「2019年4月1日」が下書きとExcelで
+// 「令和1年4月1日」になっていた（令和は2019年5月1日から。正しくは平成31年4月1日）。
+// ・2019年1〜4月 → 平成31。5月以降は令和1
+// ・1989年1月1〜7日 → 昭和64（平成は1月8日から）。1989年1月で日が分からないときは決められないので、今までどおり平成1
+// ・月が分からないとき（month が空）は、今までどおり yearToWareki() と同じ
+// 使う所：下書きの通院期間・手帳の交付年月日、Excelの同じ所と表面の発病日・初診日、画面の和暦表示の年月の文字
+// （formatGapDateLabel()）。年だけの目盛り・帯の名前はyearToWareki()のまま。
+// なお1926年（大正15年・昭和元年）は様式の元号の欄に大正が無いので、今までどおり昭和1として扱う。
+function dateToWareki(year, month, day){
+  const y = parseInt(year, 10);
+  const m = parseInt(month, 10);
+  const d = parseInt(day, 10);
+  if(y === 2019 && m >= 1 && m <= 4) return ['平成', 31];
+  if(y === 1989 && m === 1 && d >= 1 && d <= 7) return ['昭和', 64];
+  return yearToWareki(y);
 }
 
 // ---- 決定#35：年齢帯（buildAgeBands()の1件）のラベルを、西暦⇄元号切替（state.eraDisplayMode、4.6節）
@@ -632,11 +673,12 @@ function formatAgeBandLabel(band, isWareki){
 
 // ---- computeGaps()のfromLabel/toLabel（例："2015年頃"「2018年4月頃"）の先頭の「YYYY年」部分だけを
 // 西暦⇄元号切替に応じて置き換える。それ以外の部分（月・「頃」等）はそのまま保つ。
+// 【2026-10-03・N-8】すぐ後ろに「M月」があれば、月まで見て元号を決める（例：「2019年4月頃」→「平成31年4月頃」）。
 function formatGapDateLabel(labelStr, isWareki){
   if(!isWareki) return labelStr;
-  const m = (labelStr || '').match(/^(\d+)年/);
+  const m = (labelStr || '').match(/^(\d+)年(?:(\d+)月)?/);
   if(!m) return labelStr;
-  const [g, y] = yearToWareki(parseInt(m[1]));
+  const [g, y] = dateToWareki(parseInt(m[1]), m[2]);
   if(!g) return labelStr;
   return labelStr.replace(/^\d+年/, `${g}${y}年`);
 }
@@ -1216,13 +1258,13 @@ async function exportToOfficialForm(){
   // 入力があれば反映、なければ空欄のままにする（将来ヒアリング項目を追加予定）
   if(state.byomei) front.getCell('M3').value = state.byomei;
   if(state.onset && state.onset.year){
-    const [g,y] = yearToWareki(state.onset.year);
+    const [g,y] = dateToWareki(state.onset.year, state.onset.month); // 【N-8】月まで見る
     front.getCell('H4').value = g;
     front.getCell('N4').value = y;
     front.getCell('Q4').value = state.onset.month || '';
   }
   if(state.firstVisit && state.firstVisit.year){
-    const [g,y] = yearToWareki(state.firstVisit.year);
+    const [g,y] = dateToWareki(state.firstVisit.year, state.firstVisit.month); // 【N-8】月まで見る
     front.getCell('AB4').value = g;
     front.getCell('AH4').value = y;
     front.getCell('AK4').value = state.firstVisit.month || '';
@@ -1727,6 +1769,12 @@ function makeInitialState(){
     afterGapReviewAction:null, // 一時UI状態：gap確認をすべて終えた後の追加動作。'go_ch5'なら第5章へ進む。nullならch4_summaryに戻るだけ
     editingGapKey:null,      // 【2026-09-19・A5】一覧の「修正する」リンクから、特定の1件の空白期間だけを
                               // 開いて理由を修正するモード。editingHospitalId/editingPeriodIdと同じ考え方
+    // 【2026-10-03・残タスクN-2】空白期間を続けて確認している途中の「戻る」で、1つ前の空白へ戻るための一時UI状態
+    // （stepCh4GapReview()の上のコメント参照）。保存データの版は上げていない：古い保存データには無いので、使う側で
+    // 無いときは空として扱う（editingGapKeyと同じ）。
+    gapReviewTrail:[],       // この回に「次へ」で答えた空白のキーを、答えた順に
+    gapReviewBackIndex:null, // 「戻る」で開き直している空白の、gapReviewTrailの中の位置（null＝まだ答えていない先頭の空白を表示中）
+    gapReviewPending:{},     // 「戻る」で離れたときにまだ保存していなかった選択を、空白のキーごとに預かる（不具合イの案B：選択は消さない）
     nextHospitalId:1,        // 病院の永続ID発行用カウンタ
     nextPeriodId:1,          // 【病院期間分割】periodの永続ID発行用カウンタ。pastIdCountersには入れない
                               // （3.3節：pastIdCountersは過去編専用のため。state.nextHospitalIdと同じ並びの
@@ -2754,7 +2802,8 @@ function writeDatePart(ws, eraCol, yearCol, monthCol, dayCol, row0, kind, year, 
     if(dayCol) ws.getCell(`${dayCol}${row0}`).value = '';
     return;
   }
-  const [g, y] = yearToWareki(year);
+  // 【2026-10-03・N-8】書く月・日と同じものを見て元号を決める（'y'は年だけなので月を見ない。'now'は日も書く）
+  const [g, y] = dateToWareki(year, (kind === 'y') ? null : month, (kind === 'now') ? day : null);
   ws.getCell(`${eraCol}${row0}`).value = g;
   ws.getCell(`${yearCol}${row0}`).value = y;
   ws.getCell(`${monthCol}${row0}`).value = (kind === 'y') ? '' : (month || '');
@@ -2973,7 +3022,10 @@ function writeDisabilityNotebookToBack(back, nb, rowOffset){
 
   // 交付年月日（和暦変換。年のみ／年月／年月日のどこまで埋まっているかをacquiredKindで判定）
   if(nb.acquiredKind && nb.acquiredKind !== 'none' && nb.acquiredYear){
-    const [g, y] = yearToWareki(parseInt(nb.acquiredYear, 10));
+    // 【2026-10-03・N-8】下で書く月・日と同じものを見て元号を決める
+    const [g, y] = dateToWareki(parseInt(nb.acquiredYear, 10),
+      (nb.acquiredKind==='ym' || nb.acquiredKind==='ymd') ? nb.acquiredMonth : null,
+      nb.acquiredKind==='ymd' ? nb.acquiredDay : null);
     if(g){
       back.getCell(at('AQ63')).value = g;
       back.getCell(at('BC63')).value = y;
@@ -3397,6 +3449,11 @@ function renderHelpListHtml(items){
 function setFooter(opts){
   const footer = document.getElementById('footerNav');
   footer.innerHTML = '';
+  // 【2026-10-03・残タスクN-4】ボタン帯を作り直すと、DL保存の「前回の保存から内容は変わっていません。…もう一度押すと保存します。」
+  // の案内も消える。案内が消えたのに「もう一度押せば保存する」状態（dlSaveConfirmPending）だけが残っていたため、別の画面へ
+  // 移ってから1回押すだけで、変わっていない内容のファイルがもう1つできていた。案内と一緒に、この状態も消す
+  // （案内が出ている間にもう一度押せば保存される、という今までの動きは変わらない）。
+  dlSaveConfirmPending = false;
 
   const statusEl = document.createElement('div');
   statusEl.className = 'footer-status';
@@ -3499,8 +3556,12 @@ function fitPlaceScreenHeight(){
   el.style.minHeight = PLACE_SCREEN_MIN_HEIGHT + 'px';
 }
 // 画面の向きや大きさが変わったとき（回転・ツールバーの出し入れ等）も合わせ直す。
+// 【2026-10-03・残タスクN-3】以前はここで配置画面の高さだけを合わせ直していて、ボタン帯の余白（--footer-space）は
+// 回転しても測り直されなかった（横→縦でボタン帯が1段高くなっても余白が前のままで、本文の下の余裕が減る。
+// 出来事カードを自作する入口の画面（幅320）で38px→20px、Chromiumで実測）。updateFooterSpaceVar()は末尾で
+// 配置画面の高さも合わせ直すので、ここはこれ1つを呼べばよい（実際の大きさを測れない環境では、どちらも何もしない）。
 window.addEventListener('resize', ()=>{
-  if(current === 'ch5_place') fitPlaceScreenHeight();
+  updateFooterSpaceVar(document.getElementById('footerNav'));
 });
 
 function getChapterNum(stepId){
@@ -3752,6 +3813,8 @@ const BACKUP_FILE_FORMAT = 1;
 // 名称という全画面共通の最重要語彙を「気になった人だけ？を開く」任せにするのは非プログラマ向け
 // という目的に対して弱いと判断し、開始画面は必ず1回読む地の文（stepStart）に埋め込む方式に変更。
 // 再開確認画面（stepResumeCheck）は開始画面を通らない人向けの画面のため、引き続き？小窓で持つ）。
+// 【V-1・2026-10-03】開始画面のこの地の文は、ユーザーの決定で、閉じたアコーディオン「保存について」の中に移した
+// （文はそのまま。はじめは閉じているので、開かないと読めない）。経緯は stepStart() のコメント。
 // 「端末のダウンロードフォルダへ」のように保存先を具体的に言い切らないのは、iOS Safariで
 // 実際にファイルとしてダウンロードされるかが00_索引.md記載のとおりまだ実機未確認のため。
 const DL_ABBREVIATION_HELP_PAGE = 'DL保存とは？\nダウンロード保存の略です。\n端末にデータをダウンロードできます。';
@@ -4155,37 +4218,81 @@ function stepResumeCheck(savedPayload){
 }
 
 function stepStart(){
+  // 【V-1・2026-10-03・ユーザー決定】最初の画面に、簡易な「アプリの流れ」を置いた（入口の敷居を低くするため）。
+  // 以前は「この試作版でできること」6行・「この試作版でまだ出力しないもの」4行・保存の説明3段落を地の文で並べていたが、
+  // 幅320×568では「できること」の6行だけで下のボタン帯まで埋まり、残りはスクロールの先だった（なりきりチャット2回目でも
+  // 後半は9件中7件が読み飛ばした）。長い文は読まれない前提で、4つのアコーディオン（はじめは閉じる。部品は stepCh5Done と同じ）にまとめた。
+  // ・「アプリの流れ」の各段は、実際の動きと合わせてある：1段目＝生年・区切りは答えないと進めない（3年ごと／5年ごと）／
+  //   2段目＝就労状況の3択（stepCh1WorkStatus）だけ必須、ほかは「答えなくても次に進めます」／3段目＝出来事を選ぶ画面の次へはいつも押せる／
+  //   4段目＝記録0件のときは1件分の3画面（病院名→いつから→確かさ）を通る以外に進む道が無いが、3画面とも空欄で進める／
+  //   5段目＝配置していなくても年表へ進める（V-2の？4枚目と同じ）／6・7段目＝着いた画面の見出しそのまま
+  //   （stepCh5Done の「年表ができました」、stepCh5Preview の「申立書の下書き確認」）。画面の見出しや必須の質問を変えるときは、ここも見直すこと。
+  //   安心の一言は「途中でやめられます」だけにした（「選ぶだけでも」「答えなくても」は、最初の3問が必須なので言えない。9/03に
+  //   「あとから直せます」を消したのと同じ理由）。
+  // ・保存の説明（データが消えることがある・DL保存）は「保存について」の中へ移した。2026-09-10（消える注意は地の文で）と
+  //   2026-09-15（DLの説明は地の文で）の決定を、ユーザーの判断で変えたもの。使い始める決め手になった「送信しません」だけは、
+  //   見出しの2行目に出して閉じていても見えるようにした。本文に「同じ端末・同じブラウザで開けば、続きから再開できます。」を足した。
+  // ・書かないと決めたもの：「相談に行く前に」（相談したあとの人が使っていいのか迷う）、請求の準備の流れ（利用者の行動次第）。
+  // ・題名の「（試作）」はそのまま（満足できるものになったら外す。#39）。導入文は「このWebアプリは」（試作版とWebアプリは別の意味の呼び方）。
+  // ・再開のリンクと？はアコーディオンの外に残す（データが消えてしまった人が着くのはこの画面のため）。
+  // 経緯・測った数字は相談キャンバスの「V-1 最初の画面（10/2）」ページ（付箋#90〜#92）と管理ページV-1。
   document.getElementById('screen').innerHTML = `
     <div class="card center">
       <h1>申立書サポート（試作）</h1>
-      <p class="lead">この試作版は、障害年金の病歴・就労状況等申立書の下書きを作るために、質問に答えながら情報を整理していくものです。</p>
+      <p class="lead">このWebアプリは、障害年金の病歴・就労状況等申立書の下書きを作るために、質問に答えながら情報を整理していくものです。</p>
 
-      <div style="text-align:left;margin-top:14px;">
-        <p class="edit-section-label">この試作版でできること</p>
-        <ul style="margin:4px 0 0;padding-left:18px;font-size:14px;line-height:1.7;">
-          <li>今の生活状況・就労状況の整理</li>
-          <li>これまでの通院歴と、通院していない期間の整理</li>
-          <li>生活に影響した出来事の年表づくり</li>
-          <li>障害認定日ごろの状態の整理</li>
-          <li>障害者手帳の情報の整理</li>
-          <li>ここまでの内容を申立書様式の一部にExcel出力</li>
-        </ul>
+      <div class="accordion-group" style="margin-top:14px;text-align:left;">
+        <div class="accordion-item">
+          <button type="button" class="accordion-trigger" data-accordion="acc-start-flow">アプリの流れ</button>
+          <div class="accordion-panel" id="acc-start-flow" hidden>
+            <ol class="start-flow-list" style="margin:0;padding-left:20px;font-size:14px;line-height:1.7;">
+              <li>生まれた年と、年表の区切りを答える<span class="start-flow-sub">3年ごとか5年ごとを選びます</span></li>
+              <li>今の仕事と生活について答える<span class="start-flow-sub">仕事をしているかだけ選びます。ほかは答えられる所だけで大丈夫です</span></li>
+              <li>過去の出来事を選ぶ<span class="start-flow-sub">選ばなくても進めます</span></li>
+              <li>通院の記録を、まず1件入れる<span class="start-flow-sub">わかる所だけで大丈夫です</span></li>
+              <li>出来事を年表に置く<span class="start-flow-sub">置かなくても進めます</span></li>
+              <li>「年表ができました」</li>
+              <li>「申立書の下書き確認」で下書きを見る</li>
+            </ol>
+            <p class="small" style="margin:8px 0 0;">途中でやめられます。続きの再開については「保存について」に書いてあります。</p>
+          </div>
+        </div>
+        <div class="accordion-item">
+          <button type="button" class="accordion-trigger" data-accordion="acc-start-can">このWebアプリでできること</button>
+          <div class="accordion-panel" id="acc-start-can" hidden>
+            <ul style="margin:0;padding-left:18px;font-size:14px;line-height:1.7;">
+              <li>今の生活状況・就労状況の整理</li>
+              <li>これまでの通院歴と、通院していない期間の整理</li>
+              <li>生活に影響した出来事の年表づくり</li>
+              <li>障害認定日ごろの状態の整理</li>
+              <li>障害者手帳の情報の整理</li>
+              <li>入力した内容を申立書様式の一部にExcel出力</li>
+            </ul>
+          </div>
+        </div>
+        <div class="accordion-item">
+          <button type="button" class="accordion-trigger" data-accordion="acc-start-not">このWebアプリで出力されないもの</button>
+          <div class="accordion-panel" id="acc-start-not" hidden>
+            <ul style="margin:0;padding-left:18px;font-size:14px;line-height:1.7;">
+              <li>傷病名</li>
+              <li>発病時期</li>
+              <li>初診日</li>
+              <li>診断書等との整合確認が必要な項目</li>
+            </ul>
+          </div>
+        </div>
+        <div class="accordion-item">
+          <button type="button" class="accordion-trigger" data-accordion="acc-start-save"><span>保存について<br><span class="start-save-note">（サーバーには送信しません）</span></span></button>
+          <div class="accordion-panel" id="acc-start-save" hidden>
+            <p class="small" style="margin:0;">入力内容はこの端末のブラウザに保存されます。</p>
+            <p class="small" style="margin-top:10px;">同じ端末・同じブラウザで開けば、続きから再開できます。</p>
+            <p class="small" style="margin-top:10px;">なお、端末やブラウザの設定によっては、しばらく開かない期間が続いたときや、履歴を消したとき、機種を変えたときなどに、保存内容が消えてしまうことがあります。また、プライベートブラウズ（InPrivate・シークレットモードなど）でご利用の場合、ウィンドウを閉じると内容は残りません。</p>
+            <p class="small" style="margin-top:10px;">画面の下にある「DL保存」を押すと、ここまでの内容をファイルとして端末にダウンロードできます。「DL」は「ダウンロード」の略です。内容が消えてしまったときは、そのファイルから戻すことができます。</p>
+          </div>
+        </div>
       </div>
 
-      <div style="text-align:left;margin-top:14px;">
-        <p class="edit-section-label">この試作版でまだ出力しないもの</p>
-        <ul style="margin:4px 0 0;padding-left:18px;font-size:14px;line-height:1.7;">
-          <li>傷病名</li>
-          <li>発病時期</li>
-          <li>初診日</li>
-          <li>診断書等との整合確認が必要な項目</li>
-        </ul>
-      </div>
-
-      <div class="edit-section">
-        <p class="small">入力内容はこの端末のブラウザに保存されます。サーバーには送信しません。</p>
-        <p class="small" style="margin-top:10px;">なお、端末やブラウザの設定によっては、しばらく開かない期間が続いたときや、履歴を消したとき、機種を変えたときなどに、保存内容が消えてしまうことがあります。また、プライベートブラウズ（InPrivate・シークレットモードなど）でご利用の場合、ウィンドウを閉じると内容は残りません。</p>
-        <p class="small" style="margin-top:10px;">画面の下にある「DL保存」を押すと、ここまでの内容をファイルとして端末にダウンロードできます。「DL」は「ダウンロード」の略です。内容が消えてしまったときは、そのファイルから戻すことができます。</p>
+      <div style="margin-top:12px;">
         <div style="display:flex;align-items:center;">
           <button type="button" id="restoreLinkStart" class="link-btn">DL保存したファイルから再開する</button>
           <button type="button" class="help-hint-btn" id="restoreLinkStartHelp" aria-label="「DL保存したファイルから再開する」について">？</button>
@@ -4195,12 +4302,22 @@ function stepStart(){
       </div>
     </div>`;
   setFooter({primaryLabel:'はじめる', primaryEnabled:true, primaryFn:()=>goTo('profile_birth')});
+  // 【V-1・2026-10-03】アコーディオン開閉（stepCh5Done と同じ動き：はじめは閉じた状態、押すと開閉）
+  document.querySelectorAll('#screen .accordion-trigger').forEach(btn=>{
+    btn.onclick = ()=>{
+      const panel = document.getElementById(btn.getAttribute('data-accordion'));
+      const isOpen = !panel.hidden;
+      panel.hidden = isOpen;
+      btn.classList.toggle('accordion-trigger-open', !isOpen);
+    };
+  });
   document.getElementById('restoreLinkStart').onclick = ()=>{
     document.getElementById('restoreFileInputStart').click();
   };
   // 【2026-09-15再修正】13件目③対応（開始画面側）。「DL」の説明は上の地の文（常時表示）に
   // 移したため、DL_ABBREVIATION_HELP_PAGEはここでは使わない（重複のため）。？の中身は
   // 「このリンクは何をするか」（再開確認画面の？1枚目と共有）と「ファイル名の形式」の2枚。
+  // 【V-1・2026-10-03】上の地の文は、閉じたアコーディオン「保存について」の中に移った。このリンクと？はアコーディオンの外のまま。
   document.getElementById('restoreLinkStartHelp').onclick = ()=>{
     openHelp([
       DL_RESTORE_WHAT_IT_DOES_HELP_PAGE,
@@ -4339,10 +4456,13 @@ function workStatusChangedNoticeHtml(){
 }
 
 function stepCh3Intro(){
+  // 【2026-10-03・ユーザー決定】常時表示の1文目・2文目を、「入れていく」から「選択する」という言い方に変えた。
+  // 1文目＝「ここでは、思い出せる出来事を選択していきます。」／2文目＝「進学・就職・転居・退職・結婚などを選択します。」。
+  // 3文目以降（年表への橋渡し・通院の予告）と？の中身は変えていない。
   document.getElementById('screen').innerHTML = `
     <div class="card">
       <h2>人生の大きな出来事を教えてください</h2>
-      <p class="lead">今は、思い出せる出来事を入れていくだけで大丈夫です。<br>進学・就職・転居・退職・結婚など、時期を思い出せそうなことを入れていきます。<br><br>ここで集めた出来事カードは、あとで年表に並べます。<button type="button" class="help-hint-btn" id="ch3EventTimelineHelp" aria-label="「年表」について">？</button><br>通院については、次のブロックで確認します。</p>
+      <p class="lead">ここでは、思い出せる出来事を選択していきます。<br>進学・就職・転居・退職・結婚などを選択します。<br><br>ここで集めた出来事カードは、あとで年表に並べます。<button type="button" class="help-hint-btn" id="ch3EventTimelineHelp" aria-label="「年表」について">？</button><br>通院については、次のブロックで確認します。</p>
       <p class="optional-notice">答えなくても次に進めます</p>
       <p class="optional-notice" style="margin-top:14px;font-weight:400;">${CHAPTER_INTRO_REST_NOTICE}</p>
     </div>`;
@@ -4971,7 +5091,29 @@ function returnToSummaryWithoutHistory(){
 function openGapReview(opts){
   state.editingGapKey = (opts && opts.editKey) || null;
   state.afterGapReviewAction = (opts && opts.afterAction) || null;
+  // 【2026-10-03・N-2】入るたびに「この回に答えた順」を空にする（前の回の分で「戻る」の行き先が決まらないように）。
+  // 預かっている未保存の選択は、もう無い空白の分だけ捨てる（ある空白の分は、開いたときに戻す＝不具合イの案B）。
+  clearGapReviewTrail();
+  const pending = gapReviewPendingMap();
+  const liveKeys = computeGaps().map(g => g.key);
+  Object.keys(pending).forEach(k => { if(!liveKeys.includes(k)) delete pending[k]; });
   goTo('ch4_gap_review');
+}
+
+// ---- 【2026-10-03・残タスクN-2】続けて確認している途中の「戻る」用の小さな道具 ----
+function gapReviewTrailList(){
+  if(!Array.isArray(state.gapReviewTrail)) state.gapReviewTrail = [];
+  return state.gapReviewTrail;
+}
+function gapReviewPendingMap(){
+  if(!state.gapReviewPending || typeof state.gapReviewPending !== 'object' || Array.isArray(state.gapReviewPending)){
+    state.gapReviewPending = {};
+  }
+  return state.gapReviewPending;
+}
+function clearGapReviewTrail(){
+  state.gapReviewTrail = [];
+  state.gapReviewBackIndex = null;
 }
 
 // ---- 通院空白確認フェーズ（第4章B） ----
@@ -4980,9 +5122,32 @@ function openGapReview(opts){
 // 【2026-09-19・A5】state.editingGapKeyが立っている間は「修正モード」：一覧の「修正する」
 // リンクから特定の1件だけを開く。findFirstUnansweredGap()は使わず（既に理由入力済みの
 // gapは対象外になってしまうため）、findGapByKey()で直接その1件を取得する。
+//
+// 【2026-10-03・残タスクN-2・ユーザー決定】続けて確認している途中の「戻る」で、1つ前の空白へ戻れるようにした。
+// 以前は、次の空白へ進むとき画面の履歴（historyStack）に積まずに同じ画面を描き直すだけなので、2件目以降で「戻る」を
+// 押すと、この画面に入る前の画面（一覧など）まで戻っていた。goTo()/goBack()と履歴の積み方は変えず、この画面の中だけで
+// 「この回に答えた空白のキー」を答えた順に持つ（state.gapReviewTrail）。「戻る」はそこを1つさかのぼって開き直し
+// （state.gapReviewBackIndex）、開き直した空白には保存済みの理由が出る。そのまま／変えて「次へ」を押すと保存して、
+// さかのぼる前の順に1つずつ進み、最後は先頭の未確認の空白へ戻る。この回の最初の空白で「戻る」を押したときは、
+// 今までどおり入ってきた画面へ戻る。修正モード（editingGapKey）では使わない（今までどおり一覧へ戻る）。
+// 「戻る」で離れるときに保存していない選択があれば、その空白のキーで預かり（state.gapReviewPending）、次にその空白を
+// 開いたときに戻す（不具合イの案B「選択は消さない」と、案Cの「まだ保存していない選択です」の一言をそのまま保つため）。
 function stepCh4GapReview(){
   const editMode = !!state.editingGapKey;
-  const target = editMode ? findGapByKey(state.editingGapKey) : findFirstUnansweredGap();
+  let backKey = null;
+  if(!editMode){
+    // さかのぼって開き直している空白が、もう無くなっていたら（通院の記録を直した等）、この回の記録から外す
+    const trail = gapReviewTrailList();
+    const idx = state.gapReviewBackIndex;
+    const keyAtIdx = (typeof idx === 'number' && idx >= 0 && idx < trail.length) ? trail[idx] : null;
+    const kept = trail.filter(k => !!findGapByKey(k));
+    state.gapReviewTrail = kept;
+    const newIdx = keyAtIdx ? kept.indexOf(keyAtIdx) : -1;
+    state.gapReviewBackIndex = newIdx >= 0 ? newIdx : null;
+    backKey = newIdx >= 0 ? kept[newIdx] : null;
+  }
+  const target = editMode ? findGapByKey(state.editingGapKey)
+               : (backKey ? findGapByKey(backKey) : findFirstUnansweredGap());
   if(!target){
     // 対象が無い＝新規表示・「戻る」・再開・DL復元のいずれかでここに来た場合（今まさに
     // 1件答え終えた直後は、下のprimaryFn内で個別に処理するためここを通らない）。
@@ -4990,6 +5155,7 @@ function stepCh4GapReview(){
     // 値に関わらず、常に一覧へ戻るだけにする（「戻る」や再開のたびに次の章へ飛ぶ不具合の対策）。
     state.editingGapKey = null;
     state.afterGapReviewAction = null;
+    clearGapReviewTrail();
     returnToSummaryWithoutHistory();
     return;
   }
@@ -5022,7 +5188,14 @@ function stepCh4GapReview(){
   // 上書きしない。これにより、まだ「次へ」を押していない選択中の内容が再開のたびに
   // 消えてしまう不具合を避ける（選択自体はデバウンス保存で既にlocalStorageに残っている）。
   if(state.tempGapReasonsKey !== target.key){
-    state.tempGapReasons = [...(state.gapReasonsByKey[target.key] || [])];
+    // 【2026-10-03・N-2】「戻る」で離れたときに預かった未保存の選択があれば、それを戻す（無ければ保存済みの理由）
+    const pending = gapReviewPendingMap();
+    if(Object.prototype.hasOwnProperty.call(pending, target.key) && Array.isArray(pending[target.key])){
+      state.tempGapReasons = [...pending[target.key]];
+      delete pending[target.key];
+    } else {
+      state.tempGapReasons = [...(state.gapReasonsByKey[target.key] || [])];
+    }
     state.tempGapReasonsKey = target.key;
   }
   // 【2026-09-20・不具合イ決着（案C）】選択自体は消さない（案B）が、今チェックリストに
@@ -5046,15 +5219,55 @@ function stepCh4GapReview(){
   // 修正対象の付箋を確実に消してから戻る。ヘッダー経由で別の章へ抜けた場合はこの「戻る」を
   // 経由しないため、付箋は温存され、そこから「戻る」で帰ってきたときは正しく同じ1件の
   // 修正モードへ戻れる（意図した挙動、テストFで確認）。
-  setFooter({secondaryLabel:'戻る', secondaryFn:()=>{ state.editingGapKey = null; goBack(); }, primaryLabel, primaryEnabled:true, primaryFn:()=>{
+  setFooter({secondaryLabel:'戻る', secondaryFn:()=>{
+    // 【2026-10-03・N-2】続けて確認している途中なら、1つ前の空白へ（画面の履歴は使わない）
+    if(!editMode){
+      const trail = gapReviewTrailList();
+      const idx = state.gapReviewBackIndex;
+      const prevIdx = (typeof idx === 'number') ? idx - 1 : trail.length - 1;
+      if(prevIdx >= 0 && prevIdx < trail.length){
+        // 保存していない選択があれば、この空白のキーで預かる（次に開いたときに戻す）
+        const pending = gapReviewPendingMap();
+        const saved = state.gapReasonsByKey[target.key] || [];
+        const dirty = JSON.stringify([...state.tempGapReasons].sort()) !== JSON.stringify([...saved].sort());
+        if(dirty) pending[target.key] = [...state.tempGapReasons];
+        else delete pending[target.key];
+        state.gapReviewBackIndex = prevIdx;
+        stepCh4GapReview();
+        window.scrollTo(0,0);
+        saveStateToStorage(); // ボタン帯の押下は#screenの変更時保存に届かないため、ここで保存する
+        return;
+      }
+    }
+    state.editingGapKey = null;
+    clearGapReviewTrail();
+    goBack();
+  }, primaryLabel, primaryEnabled:true, primaryFn:()=>{
     state.gapReasonsByKey[target.key] = [...state.tempGapReasons];
     state.tempGapReasons = [];
     state.tempGapReasonsKey = null;
+    delete gapReviewPendingMap()[target.key];
     if(editMode){
       // 修正モードの保存は、他のgapの状態に関わらず一覧へ戻るだけ（afterGapReviewActionは見ない）
       state.editingGapKey = null;
       returnToSummaryWithoutHistory();
       return;
+    }
+    // 【2026-10-03・N-2】この回に答えた順を記録する。さかのぼって開き直していたときは、記録の順のまま1つ先へ進む
+    // （最後まで進んだら、先頭の未確認の空白へ）。
+    const trail = gapReviewTrailList();
+    const idx = state.gapReviewBackIndex;
+    if(typeof idx === 'number'){
+      const nextIdx = idx + 1;
+      state.gapReviewBackIndex = nextIdx < trail.length ? nextIdx : null;
+      if(state.gapReviewBackIndex !== null || findFirstUnansweredGap()){
+        stepCh4GapReview();
+        window.scrollTo(0,0);
+        saveStateToStorage();
+        return;
+      }
+    } else {
+      trail.push(target.key);
     }
     // 【不具合ア対策】'go_ch5'への進行は、今まさに1件答え終えたこの場でだけ判定する
     // （「戻る」や再開でここに来た場合はこの分岐を通らない＝上のtarget無し判定側で処理される）
@@ -5063,6 +5276,7 @@ function stepCh4GapReview(){
       stepCh4GapReview(); // 続けて次の未入力gapを表示（editingGapKeyはfalsyのままなので通常経路）
       return;
     }
+    clearGapReviewTrail();
     const action = state.afterGapReviewAction;
     state.afterGapReviewAction = null;
     if(action === 'go_ch5'){
@@ -5236,10 +5450,13 @@ function stepCh4Summary(){
 }
 
 function stepCh5Intro(){
+  // 【V-2・エ・2026-10-02】置き方の一言を足した（なりきりチャット2回目で、入口の時点で「指でひっぱるのかな。それ苦手」と
+  // 不安になった人がいた。ユーザー決定。言い方は「タップ」にそろえる）。幅320×568では、この分「答えなくても年表に進めます」と
+  // 疲れたときの一文がボタン帯の裏に入り、スクロールしないと見えない（2026-10-02に測ってユーザーに伝えた上で決定）。
   document.getElementById('screen').innerHTML = `
     <div class="card">
       <h2>出来事を年表に置いてみましょう</h2>
-      <p class="lead">これまでに選んだ出来事を、年齢の目安をもとに、だいたいの時期に置いていきます。通院の記録があれば、近い時期の手がかりとして表示されます。</p>
+      <p class="lead">これまでに選んだ出来事を、年齢の目安をもとに、だいたいの時期に置いていきます。<br><br>カードをタップして、置きたい時期をタップするだけです。<br><br>通院の記録があれば、近い時期の手がかりとして表示されます。</p>
       <p class="optional-notice" style="margin-top:16px;">答えなくても年表に進めます</p>
       <p class="optional-notice" style="margin-top:14px;font-weight:400;">${CHAPTER_INTRO_REST_NOTICE}</p>
     </div>`;
@@ -5451,6 +5668,34 @@ function renderPlaceCard(ev){
   return `<button type="button" class="place-card${kindClass}${selected}" data-event-id="${esc(ev.id)}">${esc(ev.label)}</button>`;
 }
 
+// 【V-2・ウ・2026-10-02】出来事カードの置き方の「？」（手札の見出しの行、一言の右）の中身。文はユーザーの指定どおり。
+// 「\n」は小窓の中の改行（.help-body は white-space:pre-wrap）。小窓は、はみ出すと切れる作り（.help-body の overflow:hidden）なので、
+// 文を変えたら幅320pxで収まるか確かめること（2026-10-02：390・375・320pxとも収まる。いちばん長いのは320pxの3枚目で5行）。
+// 4枚目の「年表へ進めます」は、進むボタンの文言「年表へ」に合わせた（入口の「答えなくても年表に進めます」とも同じ言い方）。
+const PLACE_HOW_HELP = [
+  '手札をタップすると置けるエリアが点線の枠で表示されます。\n置きたいエリアをタップし配置します。',
+  '置いた手札も移動できます。\n年表内の手札をタップし移動先をタップします。',
+  '出来事の手札に戻すこともできます。\n戻したい手札をタップし、出来事の手札エリアをタップします。',
+  '配置していなくても年表へ進めます。'
+];
+
+// 【V-2・ア／ウ・2026-10-02】手札の見出しの行（「出来事の手札」＋次にすることの一言＋置き方の「？」）を描く。
+// なりきりチャット2回目で、配置画面まで来た6件のうち4件が置き方で止まった（引っぱるのか押すのか分からない／年の文字を押しても置けない）。
+// 一言は、カードを選んでいるときは「置きたい時期をタップ」、選んでいなくて手札にカードがあるときは「手札をタップ」、
+// 手札が空で何も選んでいないときは出さない（ユーザー決定）。初回だけでなく、いつも出す（9/15に「初回だけ強調する案」（ヘルプ作業リストのB-5）を
+// 見送った考え方とぶつからないように）。一言は13字までなら幅320pxでも「？」と1行に収まる（2026-10-02に測った）。
+// 「？」は見出しの右（「年表の区切り方」「年表ができました」の形）ではなく一言の右（ユーザー決定。見出しの右だと幅390pxで見出しが2行になり年表が18px低くなる）。
+// 描き直すたびに中身ごと作り直すので、「？」の押したときの動きもここで付け直す。
+function renderPlaceHandLabel(handCount){
+  const el = document.getElementById('placeHandLabel');
+  if(!el) return;
+  let hint = '';
+  if(placeSelectedKey !== null) hint = '<span class="place-hand-hint place-hand-hint-active">置きたい時期をタップ</span>';
+  else if(handCount > 0) hint = '<span class="place-hand-hint">手札をタップ</span>';
+  el.innerHTML = '出来事の手札' + hint + '<button type="button" class="help-hint-btn" id="placeHowHelp" aria-label="置き方について">？</button>';
+  document.getElementById('placeHowHelp').onclick = ()=>{ openHelp(PLACE_HOW_HELP); };
+}
+
 function stepCh5Place(){
   placeSelectedKey = null; // 画面表示のたびに選択状態を初期化（6.2節：画面離脱時に解除）
   document.getElementById('screen').innerHTML = `
@@ -5461,17 +5706,20 @@ function stepCh5Place(){
       </div>
       <div class="place-timeline" id="placeTimeline"></div>
       <div class="place-hand" id="placeHand">
-        <p class="place-hand-label">出来事の手札</p>
-        <div class="place-hand-body" id="placeHandBody">
-          <div class="place-hand-watermark">手札が残っていても<br>先へ進めます</div>
-        </div>
+        <p class="place-hand-label" id="placeHandLabel">出来事の手札</p>
+        <div class="place-hand-body" id="placeHandBody"></div>
+        <div class="place-hand-watermark">手札が残っていても先へ進めます</div>
       </div>
     </div>`;
   renderCh5PlaceScreen();
   // 【2026-09-06】付箋(returnToStack)全廃に伴い、素のgoBack()に統一した
   // （2026-09-05時点はreturnToStackの置き去り対策として条件分岐していたが、
   // pushする側自体が無くなったため分岐が不要になった）。
-  setFooter({secondaryLabel:'戻る', secondaryFn:goBack, primaryLabel:chapterAdvanceLabel('年表ができました画面へ'), primaryEnabled:true, primaryFn:()=>{ finishChapter('ch5', 'ch5_done'); }});
+  // 【V-2・2026-10-02・ユーザー決定】進むボタンの文言を「年表ができました画面へ」から「年表へ」に。前の文言はボタンの中で3段に折れていた
+  // （幅390・375・320pxとも）。1段になり、下のボタン帯が126px→92pxに低くなった分、年表と手札が高くなる（年表は320pxで137→160px）。
+  // 行き先は今までどおり「年表ができました」画面（9/06に固定）。「年表」は「完了し年表へ戻る」と同じく、「年表ができました」画面を指す使い方。
+  // 9/03に章の境目のボタンを行き先の名前にそろえた考え方は保つ（「次へ」にしなかった。経緯は相談キャンバスの付箋#85・#87）。
+  setFooter({secondaryLabel:'戻る', secondaryFn:goBack, primaryLabel:chapterAdvanceLabel('年表へ'), primaryEnabled:true, primaryFn:()=>{ finishChapter('ch5', 'ch5_done'); }});
 }
 
 function renderCh5PlaceScreen(){
@@ -5495,7 +5743,7 @@ function renderCh5PlaceScreen(){
     const educationBar = renderEducationBarRow(band);
     const cardsHere = eventsInBand(i).map(k=>renderPlaceCard(findEventObj(k))).join('');
     return `
-      <div class="place-band">
+      <div class="place-band" data-band-index="${i}">
         <div class="place-band-label">${esc(label)}</div>
         <div class="place-band-body" data-band-index="${i}">
           ${hospitalBar}
@@ -5508,11 +5756,13 @@ function renderCh5PlaceScreen(){
   // ---- 出来事の手札（下1/3、独立スクロール） ----
   const handBodyEl = document.getElementById('placeHandBody');
   const handEvents = eventsInHand();
-  const watermarkHtml = '<div class="place-hand-watermark">手札が残っていても<br>先へ進めます</div>';
-  handBodyEl.innerHTML = watermarkHtml + (handEvents.length
+  // 【V-3・2026-10-03】薄い文字「手札が残っていても先へ進めます」は、手札の枠（#placeHand）の右下へ移した
+  // （stepCh5Place()のひな形にある）。ここでは手札のカードだけを描く。
+  handBodyEl.innerHTML = handEvents.length
     ? `<div class="place-card-group">${handEvents.map(renderPlaceCard).join('')}</div>`
-    : '');
+    : '';
 
+  renderPlaceHandLabel(handEvents.length); // 【V-2・ア／ウ・2026-10-02】
   bindCh5PlaceHandlers(bands);
 }
 
@@ -5532,8 +5782,11 @@ function bindCh5PlaceHandlers(bands){
   const timelineEl = document.getElementById('placeTimeline');
   const handBodyEl = document.getElementById('placeHandBody');
 
-  // 帯本体のタップ（配置・移動・同帯内交換の行き先）
-  timelineEl.querySelectorAll('.place-band-body').forEach(bandEl=>{
+  // 帯のタップ（配置・移動・同帯内交換の行き先）
+  // 【V-2・イ・2026-10-02】以前は帯本体（.place-band-body）だけを押す場所にしていて、帯の年の文字（.place-band-label）は
+  // 押しても何も起きなかった（なりきりチャット2回目で、年の文字を押して置けなかった人がいた）。帯まるごと（.place-band）にした。
+  // 帯本体のdata-band-indexは残している（テストや通しの確認の道具が帯本体を押す。押すと帯まで伝わるので同じ動きになる）。
+  timelineEl.querySelectorAll('.place-band').forEach(bandEl=>{
     const bandIndex = parseInt(bandEl.getAttribute('data-band-index'), 10);
     bandEl.classList.toggle('place-target-active', placeSelectedKey !== null);
     bandEl.onclick = (e)=>{
@@ -5814,8 +6067,9 @@ function buildPreviewPeriodRows(){
 }
 
 // ---- 元号セレクタ風表示（仕様書2.2節4番）。和暦が決まらない場合は実物のプレースホルダーを出す。 ----
-function renderPreviewEraHtml(year){
-  const [g] = yearToWareki(parseInt(year, 10));
+// 【2026-10-03・N-8】month・dayを渡すと、月・日まで見て元号を決める（並べて出す年の数字と必ず同じ引数で呼ぶこと）
+function renderPreviewEraHtml(year, month, day){
+  const [g] = dateToWareki(parseInt(year, 10), month, day);
   if(!g){
     return `<span class="pp-date-placeholder">元号を選んでください</span>`;
   }
@@ -5835,8 +6089,8 @@ function renderPreviewPeriodRowsHtml(rows){
     return `<div class="pp-period-row"><div class="pp-period-num">1</div><div class="pp-period-body"><div class="pp-period-dates pp-blank">未入力</div><div class="pp-period-note pp-blank">記録がありません</div></div></div>`;
   }
   return rows.map((r,i)=>{
-    const fromHtml = r.fromKind==='none' ? `<span class="pp-blank">${esc(r.fromLabel)}</span>` : `${renderPreviewEraHtml(r.fromYear)}　${r.fromYear?esc(yearToWareki(r.fromYear)[1]):''}年　${r.fromMonth||''}月から`;
-    const toHtml = r.toKind==='none' ? `<span class="pp-blank">${esc(r.toLabel)}</span>` : `${renderPreviewEraHtml(r.toYear)}　${r.toYear?esc(yearToWareki(r.toYear)[1]):''}年　${r.toMonth||''}月まで`;
+    const fromHtml = r.fromKind==='none' ? `<span class="pp-blank">${esc(r.fromLabel)}</span>` : `${renderPreviewEraHtml(r.fromYear, r.fromMonth)}　${r.fromYear?esc(dateToWareki(r.fromYear, r.fromMonth)[1]):''}年　${r.fromMonth||''}月から`;
+    const toHtml = r.toKind==='none' ? `<span class="pp-blank">${esc(r.toLabel)}</span>` : `${renderPreviewEraHtml(r.toYear, r.toMonth)}　${r.toYear?esc(dateToWareki(r.toYear, r.toMonth)[1]):''}年　${r.toMonth||''}月まで`;
     const visitedHtml = r.fromKind==='none' ? '' : `<div style="margin-top:3px;">${renderPreviewCheckboxPairHtml('受診した', r.visited, '受診していない', !r.visited)}</div>`;
     const helpBadge = r.hospitalMultiple
       ? `<button type="button" class="help-hint-btn prefix hospital-multi-help" aria-label="医療機関名について">？</button>`
@@ -5890,11 +6144,23 @@ function renderPreviewAdlGridHtml(adl){
 
 // ---- 不就労理由（ア〜オの記号付き選択肢、仕様書6章）。NOTWORK_REASON_MAPの文字を使い、
 //      実物の5択（ア・イ・ウ・エ・オ）にUI側8択を縮約して表示する（出力ロジックと同じ縮約）。 ----
+// 【2026-10-03・残タスクV-4・ユーザー決定】様式は、１．障害認定日の欄が過去形（裏面AS13〜AS16）、２．現在の欄が現在形
+// （裏面AT40〜AT43）。以前は下書き確認画面で両方ともこの過去形の文を使っていたため、「２．現在」でも「体力に自信がなかったから」
+// などと出ていた（なりきりチャット2回目で、働いている人が「いや、今仕事してるんだけど…？」）。下のNOTWORK_REASON_DISPLAY_CURRENT
+// に分けた。Excelはレ点を付けるだけで様式の文がそのまま残るので、変えたのは下書き確認画面だけ。決定#46（認定日ごろの日常生活の
+// 選択肢を過去形に分けた）と同じ考え方。文は様式の文字どおり（オは様式でも「その他」）。
 const NOTWORK_REASON_DISPLAY = [
   ['ア','体力に自信がなかったから'],
   ['イ','医師から働くことを止められていたから'],
   ['ウ','働く意欲がなかったから'],
   ['エ','働きたかったが適切な職場がなかったから'],
+  ['オ','その他']
+];
+const NOTWORK_REASON_DISPLAY_CURRENT = [
+  ['ア','体力に自信がないから'],
+  ['イ','医師から働くことを止められているから'],
+  ['ウ','働く意欲がないから'],
+  ['エ','働きたいが適切な職場がないから'],
   ['オ','その他']
 ];
 // 2026-08-09バグ修正：UI側8択のうち「外に出られない」「人と関わるのがつらい」
@@ -5905,8 +6171,10 @@ const NOTWORK_REASON_DISPLAY = [
 // 選んだ理由の文言をそのままBC44セルに書き出しており、そちらは正しかった）。
 // exportToOfficialForm()のotherNoteParts構築（880〜888行目）と全く同じロジックに
 // 揃えることで、プレビューと実際の出力を一致させる。
-function renderPreviewReasonListHtml(selectedReasons, reasonOther){
+// side：'current'（２．現在）なら現在形の文、それ以外（'recognition'・省略）は過去形の文（V-4）。
+function renderPreviewReasonListHtml(selectedReasons, reasonOther, side){
   const reasons = selectedReasons || [];
+  const display = side === 'current' ? NOTWORK_REASON_DISPLAY_CURRENT : NOTWORK_REASON_DISPLAY;
   const selectedLetters = new Set(reasons.map(r=>NOTWORK_REASON_MAP[r]).filter(Boolean));
   const otherNoteParts = [];
   reasons.forEach(reason=>{
@@ -5915,7 +6183,7 @@ function renderPreviewReasonListHtml(selectedReasons, reasonOther){
   });
   if(reasons.includes('その他') && reasonOther) otherNoteParts.push(reasonOther);
 
-  const items = NOTWORK_REASON_DISPLAY.map(([letter,label])=>{
+  const items = display.map(([letter,label])=>{
     const selected = selectedLetters.has(letter);
     let extra = '';
     if(letter==='オ' && selected){
@@ -5963,7 +6231,10 @@ function renderPreviewWorkSectionHtml(work, notWorkReasons, adl, otherChips, oth
   const conditionHtml = isWorking
     ? (toLabelStrings(work.condition).length ? esc(toLabelStrings(work.condition).join('・')) : '<span class="pp-blank">仕事中や仕事が終わった時の体や気持ちの状態について記入してください。</span>')
     : '<span class="pp-blank">仕事中や仕事が終わった時の体や気持ちの状態について記入してください。</span>';
-  const reasonListHtml = renderPreviewReasonListHtml(isNotWorking ? notWorkReasons : [], notWorkReasonOther);
+  const reasonListHtml = renderPreviewReasonListHtml(isNotWorking ? notWorkReasons : [], notWorkReasonOther, side);
+  // 【V-4・2026-10-03】行の名前も様式どおり、現在の欄は現在形（裏面H40「仕事をしていない（休職している）理由」）、
+  // 認定日の欄は過去形（裏面H13「仕事をしていなかった（休職していた）理由」）。（休職…）の部分は今までどおり省いている。
+  const reasonRowLabel = side === 'current' ? '仕事をしていない理由' : '仕事をしていなかった理由';
 
   let otherText = toLabelStrings(otherChips||[]).join('・');
   if(otherNote){ otherText = otherText ? (otherText + '／' + otherNote) : otherNote; }
@@ -5978,7 +6249,7 @@ function renderPreviewWorkSectionHtml(work, notWorkReasons, adl, otherChips, oth
         <div class="pp-row"><div class="pp-row-label">通勤時間</div><div class="pp-row-value">${commuteTimeHtml}</div></div>
         <div class="pp-row"><div class="pp-row-label">出勤日数</div><div class="pp-row-value">${workDaysHtml}</div></div>
         <div class="pp-row"><div class="pp-row-label">仕事中・終わった後の体や気持ちの状態</div><div class="pp-row-value">${conditionHtml}</div></div>
-        <div class="pp-row"><div class="pp-row-label">仕事をしていなかった理由</div><div class="pp-row-value">${reasonListHtml}</div></div>
+        <div class="pp-row"><div class="pp-row-label">${reasonRowLabel}</div><div class="pp-row-value">${reasonListHtml}</div></div>
       </div>
     </div>
     <div class="pp-block">
@@ -6010,7 +6281,7 @@ function renderPreviewNotebookRowsHtml(nb){
     return `<span class="pp-notebook-type-opt${selected?' pp-selected':''}">${short}</span>`;
   }).join('');
   const dateHtml = (nb.acquiredKind && nb.acquiredKind!=='none' && nb.acquiredYear)
-    ? `${renderPreviewEraHtml(nb.acquiredYear)}　${esc(yearToWareki(parseInt(nb.acquiredYear,10))[1])}年${nb.acquiredMonth?`　${nb.acquiredMonth}月`:''}${nb.acquiredDay?`　${nb.acquiredDay}日`:''}`
+    ? `${renderPreviewEraHtml(nb.acquiredYear, nb.acquiredMonth, nb.acquiredDay)}　${esc(dateToWareki(parseInt(nb.acquiredYear,10), nb.acquiredMonth, nb.acquiredDay)[1])}年${nb.acquiredMonth?`　${nb.acquiredMonth}月`:''}${nb.acquiredDay?`　${nb.acquiredDay}日`:''}`
     : `<span class="pp-date-placeholder">元号を選んでください</span>`;
   const gradeHtml = nb.grade ? esc(nb.grade) : '<span class="pp-blank">（　級）</span>';
   const nameHtml = nb.disabilityName ? esc(nb.disabilityName) : '<span class="pp-blank">障害名</span>';
@@ -6629,7 +6900,7 @@ const WORK_DAYS_HINT_RECOGNITION = '障害認定日は、原則として初診�
 // 【2026-09-28・R-6】出勤日数を様式どおり「請求日の前月」「請求日の前々月」の2問にした（5問→6問）。
 // それまでの聞き方は「先月の出勤日数は、およそ何日でしたか」の1問だった。
 const CH2_WORK_DETAIL_STEPS = [
-  {key:'jobType', type:'text', q:'今の仕事の内容を教えてください', sub:'職種やお仕事の内容を、短くで大丈夫です。', placeholder:'例：事務職、清掃業、接客業'},
+  {key:'jobType', type:'text', q:'今の仕事の内容を教えてください', sub:'職種やお仕事の内容を、短くて大丈夫です。', placeholder:'例：事務職、清掃業、接客業'},
   {key:'commute', type:'chips-multi', q:'通勤方法を教えてください', sub:'あてはまるものを、いくつでも選んでください。', options:COMMUTE_METHOD},
   {key:'commuteTime', type:'chips-single', q:'片道の通勤時間は、どれくらいですか', sub:'一番近いものをタップしてください。', options:COMMUTE_TIME},
   {key:'workDays', type:'number', q:'請求日の前月の出勤日数は、およそ何日でしたか', sub:WORK_DAYS_HINT_CURRENT, placeholder:'例：18'},
@@ -7906,7 +8177,7 @@ function renderCh5RecognitionWorkDetailForm(){
 // 今より前の時点）を聞くこの画面では誤解を招くため（不就労理由のCH2_NOTWORK_STEPSは
 // たまたま時制に依存しない文言だったのでそのまま流用できたが、ここは事情が異なる）。
 const CH5_RECOGNITION_WORK_DETAIL_STEPS = [
-  {key:'jobType', type:'text', q:'そのころの仕事の内容を教えてください', sub:'職種やお仕事の内容を、短くで大丈夫です。', placeholder:'例：事務職、清掃業、接客業'},
+  {key:'jobType', type:'text', q:'そのころの仕事の内容を教えてください', sub:'職種やお仕事の内容を、短くて大丈夫です。', placeholder:'例：事務職、清掃業、接客業'},
   {key:'commute', type:'chips-multi', q:'通勤方法を教えてください', sub:'あてはまるものを、いくつでも選んでください。', options:COMMUTE_METHOD},
   {key:'commuteTime', type:'chips-single', q:'片道の通勤時間は、どれくらいでしたか', sub:'一番近いものをタップしてください。', options:COMMUTE_TIME},
   // 【2026-09-28・R-6】出勤日数を様式どおり「障害認定日の前月」「障害認定日の前々月」の2問にした。
@@ -9511,6 +9782,8 @@ function buildBandDetailLanes(band){
 // 年の目盛り。帯の各年の始まり（1月）の位置に短い線と年を出す。位置はバーと同じ目盛り（bandGeometry）。
 // 和暦表示のときは毎回元号を付ける（例：平成30・令和1・令和2。2026-09-25ユーザー確定。改元をまたぐ帯で
 // 数字だけだと混乱するため）。2019年はyearToWareki()のとおり「令和1」（アプリの他の画面と同じ）。
+// 【2026-10-03・N-8】目盛りは年だけなので「令和1」のまま。レーンの期間の文字は月まで分かれば月で元号を決める
+// （例：「平成31年4月〜現在」が「令和1」の目盛りの帯に並ぶ。formatGapDateLabel()参照）。
 // 最後の帯の今年の分（今月まで）は幅が狭いことがあり、年の文字が帯の右端からはみ出したり前の年と
 // 重なったりするため、その年の幅が15%に満たないときは線だけにする。
 const BAND_DETAIL_TICK_LABEL_MIN_PCT = 15;
