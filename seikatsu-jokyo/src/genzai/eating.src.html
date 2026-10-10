@@ -280,9 +280,16 @@ function renderEvaluate(){
   return html;
 }
 
+// 【2026-10-07・セキュリティ監査V-2】完了画面に出す答えは、この画面の4つの選択肢（LEVELS）の言葉だけにする。
+// 保存されている値がそれ以外（壊れた・細工された値）のときは「未選択」と表示する（保存されている値そのものは消さない）。
+// 保存データの文字列を、そのままHTMLにつながない（返すのは、LEVELSの言葉か、定数の「未選択」だけ）。
+function levelLabel(v){
+  for(var i=0;i<LEVELS.length;i++){ if(LEVELS[i].key===v) return LEVELS[i].key; }
+  return '未選択';
+}
 function renderComplete(){
   var html = '<h1>「食事」についてはこれでおわりです。</h1>';
-  html += '<div class="option selected"><div class="option-title">食事</div><div>'+(state.level||'未選択')+'</div></div>';
+  html += '<div class="option selected"><div class="option-title">食事</div><div>'+levelLabel(state.level)+'</div></div>';
   html += '<div class="handoff-box">ここまでの記録は、この端末に保存されています。次に開いたときも、続きから見られます。</div>';
   html += '<div class="chick-line">'+
       '<div class="opening-hiyoko">🐥</div>'+

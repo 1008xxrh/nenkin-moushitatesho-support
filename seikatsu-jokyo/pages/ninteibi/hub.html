@@ -160,7 +160,6 @@ function wireChickBubble(idPrefix, message, onDone){
 
 function renderItemList(){
   var handoff = readHandoff();
-  var doneCount = ADL_ITEMS.filter(function(it){ return !!handoff[it[0]]; }).length;
 
   // 本体index.htmlのADL_LEVEL_TO_NUMと同じ数字を使う（genzai側のhub.src.htmlと同じ理由）。
   // 2026-08-01：実テンプレート02.xlsxの認定日欄が過去形表記だったため、各項目のLEVELSも
@@ -169,6 +168,15 @@ function renderItemList(){
   // 援助があれば/できなかった）に再変更（本体側ADL_LEVEL_TO_NUM・各項目LEVELSと同じ対応）。
   var LEVEL_TO_NUM = {'できた':1, 'まあできた':2, '援助があれば':3, 'できなかった':4};
 
+  // 【2026-10-07・セキュリティ監査V-2】保存されている答えは、上の表の4つの言葉のどれかのときだけ「答えあり」として扱い、
+  // 画面には保存された文字列ではなく、表の言葉を出す。それ以外（壊れた・細工された値）は「答えなし（未着手）」として扱う。
+  function levelOf(v){
+    var ks = Object.keys(LEVEL_TO_NUM);
+    for(var i=0;i<ks.length;i++){ if(ks[i]===v) return ks[i]; }
+    return null;
+  }
+  var doneCount = ADL_ITEMS.filter(function(it){ return levelOf(handoff[it[0]]) !== null; }).length;
+
   var html = '<div class="progress-note">10項目中 '+doneCount+'項目 完了（'+doneCount+'/'+ADL_ITEMS.length+'）</div>';
   html += '<p class="hub-permission-note">一度に全部やらなくても大丈夫です。気になるものだけ、途中まででも大丈夫です。</p>';
   // 2026-09-27：本体側の取り込み（2026-08-02実装）に合わせ、取り込みの案内を戻した（上の【2026-07-31】コメントの追記参照）
@@ -176,13 +184,12 @@ function renderItemList(){
   html += '<div class="item-list" id="hubItemList">';
   ADL_ITEMS.forEach(function(it){
     var key = it[0], label = it[1], url = it[2];
-    var done = !!handoff[key];
+    var level = levelOf(handoff[key]);
+    var done = level !== null;
     if(url){
       var statusInner;
       if(done){
-        var num = LEVEL_TO_NUM[handoff[key]];
-        var numBadge = num ? '<span class="hub-item-num">'+num+'</span>' : '';
-        statusInner = numBadge+handoff[key];
+        statusInner = '<span class="hub-item-num">'+LEVEL_TO_NUM[level]+'</span>'+level;
       } else {
         statusInner = '未着手';
       }
