@@ -343,7 +343,9 @@ button:focus-visible, .option:focus-visible, .chip:focus-visible, [role="button"
 .pp-notebook-type-opt{border:1px solid #999;border-radius:2px;padding:1px 4px;color:#999;}
 .pp-notebook-type-opt.pp-selected{border-color:#1a1a1a;color:#1a1a1a;font-weight:700;background:#eee;}
 
-.preview-output-note{font-size:11px;color:var(--ink-soft);text-align:center;margin-top:8px;}
+/* 【N-11・2026-10-11】下書きの画面の一番下（ボタンのまわり）。下書きのブロックとの間を、今より広くした（目安24px。ユーザーに見せて確かめる） */
+.preview-export-area{margin-top:24px;}
+.preview-output-note{font-size:11px;color:var(--ink-soft);text-align:center;margin:0;}
 .preview-jump{background:none;border:none;padding:0;font-size:12px;cursor:pointer;color:var(--ink);}
 
 /* ---- ch5_place 再設計：出来事カード配置画面（画面仕様書 全14章） ---- */
@@ -1266,7 +1268,11 @@ function userFacingError(message){
   return err;
 }
 
-async function exportToOfficialForm(){
+// 【N-11・2026-10-11】申立書（02.xlsx）と続紙（04.xlsx）は、ボタンを押すたびに1つずつ出す。
+// which='continuation'なら続紙だけ、それ以外（省略したときも）なら申立書だけをダウンロードする。
+// 理由：iPhoneのSafariで2つを続けて出すと、続紙だけが保存され、申立書が保存されなかったため
+// （原因は確かめられていない。ユーザーの決定：試験版はしない・1回押すごとに1ファイル）。
+async function exportToOfficialForm(which){
   if(typeof ExcelJS === 'undefined'){
     // ここでalertして握りつぶすと、呼び出し元（stepCh5Done）が「成功」とみなしてしまう。
     // 失敗として呼び出し元のcatchに伝え、ボタン側で失敗メッセージ・再試行可能な状態に戻す。
@@ -1319,28 +1325,33 @@ async function exportToOfficialForm(){
   // 無言で書き込まれずに終わっていた（利用者は気づけない）。ここで明示エラーにして、
   // 呼び出し元（previewExportFormBtn）のcatchでちゃんと利用者に伝わるようにする。
   if(continuationRows.length > CONTINUATION_CAPACITY){
-    throw userFacingError(`通院記録・通院していない期間の件数が多く、書式の枠（16件）に${continuationRows.length - CONTINUATION_CAPACITY}件収まりません。記録の一部をまとめるか、通院していない期間の理由を調整してから、もう一度お試しください。`);
+    throw userFacingError(`通院記録・通院していない期間の件数が多く、申立書と続紙を合わせた枠（16件）に${continuationRows.length - CONTINUATION_CAPACITY}件収まりません。記録の一部をまとめるか、通院していない期間の理由を調整してから、もう一度お試しください。`);
   }
 
-  writeRowsToMainSheet(front, mainRows);
-
-  // continuationRowsが1件以上ある場合のみ04.xlsxを生成する（0件なら04は不要・生成しない）
-  let outBuffer04 = null;
-  if(continuationRows.length > 0){
+  // 続紙のボタン（which='continuation'）：続紙（04.xlsx）だけを出して終わる。
+  // 続紙が要らない（continuationRowsが0件）のに呼ばれたときは、何も出さずに伝える（ボタンは続紙が要るときにしか出さないので、ふつうは起きない）。
+  if(which === 'continuation'){
+    if(continuationRows.length === 0){
+      throw userFacingError('続紙は必要ありません。');
+    }
     const buffer04 = base64ToArrayBuffer(TEMPLATE_04_XLSX_BASE64);
     const wb04 = new ExcelJS.Workbook();
     await wb04.xlsx.load(buffer04);
     const front04 = wb04.getWorksheet('表');
     const back04 = wb04.getWorksheet('裏');
     writeRowsToContinuationSheet(front04, back04, continuationRows);
-    outBuffer04 = await wb04.xlsx.writeBuffer();
+    const outBuffer04 = await wb04.xlsx.writeBuffer();
+    downloadXlsxBuffer(outBuffer04, '病歴・就労状況等申立書(続紙).xlsx');
+    return;
   }
+
+  writeRowsToMainSheet(front, mainRows);
 
   // ---- 裏面：現在（請求日頃）の就労状況 ----
   // 【2026-10-10・N-10】下書き（今の状態の欄）と同じ分け方で書く：「仕事をしている」なら仕事の内容の側（職種・通勤方法・通勤時間・出勤日数・体調）だけ、
   // 「休職中」「仕事をしていない」なら仕事をしていない理由だけ。選んでいなければどちらも書かない。判定は、下書きと同じ関数（workStatusSides）を使う。
   // 理由：第1章で就労状況を選び直しても、前の答えを消すのは「次へ」を押したときだけの作りなので、「次へ」を押さずに別の画面へ移ると、
-  // 今の就労状況に合わない前の答えが保存データに残る。それをそのままExcelに書くと、下書きに出ない内容が出てしまう（下書きの下には「Excelは、このプレビューの内容をもとに作成されます」と書いてある）。
+  // 今の就労状況に合わない前の答えが保存データに残る。それをそのままExcelに書くと、下書きに出ない内容が出てしまう（下書きの下には「Excelは、この下書きの内容をもとに作成されます」と書いてある。2026-10-11に「プレビュー」から「下書き」へ変えた）。
   // 出力側でも「就労状況に対応しない情報は書かない」ことを保証する（認定日ごろの書き込みに2026-08-13〜14に入れた二重対策と同じ考え）。
   // 保存データの中の、使われない前の答えは消さない（「次へ」を押すまで、選び直しを元に戻せるように）。
   const work = state.work || {};
@@ -1397,20 +1408,11 @@ async function exportToOfficialForm(){
   if(state.disabilityNotebook.enabled) writeDisabilityNotebookToBack(back, state.disabilityNotebook2, 5);
 
   // ---- ファイル出力 ----
-  // 02.xlsxは常にダウンロードする。04.xlsxはcontinuationRowsが1件以上ある場合のみ続けてダウンロードする。
-  // ZIPにまとめる等のUI変更は行わず、既存の単発ダウンロード方式を2回呼ぶ形にとどめた
-  // （新規ライブラリ導入や挙動変更は今回のスコープ外。詳細はGPTへの報告を参照）。
+  // 申立書（02.xlsx）だけをダウンロードする。続紙（04.xlsx）は、続紙のボタン（which='continuation'。上）で別に出す。
+  // 【N-11・2026-10-11】以前は、続紙が要るときは、申立書のあとに間隔（300ms）をあけて続紙も続けて出していた（決定#31）。
+  // iPhoneのSafariで続紙だけが保存されたため、1回押すごとに1ファイルにした（上の関数の説明も参照）。
   const outBuffer = await wb.xlsx.writeBuffer();
   downloadXlsxBuffer(outBuffer, '病歴・就労状況等申立書.xlsx');
-  if(outBuffer04){
-    // 【決定#31・developmental mode対応時に発覚】a.click()による連続ダウンロードを間隔なしで2回発火すると、
-    // ブラウザ（特にChrome）が「複数ファイルの自動ダウンロード」とみなして2件目をブロックすることが
-    // あるため、1件目の処理が確実に始まってから2件目を発火するよう少し間隔を空ける。
-    // developmental modeでフェーズ1の固定行が加わり、02+04の2ファイル出力（=continuationRowsが
-    // 1件以上）が従来より起きやすくなったことで顕在化した。
-    await new Promise(resolve => setTimeout(resolve, 300));
-    downloadXlsxBuffer(outBuffer04, '病歴・就労状況等申立書(続紙).xlsx');
-  }
 }
 
 const CH_LABELS = ["就労状況","日常生活状況","出来事カード収集","通院の記録","出来事カード配置"];
@@ -1612,13 +1614,13 @@ const CHAPTER_INTRO_REST_NOTICE = '疲れてきたら、ここまでにしまし
 // 根拠：日本年金機構「記載要領（病歴・就労状況等申立書）」の「就労していない（いなかった）
 // 場合」の項目に「休職中だった場合にも理由を記入してください」と明記されている
 // （2026-08-02にsupport会話内で確認・出典URLはセッションまとめ参照）。
-const WORK_LEAVE_NOTICE = '「休職中」は、会社に籍は残っていても実際には働いていない状態です。この申立書では「仕事をしていない」として扱われます。雇用が続いているからといって「仕事をしている」を選ぶ必要はありません。次の画面では、仕事をしていない理由を教えてください。';
+const WORK_LEAVE_NOTICE = '「休職中」は、会社に籍は残っていても実際には働いていない状態です。雇用が続いているからといって「仕事をしている」を選ぶ必要はありません。この申立書では「仕事をしていない」として扱われます。次の画面では、仕事をしていない理由を教えてください。';
 
 // ---- ch5_recognition（認定日欄の就労状況）の「休職中だった」に対する補足注記 ----
 // 2026-08-13追加。WORK_LEAVE_NOTICEの過去形版。就労状況3択の文言確定（本セッション）に伴い新設。
 // 文言はチャットでの確定案がベースだが、ch1と異なりch5_recognitionは就労状況の質問と
 // 理由入力が同一画面に同居しているため、「次の画面では」は実態に合わせて「下の欄で」に修正した。
-const WORK_LEAVE_NOTICE_PAST = '「休職中だった」は、会社に籍は残っていても実際には働いていなかった状態です。この記入では「仕事をしていなかった」として扱います。雇用が続いていたからといって「仕事をしていた」を選ぶ必要はありません。下の欄で、仕事をしていなかった理由を教えてください。';
+const WORK_LEAVE_NOTICE_PAST = '「休職中だった」は、会社に籍は残っていても実際には働いていなかった状態です。雇用が続いていたからといって「仕事をしていた」を選ぶ必要はありません。この記入では「仕事をしていなかった」として扱います。次の画面で、仕事をしていなかった（休職していた）理由を教えてください。';
 
 // ---- 認定日欄（stepCh5Recognition）専用の時期注記 ----
 // 現在状況(ch2)と認定日欄(ch5)の混同を防ぐための文言強化（GPTレビュー指示1-1）。
@@ -6028,10 +6030,7 @@ function stepCh5Done(opts){
       <button type="button" class="accordion-trigger" data-accordion="acc-export">Excel出力について</button>
       <div class="accordion-panel" id="acc-export" hidden>
         <p class="small" style="margin:0;line-height:1.8;">
-          通院期間・通院していない期間は、最大16件まで出力されます。件数が多い場合は一部をまとめて出力し、
-          それでも16件を超えるときは出力時にエラーになり、調整する場所を案内します。
-          出力されるのは様式（02.xlsx）の一部で、続紙（04.xlsx）が必要な場合は自動で続けてダウンロードされます。
-          出力は次の「申立書の下書きを確認する」の画面から行います。
+          通院期間・通院していない期間は、16件までは出力されます。17件以上になると、Excelは作成されません。Excelは、下書きの内容をもとに作成されます。続紙がある場合は、申立書と続紙の2つのファイルになり、1つずつダウンロードします。出力は次の「申立書の下書きを確認する」の画面から行います。
         </p>
       </div>
     </div>
@@ -6157,7 +6156,8 @@ function buildPreviewPeriodRows(){
   const availableSlotsForPast = Math.max(0, 16 - currentRows.length);
   const compressed = compressPastRowsIfNeeded(availableSlotsForPast);
   if(compressed && compressed.error){
-    return { rows: compressed.rows, error: compressed.message };
+    // 【N-11】枠（16件）に収まらないのだから、続紙も要る（ボタンは2つ並べる。どちらを押しても、注意の文が出てファイルは作られない）
+    return { rows: compressed.rows, error: compressed.message, needsContinuation: true };
   }
   const { mainRows, continuationRows } = allocateRowsToMainAndContinuation(currentRows, compressed);
   // 【4.4対応】exportToOfficialForm()と同じ基準で、事前（プレビュー時点）にも枠超過を検知する。
@@ -6165,10 +6165,12 @@ function buildPreviewPeriodRows(){
   if(continuationRows.length > CONTINUATION_CAPACITY){
     return {
       rows: mainRows.concat(continuationRows),
-      error: `通院記録・通院していない期間の件数が多く、書式の枠（16件）に${continuationRows.length - CONTINUATION_CAPACITY}件収まりません。`
+      error: `通院記録・通院していない期間の件数が多く、申立書と続紙を合わせた枠（16件）に${continuationRows.length - CONTINUATION_CAPACITY}件収まりません。`,
+      needsContinuation: true
     };
   }
-  return { rows: mainRows.concat(continuationRows), error: null };
+  // 【N-11・2026-10-11】続紙が要るか（続紙のボタンとお知らせを出すか）。Excelを作る側と同じ割り振りの結果で決める（食い違わない）
+  return { rows: mainRows.concat(continuationRows), error: null, needsContinuation: continuationRows.length > 0 };
 }
 
 // ---- 元号セレクタ風表示（仕様書2.2節4番）。和暦が決まらない場合は実物のプレースホルダーを出す。 ----
@@ -6442,6 +6444,17 @@ function stepCh5Preview(){
     ? `<p class="hint" style="background:var(--warn-soft);color:var(--warn);margin:0 0 14px;">${esc(periodResult.error)}画面上部のヘッダーから該当の章に戻り、記録の一部を調整してから、もう一度お試しください。</p>`
     : '';
 
+  // ---- 【N-11・2026-10-11】下書きの画面の一番下：続紙が要るときだけ、お知らせの一文と「続紙（Excel）をダウンロード」のボタンを足す ----
+  // 続紙が要るかは、Excelを作る側と同じ割り振りの結果（periodResult.needsContinuation）。
+  // ボタンの文字の大きさ・色・間隔は、ユーザーに見せて確かめる目安（相談キャンバスの試作の値）。
+  const exportBtnStyle = 'width:100%;padding:12px;border-radius:8px;border:none;background:var(--accent-strong);color:#fff;font-size:15px;cursor:pointer;margin-top:14px;';
+  const continuationNoticeHtml = periodResult.needsContinuation
+    ? '<p class="small preview-continuation-notice" style="margin:14px 0 0;line-height:1.8;">この下書きは、申立書と続紙の2つのファイルになります。1つずつダウンロードしてください。</p>'
+    : '';
+  const continuationBtnHtml = periodResult.needsContinuation
+    ? `<button type="button" id="previewExportContinuationBtn" style="${exportBtnStyle}">続紙（Excel）をダウンロード</button>`
+    : '';
+
   // ---- 「その他日常生活で不便に感じたこと」欄の印刷見切れ注意（2026-09-05新設） ----
   // 02.xlsx裏面のこの欄（現在=AP55、認定日ごろ=AP28）は、実テンプレ確認により高さが約2行分
   // （1行あたり概ね25字、実測）しか無いことが判明した。上下中央揃え設定のため、3行目以降に
@@ -6487,6 +6500,8 @@ function stepCh5Preview(){
   // 「就労状況」「日常生活状況」はその配下の縦書きラベル（2階層構造）。HTML組み立て側で
   // 章タイトル＋ブロックの2階層を直接構成する（v4仕様書6章追補・実装解釈ズレの修正）。 ----
 
+  // 【2026-10-11・ユーザーの指示（相談キャンバスのコメント）】画面の下の一文を「このプレビューの内容」から「この下書きの内容」に変えた
+  // （利用者に見せる言葉は「下書き」にそろえる。「プレビュー」は内部の名前としてだけ残る）。
   document.getElementById('screen').innerHTML = `
     <div class="card">
       <h2>申立書の下書き確認</h2>
@@ -6550,11 +6565,14 @@ function stepCh5Preview(){
         </div>
       </div>
 
-      ${otherTextClipWarningHtml}
-      <button type="button" id="previewExportFormBtn" style="width:100%;padding:12px;border-radius:8px;border:none;background:var(--accent-strong);color:#fff;font-size:15px;cursor:pointer;margin-top:14px;">申立書（Excel）をダウンロード</button>
-      <p class="small" id="previewExportFormStatus" style="margin-top:8px;color:var(--accent-strong);"></p>
-
-      <p class="preview-output-note">Excelは、このプレビューの内容をもとに作成されます</p>
+      <div class="preview-export-area">
+        ${otherTextClipWarningHtml}
+        <p class="preview-output-note">Excelは、この下書きの内容をもとに作成されます</p>
+        ${continuationNoticeHtml}
+        <button type="button" id="previewExportFormBtn" style="${exportBtnStyle}">申立書（Excel）をダウンロード</button>
+        ${continuationBtnHtml}
+        <p class="small" id="previewExportFormStatus" style="margin-top:8px;color:var(--accent-strong);"></p>
+      </div>
 
       ${deleteSectionHtml}
     </div>`;
@@ -6601,15 +6619,19 @@ function stepCh5Preview(){
       ]);
     };
   });
-  document.getElementById('previewExportFormBtn').onclick = async ()=>{
-    const btn = document.getElementById('previewExportFormBtn');
+  // 【N-11・2026-10-11】申立書と続紙は、ボタンを押すたびに1つずつ出す（exportToOfficialForm(which)）。
+  // 押したあとの成功の一文（「ダウンロードしました。」）は出さない：アプリは、小窓で保存されたかを知ることができないため。
+  // 失敗の文（userFacingの文・汎用の文）は、今までどおり出す。作っている間は、2つのボタンとも押せなくする（2つを同時に出さないため）。
+  const exportButtons = ['previewExportFormBtn', 'previewExportContinuationBtn']
+    .map(id => document.getElementById(id)).filter(Boolean);
+  const runExport = async (btn, which)=>{
     const statusEl = document.getElementById('previewExportFormStatus');
-    btn.disabled = true;
+    const label = btn.textContent;
+    exportButtons.forEach(b => { b.disabled = true; });
     btn.textContent = '作成中…';
     statusEl.textContent = '';
     try{
-      await exportToOfficialForm();
-      statusEl.textContent = 'ダウンロードしました。';
+      await exportToOfficialForm(which);
     }catch(err){
       console.error(err);
       // userFacing:trueが付いたエラーは、対処方法込みで利用者にそのまま見せてよいメッセージ
@@ -6619,10 +6641,13 @@ function stepCh5Preview(){
         ? err.message
         : '作成に失敗しました。もう一度お試しください。';
     }finally{
-      btn.disabled = false;
-      btn.textContent = '申立書（Excel）をダウンロード';
+      exportButtons.forEach(b => { b.disabled = false; });
+      btn.textContent = label;
     }
   };
+  document.getElementById('previewExportFormBtn').onclick = ()=> runExport(document.getElementById('previewExportFormBtn'), 'main');
+  const continuationBtn = document.getElementById('previewExportContinuationBtn');
+  if(continuationBtn) continuationBtn.onclick = ()=> runExport(continuationBtn, 'continuation');
 
   document.getElementById('restartFromScratchBtn').onclick = ()=>{
     const ok = confirm('保存されている入力内容を削除して、最初からやり直します（「生活状況をふりかえる」の内容は消えません）。よろしいですか？');
@@ -6707,7 +6732,7 @@ function renderPastFragmentList(){
           <button type="button" data-save-fragment="${esc(f.id)}" style="flex:1;padding:10px;border-radius:8px;border:none;background:var(--accent-strong);color:#fff;cursor:pointer;">編集を保存</button>
           <button type="button" data-delete-fragment="${esc(f.id)}" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--danger);background:var(--danger-soft);color:var(--danger);cursor:pointer;">削除</button>
         </div>
-        <button type="button" class="link-btn" data-collapse-fragment="${esc(f.id)}" style="margin-top:8px;">閉じる</button>
+        <button type="button" class="link-btn" data-collapse-fragment="${esc(f.id)}" style="margin:24px auto 0;">閉じる</button>
       </div>`;
   }).join('');
 
@@ -8419,7 +8444,7 @@ const CH5_RECOGNITION_WORK_DETAIL_STEPS = [
   // それまでの聞き方は「出勤日数は、およそ月に何日でしたか」（月あたり）の1問だった。
   {key:'workDays', type:'number', q:'障害認定日の前月の出勤日数は、およそ何日でしたか', sub:WORK_DAYS_HINT_RECOGNITION, placeholder:'例：18'},
   {key:'workDaysPrev2', type:'number', q:'障害認定日の前々月の出勤日数は、およそ何日でしたか', sub:'覚えている範囲で大丈夫です。', placeholder:'例：18'},
-  {key:'condition', type:'chips-multi', q:'仕事中や終わった後の、体や気持ちの状態を教えてください', sub:'あてはまるものを、いくつでも選んでください。', options:WORK_CONDITION}
+  {key:'condition', type:'chips-multi', q:'仕事中や終わった後の、体や気持ちの状態がどうだったか教えてください', sub:'あてはまるものを、いくつでも選んでください。', options:WORK_CONDITION}
 ];
 let ch5WorkDetailConvIndex = 0;
 
