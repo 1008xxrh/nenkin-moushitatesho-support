@@ -962,6 +962,8 @@ function buildPeriodsForForm(modeOverride){
   // （吸収しても目立ちにくいもの）」から順に吸収し、枠に収まるまで行数を減らす。
   // それでもなお枠を超える場合は、これまで通り後段（allocateRowsToMainAndContinuation）の
   // 上限処理（超過分は書き込まれず警告）に委ねる。
+  // 【H-35・2026-10-14】上の「枠」は、今は続紙が1セットのときの枠（16行）の意味。超えたときは、エラーにせず、続紙を11件ごとに
+  // 表裏1セットずつ増やして全部書く（ユーザーの決定）。端数の吸収は、枠の段（16・27・38…）が1つ下がるときだけ働く（下のコメント）。
   const birth = parseInt(state.profile.birthYear) || null;
   const mode = modeOverride || state.outputMode || 'standard';
   const useDevelopmental = mode === 'developmental' && !!birth;
@@ -1028,14 +1030,22 @@ function buildPeriodsForForm(modeOverride){
     c.chunks = c.generousChunks; // 既定値。枠が足りない場合のみ、下で差し替える
   });
 
-  const totalCapacity = MAIN_SHEET_ROW_STARTS.length + CONTINUATION_CAPACITY; // 02.xlsx+04.xlsxの総枠（5+11=16行）
+  // 【H-35・2026-10-14】行数が16行（続紙が1セットの枠）に収まっていれば、そのまま確定する（今までと同じ）。
+  // 超えるときは、吸収できるだけ吸収したときに入る、いちばん小さい枠の段（16・27・38…）を目指し、
+  // それが今の行数が入る段より小さい（続紙のセットが1つ以上減る）ときだけ、端数を小さいものから吸収する。
+  // 吸収しても続紙のセットの数が変わらないなら、吸収しない（紙の枚数が同じなら、端数を吸収する意味が無い）。
+  // 16行に収まる場合の結果は、今までと変わらない（吸収して16行以下に収まるときは、今までと同じ吸収をする）。
+  const firstTierCapacity = MAIN_SHEET_ROW_STARTS.length + CONTINUATION_CAPACITY; // 02.xlsx 5行＋04.xlsx 1セット11行＝16行
   let totalRows = candidates.reduce((sum,c)=>sum + c.chunks.length, 0);
-  if(totalRows > totalCapacity){
+  if(totalRows > firstTierCapacity){
     const reducible = candidates.filter(c=>c.canReduce).sort((a,b)=>a.remainderMonths - b.remainderMonths);
-    for(const c of reducible){
-      if(totalRows <= totalCapacity) break;
-      totalRows -= 1; // absorbBorderlineは境界1箇所だけを吸収する仕組みなので、必ずちょうど1行分減る
-      c.chunks = c.reducedChunks;
+    const target = formCapacityTierAtLeast(totalRows - reducible.length);
+    if(target < formCapacityTierAtLeast(totalRows)){
+      for(const c of reducible){
+        if(totalRows <= target) break;
+        totalRows -= 1; // absorbBorderlineは境界1箇所だけを吸収する仕組みなので、必ずちょうど1行分減る
+        c.chunks = c.reducedChunks;
+      }
     }
   }
 
@@ -1307,27 +1317,9 @@ async function exportToOfficialForm(which){
   // ---- 表面・続紙：期間（Step6：Step5 row経路へ正式接続） ----
   // 旧 buildPeriodsForForm().slice(0,5) への直接依存はここで撤去した。
   // row生成 → 圧縮 → 02/04割り振り → 02/04書き込み、の順（仕様書5.5章・9.1章、Step6）。
-  const currentRows = buildCurrentPeriodRows();
-  // 02(5行)+04(11行)=16行が全体の枠。currentRowsが多い場合はその分過去編の使える枠が減る。
-  const availableSlotsForPast = Math.max(0, 16 - currentRows.length);
-  const compressed = compressPastRowsIfNeeded(availableSlotsForPast);
-  if(compressed && compressed.error){
-    // compressPastRowsIfNeeded()は明示エラーオブジェクトを返す方式（pure function方針）。
-    // exportToOfficialForm()自体は既存throw方式（呼び出し元stepCh5Doneでcatchする設計）のため、
-    // ここでthrowに変換して既存のエラーハンドリング経路に乗せる。
-    throw userFacingError(compressed.message);
-  }
-  const pastRows = compressed;
-  const { mainRows, continuationRows } = allocateRowsToMainAndContinuation(currentRows, pastRows);
-
-  // 【4.4対応】compressPastRowsIfNeeded()は過去編（旧timeBucketデータ）しか圧縮対象にしないため、
-  // 現状編（state.hospitals）由来の件数だけで16行の枠を超えるケースを検知できない。
-  // 従来はこのままwriteRowsToContinuationSheet()まで進み、11件を超えた分がconsole.warnのみで
-  // 無言で書き込まれずに終わっていた（利用者は気づけない）。ここで明示エラーにして、
-  // 呼び出し元（previewExportFormBtn）のcatchでちゃんと利用者に伝わるようにする。
-  if(continuationRows.length > CONTINUATION_CAPACITY){
-    throw userFacingError(`通院記録・通院していない期間の件数が多く、申立書と続紙を合わせた枠（16件）に${continuationRows.length - CONTINUATION_CAPACITY}件収まりません。記録の一部をまとめるか、通院していない期間の理由を調整してから、もう一度お試しください。`);
-  }
+  // 【H-35・2026-10-14】件数が16件を超えても、エラーにはしない。続紙を11件ごとに表裏1セットずつ増やして、全部書く（ユーザーの決定）。
+  // 以前はここで、16件を超えると「申立書と続紙を合わせた枠（16件）に◯件収まりません。」と明示エラーにしていた（4.4対応・J-16）。
+  const { mainRows, continuationRows } = buildAllocatedPeriodRows();
 
   // 続紙のボタン（which='continuation'）：続紙（04.xlsx）だけを出して終わる。
   // 続紙が要らない（continuationRowsが0件）のに呼ばれたときは、何も出さずに伝える（ボタンは続紙が要るときにしか出さないので、ふつうは起きない）。
@@ -1338,9 +1330,7 @@ async function exportToOfficialForm(which){
     const buffer04 = base64ToArrayBuffer(TEMPLATE_04_XLSX_BASE64);
     const wb04 = new ExcelJS.Workbook();
     await wb04.xlsx.load(buffer04);
-    const front04 = wb04.getWorksheet('表');
-    const back04 = wb04.getWorksheet('裏');
-    writeRowsToContinuationSheet(front04, back04, continuationRows);
+    writeContinuationSets(wb04, continuationRows);
     const outBuffer04 = await wb04.xlsx.writeBuffer();
     downloadXlsxBuffer(outBuffer04, '病歴・就労状況等申立書(続紙).xlsx');
     return;
@@ -1615,13 +1605,16 @@ const CHAPTER_INTRO_REST_NOTICE = '疲れてきたら、ここまでにしまし
 // 根拠：日本年金機構「記載要領（病歴・就労状況等申立書）」の「就労していない（いなかった）
 // 場合」の項目に「休職中だった場合にも理由を記入してください」と明記されている
 // （2026-08-02にsupport会話内で確認・出典URLはセッションまとめ参照）。
-const WORK_LEAVE_NOTICE = '「休職中」は、会社に籍は残っていても実際には働いていない状態です。雇用が続いているからといって「仕事をしている」を選ぶ必要はありません。この申立書では「仕事をしていない」として扱われます。次の画面では、仕事をしていない理由を教えてください。';
+// 【J-14・2026-10-14（ユーザーの決定）】以前は、2文目と最後の文のあいだに「この申立書では「仕事をしていない」として扱われます。」の1文があった。
+// 「アプリの都合」の説明が途中に入ると混乱させるおそれがあるため、この1文だけ消した。誤解を防ぐ説明（1〜2文目）と、次の画面の案内（最後の文）は残してある。
+const WORK_LEAVE_NOTICE = '「休職中」は、会社に籍は残っていても実際には働いていない状態です。雇用が続いているからといって「仕事をしている」を選ぶ必要はありません。次の画面では、仕事をしていない理由を教えてください。';
 
 // ---- ch5_recognition（認定日欄の就労状況）の「休職中だった」に対する補足注記 ----
 // 2026-08-13追加。WORK_LEAVE_NOTICEの過去形版。就労状況3択の文言確定（本セッション）に伴い新設。
 // 文言はチャットでの確定案がベースだが、ch1と異なりch5_recognitionは就労状況の質問と
 // 理由入力が同一画面に同居しているため、「次の画面では」は実態に合わせて「下の欄で」に修正した。
-const WORK_LEAVE_NOTICE_PAST = '「休職中だった」は、会社に籍は残っていても実際には働いていなかった状態です。雇用が続いていたからといって「仕事をしていた」を選ぶ必要はありません。この記入では「仕事をしていなかった」として扱います。次の画面で、仕事をしていなかった（休職していた）理由を教えてください。';
+// 【J-14・2026-10-14（ユーザーの決定）】現在の側と同じく、「この記入では「仕事をしていなかった」として扱います。」の1文だけ消した。
+const WORK_LEAVE_NOTICE_PAST = '「休職中だった」は、会社に籍は残っていても実際には働いていなかった状態です。雇用が続いていたからといって「仕事をしていた」を選ぶ必要はありません。次の画面で、仕事をしていなかった（休職していた）理由を教えてください。';
 
 // ---- 認定日欄（stepCh5Recognition）専用の時期注記 ----
 // 現在状況(ch2)と認定日欄(ch5)の混同を防ぐための文言強化（GPTレビュー指示1-1）。
@@ -2855,6 +2848,86 @@ function allocateRowsToMainAndContinuation(currentRows, pastRows){
 }
 
 // =====================================================================
+// 【H-35・2026-10-14】続紙を、11件ごとに表裏1セットずつ増やす（ユーザーの決定：17件を超えたら続紙のシートを表裏1セットで追加していく）
+// =====================================================================
+
+// 申立書（5件）と続紙に入れる行を、1か所で決める。Excelを作る側と、下書きの画面が、同じ結果を使う（食い違わない）。
+// 現状編の行 → 過去編（旧データ移行専用）の圧縮 → 02/04割り振り。以前は、同じ手順が2か所に写してあった。
+// 過去編の圧縮は、今までどおり16件に収まるよう試す。収まらなくてもエラーにはしない（続紙を増やして書けるため）。
+function buildAllocatedPeriodRows(){
+  const currentRows = buildCurrentPeriodRows();
+  const availableSlotsForPast = Math.max(0, MAIN_SHEET_ROW_STARTS.length + CONTINUATION_CAPACITY - currentRows.length);
+  const compressed = compressPastRowsIfNeeded(availableSlotsForPast);
+  // 収まらなかったときは、圧縮できるところまで圧縮した行（rows）が返ってくる。それをそのまま使う
+  const pastRows = (compressed && compressed.error) ? compressed.rows : compressed;
+  return allocateRowsToMainAndContinuation(currentRows, pastRows);
+}
+
+// 様式に入る行数の「枠の段」：続紙が1セットなら16行、2セットなら27行、3セットなら38行…（申立書5行＋続紙11行×セット数）。
+// n行が入る、いちばん小さい段を返す（n が16以下なら16）。端数の吸収で、続紙のセットが減らせるかを知るために使う。
+function formCapacityTierAtLeast(n){
+  let tier = MAIN_SHEET_ROW_STARTS.length + CONTINUATION_CAPACITY;
+  while(tier < n) tier += CONTINUATION_CAPACITY;
+  return tier;
+}
+
+// 続紙の行を、11件ずつ（表5＋裏6）のセットに分ける。続紙が要らなければ、空の配列。
+function splitIntoContinuationSets(continuationRows){
+  const rows = continuationRows || [];
+  const sets = [];
+  for(let i = 0; i < rows.length; i += CONTINUATION_CAPACITY){
+    sets.push(rows.slice(i, i + CONTINUATION_CAPACITY));
+  }
+  return sets;
+}
+
+// シートを、セルを1つずつ写して複製する（値・書式・列幅・行の高さ・結合・用紙設定・選択リスト）。
+// ワークシートのモデルごと写す方法は、罫線が消えたセルが出た（2026-10-14に、04.xlsxの複製で461セル・目で見ても区切りの線が消えた）ので使わない。
+function cloneWorksheetCellByCell(wb, src, newName){
+  const deep = o => (o === undefined ? undefined : JSON.parse(JSON.stringify(o)));
+  const dst = wb.addWorksheet(newName, {
+    pageSetup: deep(src.pageSetup),
+    properties: deep(src.properties),
+    views: deep(src.views),
+    state: src.state
+  });
+  src.columns.forEach((c, i)=>{
+    const dc = dst.getColumn(i + 1);
+    if(c.width !== undefined) dc.width = c.width;
+    if(c.hidden) dc.hidden = true;
+    if(c.style && Object.keys(c.style).length) dc.style = deep(c.style);
+  });
+  src.eachRow({ includeEmpty: true }, (row, r)=>{
+    const nr = dst.getRow(r);
+    if(row.height !== undefined) nr.height = row.height;
+    if(row.hidden) nr.hidden = true;
+    row.eachCell({ includeEmpty: true }, (cell, c)=>{
+      const nc = nr.getCell(c);
+      // 結合された2つ目以降のセルには値を写さない（結合は、下でまとめてやる）
+      if(cell.type !== ExcelJS.ValueType.Merge && cell.value !== null && cell.value !== undefined) nc.value = deep(cell.value);
+      if(cell.style) nc.style = deep(cell.style);
+    });
+  });
+  (src.model.merges || []).forEach(m => dst.mergeCellsWithoutStyle(m));
+  const dv = src.dataValidations && src.dataValidations.model;
+  if(dv) dst.dataValidations.model = deep(dv);
+  return dst;
+}
+
+// 続紙（04.xlsx）のワークブックに、続紙の全部の行を書く。1セット目は「表」「裏」、2セット目からは複製した「表(2)」「裏(2)」…。
+// 複製は、まだ何も書いていないうちにやる（書いたあとに複製すると、書いた文字まで写ってしまう）。
+function writeContinuationSets(wb04, continuationRows){
+  const sets = splitIntoContinuationSets(continuationRows);
+  const front0 = wb04.getWorksheet('表');
+  const back0 = wb04.getWorksheet('裏');
+  const sheets = [[front0, back0]];
+  for(let k = 2; k <= sets.length; k++){
+    sheets.push([cloneWorksheetCellByCell(wb04, front0, `表(${k})`), cloneWorksheetCellByCell(wb04, back0, `裏(${k})`)]);
+  }
+  sets.forEach((setRows, i)=> writeRowsToContinuationSheet(sheets[i][0], sheets[i][1], setRows));
+}
+
+// =====================================================================
 // Step6：writeRowsToMainSheet() / writeRowsToContinuationSheet()
 // 02.xlsx・04.xlsxの実テンプレ確認（Step6前半）で確定したセル番地に基づき、
 // FormPeriodRow[]をExcelワークシートへ書き込む。
@@ -4083,9 +4156,12 @@ function handleDlSaveClick(){
     // 【2026-10-04・残タスクV-9】保存したので、黄色（保存していない変更がある印）を外して白に戻す。
     // 失敗したとき（下のcatch）は黄色のまま。
     document.querySelectorAll('.dl-save-unsaved').forEach(el=>el.classList.remove('dl-save-unsaved', 'dl-save-blink'));
+    // 【N-12・2026-10-14（ユーザーの決定）】押したあとの成功の一文は出さない（Excelのボタンと同じ）。
+    // アプリは、小窓で保存されたかを知ることができないため。前の「前回の保存から内容は変わっていません。…」の案内が残らないよう、空にする。
+    // 失敗の文（下のcatch）は残す。黄色を白に戻す動きと、保存した印（上）は、今までどおり（ユーザーの決定）。
     const statusEl = document.getElementById('footerStatus');
     if(statusEl){
-      statusEl.textContent = 'ファイルをダウンロードしました。';
+      statusEl.textContent = '';
       updateFooterSpaceVar(document.getElementById('footerNav'));
     }
   }catch(err){
@@ -4328,6 +4404,10 @@ function stepStart(){
   // ・書かないと決めたもの：「相談に行く前に」（相談したあとの人が使っていいのか迷う）、請求の準備の流れ（利用者の行動次第）。
   // ・題名の「（試作）」はそのまま（満足できるものになったら外す。#39）。導入文は「このWebアプリは」（試作版とWebアプリは別の意味の呼び方）。
   //   【2026-10-09・J-10】題名に「非公式」を足した（「申立書サポート（非公式・試作）」。理由は9/19のユーザーの起案：「うつ状態等で判断力が落ちているときに、公式の年金機構ツールと誤解される可能性への配慮」。READMEの題には9/19に足してあった）。タブの名前（title）は変えていない。折り返しは、2つの部分（申立書サポート／（非公式・試作））の間でだけ（ユーザーの決定：幅320で「非公式」の途中で割れるため）。
+  // ・【2026-10-17・いろは05（ユーザーの決定）】3つ目の見出しを、以前の「このWebアプリで出力されないもの」から「このWebアプリで聞かないこと」にした。
+  //   一覧は 傷病名／発病日／初診日　など の3行（「初診日」と「など」の間は全角の空白1つ）。「診断書等との整合確認が必要な項目」の行は消した
+  //   （アプリの全体がそうなるため）。「発病時期」は、様式・下書きの画面と同じ「発病日」にそろえた。氏名・電話番号・住所は一覧に足さない
+  //   （入れることで逆に不安になる可能性がある、とのユーザーの判断）。補足の一文は足さない（V-1の決定のまま）。
   // ・再開のリンクと？はアコーディオンの外に残す（データが消えてしまった人が着くのはこの画面のため）。
   // 経緯・測った数字は相談キャンバスの「V-1 最初の画面（10/2）」ページ（付箋#90〜#92）と管理ページV-1。
   document.getElementById('screen').innerHTML = `
@@ -4365,13 +4445,12 @@ function stepStart(){
           </div>
         </div>
         <div class="accordion-item">
-          <button type="button" class="accordion-trigger" data-accordion="acc-start-not">このWebアプリで出力されないもの</button>
+          <button type="button" class="accordion-trigger" data-accordion="acc-start-not">このWebアプリで聞かないこと</button>
           <div class="accordion-panel" id="acc-start-not" hidden>
             <ul style="margin:0;padding-left:18px;font-size:14px;line-height:1.7;">
               <li>傷病名</li>
-              <li>発病時期</li>
-              <li>初診日</li>
-              <li>診断書等との整合確認が必要な項目</li>
+              <li>発病日</li>
+              <li>初診日　など</li>
             </ul>
           </div>
         </div>
@@ -5767,10 +5846,14 @@ function renderPlaceCard(ev){
 // 「\n」は小窓の中の改行（.help-body は white-space:pre-wrap）。小窓は、はみ出すと切れる作り（.help-body の overflow:hidden）なので、
 // 文を変えたら幅320pxで収まるか確かめること（2026-10-02：390・375・320pxとも収まる。いちばん長いのは320pxの3枚目で5行）。
 // 4枚目の「年表へ進めます」は、進むボタンの文言「年表へ」に合わせた（入口の「答えなくても年表に進めます」とも同じ言い方）。
+// 【2026-10-17・いろは06（ユーザーの決定）】2枚目と3枚目だけ直した。言葉の意味（ユーザーの整理）：手札＝手元にある（まだ年表に置いていない）カード／
+// カード＝出来事の札全般／出来事＝カードの中身。年表に置いたあとのカードを「手札」と呼んでいた2枚目・3枚目を、「カード」「手札」の使い分けにそろえた
+// （2枚目：置いたカード→年表内のカード／3枚目：手札に戻す・手札エリア）。ほかの「手札」「カード」「出来事」は変えない。
+// 小窓は、はみ出すと切れる作りなので、直したら幅320・375・390で収まるか確かめること（2026-10-17：どれも収まる。3枚目は幅320で5行→3行）。
 const PLACE_HOW_HELP = [
   '手札をタップすると置けるエリアが点線の枠で表示されます。\n置きたいエリアをタップし配置します。',
-  '置いた手札も移動できます。\n年表内の手札をタップし移動先をタップします。',
-  '出来事の手札に戻すこともできます。\n戻したい手札をタップし、出来事の手札エリアをタップします。',
+  '置いたカードも移動できます。\n年表内のカードをタップし移動先をタップします。',
+  '手札に戻すこともできます。\n年表内のカードをタップし、手札エリアをタップします。',
   '配置していなくても年表へ進めます。'
 ];
 
@@ -6022,7 +6105,7 @@ function stepCh5Done(opts){
       <button type="button" class="accordion-trigger" data-accordion="acc-about">この試作版について</button>
       <div class="accordion-panel" id="acc-about" hidden>
         <p class="small" style="margin:0;line-height:1.8;">
-          傷病名・発病時期・初診日など、診断書等との整合が必要な項目は、この試作版では入力・出力の対象に含まれていません。
+          傷病名・発病日・初診日などは、この試作版では入力・出力の対象に含まれていません。
           様式（申立書）の全項目ではなく、一部のみを扱っています（最初の画面の案内もご参照ください）。
         </p>
       </div>
@@ -6031,7 +6114,7 @@ function stepCh5Done(opts){
       <button type="button" class="accordion-trigger" data-accordion="acc-export">Excel出力について</button>
       <div class="accordion-panel" id="acc-export" hidden>
         <p class="small" style="margin:0;line-height:1.8;">
-          通院期間・通院していない期間は、16件までは出力されます。17件以上になると、Excelは作成されません。Excelは、下書きの内容をもとに作成されます。続紙がある場合は、申立書と続紙の2つのファイルになり、1つずつダウンロードします。出力は次の「申立書の下書きを確認する」の画面から行います。
+          通院期間・通院していない期間が6件以上になると、続紙も作られます。続紙は、11件ごとに、表と裏のシートが1組ずつ増えます。Excelは、下書きの内容をもとに作成されます。続紙がある場合は、申立書と続紙の2つのファイルになり、1つずつダウンロードします。出力は次の「申立書の下書きを確認する」の画面から行います。
         </p>
       </div>
     </div>
@@ -6150,28 +6233,12 @@ function stepCh5Done(opts){
 // =====================================================================
 
 // ---- 通院期間・通院していない期間の全件行（mainRows+continuationRows）を、
-//      exportToOfficialForm()と同じ手順（buildCurrentPeriodRows→圧縮→割り振り）で取得する。
-//      件数超過時（compressPastRowsIfNeeded()がエラーを返す場合）はエラー情報も返す。
+//      exportToOfficialForm()と同じ手順（buildAllocatedPeriodRows）で取得する。
+// 【H-35・2026-10-14】件数が16件を超えても、注意の文は出さない（続紙が増えて全部書けるため）。
+//      続紙が要るか（続紙のボタンとお知らせを出すか）は、Excelを作る側と同じ割り振りの結果で決める（食い違わない）。
 function buildPreviewPeriodRows(){
-  const currentRows = buildCurrentPeriodRows();
-  const availableSlotsForPast = Math.max(0, 16 - currentRows.length);
-  const compressed = compressPastRowsIfNeeded(availableSlotsForPast);
-  if(compressed && compressed.error){
-    // 【N-11】枠（16件）に収まらないのだから、続紙も要る（ボタンは2つ並べる。どちらを押しても、注意の文が出てファイルは作られない）
-    return { rows: compressed.rows, error: compressed.message, needsContinuation: true };
-  }
-  const { mainRows, continuationRows } = allocateRowsToMainAndContinuation(currentRows, compressed);
-  // 【4.4対応】exportToOfficialForm()と同じ基準で、事前（プレビュー時点）にも枠超過を検知する。
-  // ダウンロードボタンを押すまで気づけない状態を避け、プレビュー画面の時点で警告を出す。
-  if(continuationRows.length > CONTINUATION_CAPACITY){
-    return {
-      rows: mainRows.concat(continuationRows),
-      error: `通院記録・通院していない期間の件数が多く、申立書と続紙を合わせた枠（16件）に${continuationRows.length - CONTINUATION_CAPACITY}件収まりません。`,
-      needsContinuation: true
-    };
-  }
-  // 【N-11・2026-10-11】続紙が要るか（続紙のボタンとお知らせを出すか）。Excelを作る側と同じ割り振りの結果で決める（食い違わない）
-  return { rows: mainRows.concat(continuationRows), error: null, needsContinuation: continuationRows.length > 0 };
+  const { mainRows, continuationRows } = buildAllocatedPeriodRows();
+  return { rows: mainRows.concat(continuationRows), needsContinuation: continuationRows.length > 0 };
 }
 
 // ---- 元号セレクタ風表示（仕様書2.2節4番）。和暦が決まらない場合は実物のプレースホルダーを出す。 ----
@@ -6441,10 +6508,6 @@ function stepCh5Preview(){
     `<button type="button" class="preview-jump" data-jump="${s.anchor}">${s.done ? '✓' : '○'} ${esc(s.label)}</button>`
   ).join('');
 
-  const periodErrorHtml = periodResult.error
-    ? `<p class="hint" style="background:var(--warn-soft);color:var(--warn);margin:0 0 14px;">${esc(periodResult.error)}画面上部のヘッダーから該当の章に戻り、記録の一部を調整してから、もう一度お試しください。</p>`
-    : '';
-
   // ---- 【N-11・2026-10-11】下書きの画面の一番下：続紙が要るときだけ、お知らせの一文と「続紙（Excel）をダウンロード」のボタンを足す ----
   // 続紙が要るかは、Excelを作る側と同じ割り振りの結果（periodResult.needsContinuation）。
   // ボタンの文字の大きさ・色・間隔は、ユーザーに見せて確かめる目安（相談キャンバスの試作の値）。
@@ -6532,8 +6595,6 @@ function stepCh5Preview(){
           </div>
         </div>
       </div>
-
-      ${periodErrorHtml}
 
       <div class="preview-paper">
         <div class="preview-paper-title">病歴・就労状況等申立書</div>
