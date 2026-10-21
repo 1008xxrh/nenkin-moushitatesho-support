@@ -19,8 +19,8 @@
      するよう宣言する。iPhoneのSafari・PCのブラウザは、もともと明るい配色で表示しているので変わらない。
      Samsung Internetでも止まるかは確認できていない（Samsungの説明はこの宣言を見る設定があるとしている）。 -->
 <meta name="color-scheme" content="only light">
-<title>申立書サポート（試作・第1〜5章）</title>
-<meta name="description" content="障害年金の『病歴・就労状況等申立書』の下書きを、少しずつ整理できるツールです（非公式・試作）。入力した内容は、この端末のブラウザの中だけに保存され、外部には送信されません。">
+<title>申立書サポート（非公式）</title>
+<meta name="description" content="障害年金の『病歴・就労状況等申立書』の下書きを、少しずつ整理できるツールです（非公式）。入力した内容は、この端末のブラウザの中だけに保存され、外部には送信されません。">
 <style>
 :root{
   --bg:#F4F2EC;
@@ -75,7 +75,8 @@ header.tasks{padding:16px 20px 4px;}
 main{flex:1;padding:8px 20px var(--footer-space, 120px);}
 .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px 20px;}
 h1{font-size:20px;font-weight:500;margin:0 0 8px;}
-/* 【2026-10-09・J-10】最初の画面の見出しの折り返し位置：「申立書サポート」と「（非公式・試作）」の間でだけ割れる（幅320で「非公式」の途中で割れないように）。 */
+/* 【2026-10-09・J-10】最初の画面の見出しの折り返し位置：「申立書サポート」と「（非公式）」の間でだけ割れる（幅320で「非公式」の途中で割れないように）。
+   【2026-10-20・J-19】見出しから「試作」を外した（以前は「（非公式・試作）」）。 */
 .title-unit{display:inline-block;}
 h2{font-size:17px;font-weight:500;margin:0 0 12px;}
 .card-name-label{font-size:13px;color:var(--ink-soft);margin:0 0 4px;}
@@ -564,6 +565,38 @@ button:focus-visible, .option:focus-visible, .chip:focus-visible, [role="button"
 .band-detail-lane-seg{position:absolute;top:0;height:100%;background:var(--accent);}
 
 </style>
+<!--
+  【ライセンス表示】
+  このあとのスクリプトに埋め込まれているのは、Excelファイルを作る部品 ExcelJS 4.4.0（exceljs.min.js）です。
+  ExcelJS は MIT ライセンスです。作者名とライセンスの文は次のとおりです。
+
+  The MIT License (MIT)
+
+  Copyright (c) 2014-2019 Guyon Roche
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+  ExcelJS の中には、ほかの部品（JSZip・core-js・dayjs・uuid・readable-stream・saxes・fast-csv など。
+  ライセンスは MIT・ISC・BSD-3-Clause）が入っています。それぞれの作者名とライセンスの文は、
+  公開リポジトリの THIRD-PARTY-NOTICES.md にあります。
+  https://github.com/1008xxrh/nenkin-moushitatesho-support/blob/main/THIRD-PARTY-NOTICES.md
+-->
 <script>
 /*! ExcelJS 19-10-2023 */
 
@@ -2965,8 +2998,13 @@ function writeDatePart(ws, eraCol, yearCol, monthCol, dayCol, row0, kind, year, 
 
 // ---- writePeriodRowBlock()：1period分（5物理行）を共通ロジックで書き込む ----
 // 02表・04表・04裏は「元号列を起点に、受診した=+1列・年=+5列・受診していない=+6列・月=+7列・日=+9列・
-// 医療機関名=起点と同列」という共通レイアウトを持つ（Step6実テンプレ確認で確定。仕様書7.2の
+// 医療機関名の列=起点と同列」という共通レイアウトを持つ（Step6実テンプレ確認で確定。仕様書7.2の
 // K/M/O列記載はラベル文字セルであり入力セルではなかったため、本実装ではJ/L/N側＝起点+5/+7/+9を採用）。
+// 【N-13・2026-10-20】医療機関名：r0+3行目は「医療機関名」という見出しのセル（ロックあり。書き換えない）で、
+// 名前は、その1行下のr0+4行目（ロックなし・折り返しあり・高さ約5行・日本語入力の欄）に書く。
+// 以前は、見出しのセルに名前を書いて見出しを消していた（日付の欄の入力欄の案内文と取り違えていた）。
+// 名前が空のときは何も書かない（見出しも下の空きも、様式のまま）。
+// 根拠：様式（02.xlsx・04.xlsx）の全16ブロックで、見出しはロックあり・下の空きはロックなし。
 // 状況(note)欄の開始列は、02表のみ起点+13列（Q列が薄いスペーサーとして単独結合されている特殊構造）、
 // 04表/04裏は起点+12列という実テンプレ確認済みの違いがあるため、noteColは呼び出し側で明示的に渡す。
 //
@@ -2984,7 +3022,7 @@ function writePeriodRowBlock(ws, eraCol, noteCol, r0, row){
 
   const r1 = r0 + 1;
   const checkRow = r0 + 2;
-  const nameRow = r0 + 3;
+  const nameRow = r0 + 4;
   const noteRow = r0 + 1;
 
   writeDatePart(ws, eraCol, yearCol, monthCol, null, r0, row.fromKind, row.fromYear, row.fromMonth, undefined);
@@ -2993,7 +3031,9 @@ function writePeriodRowBlock(ws, eraCol, noteCol, r0, row){
   ws.getCell(`${checkYesCol}${checkRow}`).value = row.visited ? 'レ' : '';
   ws.getCell(`${checkNoCol}${checkRow}`).value = row.visited ? '' : 'レ';
 
-  ws.getCell(`${nameCol}${nameRow}`).value = row.hospitalName || '';
+  if(row.hospitalName){
+    ws.getCell(`${nameCol}${nameRow}`).value = row.hospitalName;
+  }
 
   let noteText = row.note || '';
   if(row.fromKind === 'none' && row.fromLabel){
@@ -4386,6 +4426,18 @@ function stepResumeCheck(savedPayload){
   };
 }
 
+// 【2026-10-20・J-18（ユーザーの決定）】画面に置く注意書きの文（4つ。1つずつ段落にする）。置き場所は2か所：最初の画面の5つ目の項目
+// 「ご利用にあたって」（stepStart）と、「年表ができました」の「このWebアプリについて」の中（stepCh5Done）。下書き画面のExcelのボタンの所には置かない
+// （ユーザーの決定。最初の画面は初めて使う人が全員通り、「年表ができました」は第5章を終えた人が通る）。
+// 1つ目の「（非公式）」は、最初の画面の見出しの「（非公式）」と同じ言葉。3つ目の「地域の相談窓口」は、ユーザーが選んだ言い方
+// （「書類を代わりに作ったり、提出したりするものではありません」は、ユーザーの決定で書かない）。4つ目は READMEの注意事項の4行目と同じ文（J-20）。
+const NOTICE_PARAGRAPHS = [
+  'このWebアプリは、日本年金機構などの公式のものではありません（非公式）。下書きを整理するための道具です。',
+  '下書きやExcelの内容が正しいかどうか、障害年金を受け取れるかどうかを、このWebアプリが保証するものではありません。',
+  '提出の前に年金事務所や社会保険労務士や、地域の相談窓口などへの相談をお勧めします。',
+  'Excelの様式（申立書・続紙）は、日本年金機構のホームページで公開されているものを使っています。様式が新しくなると、このWebアプリの出力と合わなくなることがあります。',
+];
+
 function stepStart(){
   // 【V-1・2026-10-03・ユーザー決定】最初の画面に、簡易な「アプリの流れ」を置いた（入口の敷居を低くするため）。
   // 以前は「この試作版でできること」6行・「この試作版でまだ出力しないもの」4行・保存の説明3段落を地の文で並べていたが、
@@ -4404,6 +4456,9 @@ function stepStart(){
   // ・書かないと決めたもの：「相談に行く前に」（相談したあとの人が使っていいのか迷う）、請求の準備の流れ（利用者の行動次第）。
   // ・題名の「（試作）」はそのまま（満足できるものになったら外す。#39）。導入文は「このWebアプリは」（試作版とWebアプリは別の意味の呼び方）。
   //   【2026-10-09・J-10】題名に「非公式」を足した（「申立書サポート（非公式・試作）」。理由は9/19のユーザーの起案：「うつ状態等で判断力が落ちているときに、公式の年金機構ツールと誤解される可能性への配慮」。READMEの題には9/19に足してあった）。タブの名前（title）は変えていない。折り返しは、2つの部分（申立書サポート／（非公式・試作））の間でだけ（ユーザーの決定：幅320で「非公式」の途中で割れるため）。
+  // ・【2026-10-20・J-18（ユーザーの決定）】5つ目の開く項目「ご利用にあたって」（「保存について」の下。はじめは閉じる）を足した。中身は NOTICE_PARAGRAPHS の4つの文。
+  //   以前のアコーディオン4つに数を合わせた確認（test_start_accordion_20261003.js のB・C）は5つに直した。
+  //   【2026-10-20・J-19（ユーザーの決定。次の公開でほぼ完成になるため）】題名の「試作」を外し、「申立書サポート（非公式）」にした。タブの名前（title）も同じ「申立書サポート（非公式）」（「第1〜5章」も外した）。
   // ・【2026-10-17・いろは05（ユーザーの決定）】3つ目の見出しを、以前の「このWebアプリで出力されないもの」から「このWebアプリで聞かないこと」にした。
   //   一覧は 傷病名／発病日／初診日　など の3行（「初診日」と「など」の間は全角の空白1つ）。「診断書等との整合確認が必要な項目」の行は消した
   //   （アプリの全体がそうなるため）。「発病時期」は、様式・下書きの画面と同じ「発病日」にそろえた。氏名・電話番号・住所は一覧に足さない
@@ -4412,7 +4467,7 @@ function stepStart(){
   // 経緯・測った数字は相談キャンバスの「V-1 最初の画面（10/2）」ページ（付箋#90〜#92）と管理ページV-1。
   document.getElementById('screen').innerHTML = `
     <div class="card center">
-      <h1><span class="title-unit">申立書サポート</span><span class="title-unit">（非公式・試作）</span></h1>
+      <h1><span class="title-unit">申立書サポート</span><span class="title-unit">（非公式）</span></h1>
       <p class="lead">このWebアプリは、障害年金の病歴・就労状況等申立書の下書きを作るために、質問に答えながら情報を整理していくものです。</p>
 
       <div class="accordion-group" style="margin-top:14px;text-align:left;">
@@ -4461,6 +4516,12 @@ function stepStart(){
             <p class="small" style="margin-top:10px;">同じ端末・同じブラウザで開けば、続きから再開できます。</p>
             <p class="small" style="margin-top:10px;">なお、端末やブラウザの設定によっては、しばらく開かない期間が続いたときや、履歴を消したとき、機種を変えたときなどに、保存内容が消えてしまうことがあります。また、プライベートブラウズ（InPrivate・シークレットモードなど）でご利用の場合、ウィンドウを閉じると内容は残りません。</p>
             <p class="small" style="margin-top:10px;">画面の下にある「DL保存」を押すと、ここまでの内容をファイルとして端末にダウンロードできます。「DL」は「ダウンロード」の略です。内容が消えてしまったときは、そのファイルから戻すことができます。</p>
+          </div>
+        </div>
+        <div class="accordion-item">
+          <button type="button" class="accordion-trigger" data-accordion="acc-start-notice">ご利用にあたって</button>
+          <div class="accordion-panel" id="acc-start-notice" hidden>
+            ${NOTICE_PARAGRAPHS.map((t, i) => `<p class="small" style="${i ? 'margin-top:10px;' : 'margin:0;'}">${t}</p>`).join('')}
           </div>
         </div>
       </div>
@@ -6030,6 +6091,9 @@ function bindCh5PlaceHandlers(bands){
   };
 }
 
+// 【2026-10-18・いろは05の続き（ユーザーの決定）】下の「この試作版について」の文から「（最初の画面の案内もご参照ください）」を外した。
+// 【2026-10-20・J-19（ユーザーの決定）】その見出しを「このWebアプリについて」に、文の中の「この試作版では」を「このWebアプリでは」に変えた。
+// この画面（年表ができました）まで来た人は、最初の画面を見られない（戻る道は「最初からやり直す」＝入力を消す、だけ）ため。
 function stepCh5Done(opts){
   // 【2026-10-04・残タスクV-9】opts.rerender＝この画面の中で描き直すとき（西暦・元号の切り替え）。
   // 画面に入ったとき（showScreen()から、引数なしで呼ばれる）とは、DL保存ボタンの光らせ方を分ける（この関数の最後）。
@@ -6102,12 +6166,13 @@ function stepCh5Done(opts){
       </div>
     </div>
     <div class="accordion-item">
-      <button type="button" class="accordion-trigger" data-accordion="acc-about">この試作版について</button>
+      <button type="button" class="accordion-trigger" data-accordion="acc-about">このWebアプリについて</button>
       <div class="accordion-panel" id="acc-about" hidden>
         <p class="small" style="margin:0;line-height:1.8;">
-          傷病名・発病日・初診日などは、この試作版では入力・出力の対象に含まれていません。
-          様式（申立書）の全項目ではなく、一部のみを扱っています（最初の画面の案内もご参照ください）。
+          傷病名・発病日・初診日などは、このWebアプリでは入力・出力の対象に含まれていません。
+          様式（申立書）の全項目ではなく、一部のみを扱っています。
         </p>
+        ${NOTICE_PARAGRAPHS.map(t => `<p class="small" style="margin:10px 0 0;line-height:1.8;">${t}</p>`).join('')}
       </div>
     </div>
     <div class="accordion-item">
@@ -6564,6 +6629,8 @@ function stepCh5Preview(){
   // 「就労状況」「日常生活状況」はその配下の縦書きラベル（2階層構造）。HTML組み立て側で
   // 章タイトル＋ブロックの2階層を直接構成する（v4仕様書6章追補・実装解釈ズレの修正）。 ----
 
+  // 【2026-10-20・J-22／J-19の⑥⑦（ユーザーの決定）】下の「申立書の入力状況」（開く項目）は、廃止せず形も変えずに、中の2か所の言葉だけ直した：
+  //   「△ 試作版対象外　2」→「△ 対象外　2」、「対象外（この試作版では入力しません）：…」→「対象外（このWebアプリでは入力しません）：…」（「試作」を外すため）。
   // 【2026-10-11・ユーザーの指示（相談キャンバスのコメント）】画面の下の一文を「このプレビューの内容」から「この下書きの内容」に変えた
   // （利用者に見せる言葉は「下書き」にそろえる。「プレビュー」は内部の名前としてだけ残る）。
   document.getElementById('screen').innerHTML = `
@@ -6588,10 +6655,10 @@ function stepCh5Preview(){
             <div class="preview-status-counts">
               <span>✓ 入力済み　${doneCount}</span>
               <span>○ 未入力　${statusItems.filter(s=>!s.done).length}</span>
-              <span>△ 試作版対象外　2</span>
+              <span>△ 対象外　2</span>
             </div>
             <div class="preview-status-list">${statusListHtml}</div>
-            <div class="preview-status-excluded">対象外（この試作版では入力しません）：傷病名・発病日・初診日</div>
+            <div class="preview-status-excluded">対象外（このWebアプリでは入力しません）：傷病名・発病日・初診日</div>
           </div>
         </div>
       </div>
@@ -6601,11 +6668,11 @@ function stepCh5Preview(){
 
         <div class="pp-static-row">
           <div class="pp-static-label">傷病名</div>
-          <div class="pp-static-value pp-unavailable">未入力（この試作版では対応していません）</div>
+          <div class="pp-static-value pp-unavailable">未入力（このWebアプリでは対応していません）</div>
         </div>
         <div class="pp-static-row">
           <div class="pp-static-label">発病日・初診日</div>
-          <div class="pp-static-value pp-unavailable">未入力（この試作版では対応していません）</div>
+          <div class="pp-static-value pp-unavailable">未入力（このWebアプリでは対応していません）</div>
         </div>
 
         <div id="preview-sec-period">${renderPreviewPeriodRowsHtml(periodResult.rows)}</div>
