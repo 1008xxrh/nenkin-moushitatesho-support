@@ -6153,15 +6153,14 @@ function stepCh5Done(opts){
 
   // ---- アコーディオン4項目（ch5_done仕様書3.6）。出力に関する説明・注意書きは
   // ここに集約し、出力ボタン自体はch5_previewに移したため、このページでは「説明のみ」。
+  // 【N-15・2026-10-21】段落の中の文を、行を分けずに1行につないだ。HTMLでは行の切れ目が空白1つとして表示され、
+  // 「。」と次の文の間に小さな空白が出ていたため（5か所。文の言葉は変えていない）。段落の中で行を分けないこと。
   const accordionItemsHtml = `
     <div class="accordion-item">
       <button type="button" class="accordion-trigger" data-accordion="acc-next-steps">この後の流れ</button>
       <div class="accordion-panel" id="acc-next-steps" hidden>
         <p class="small" style="margin:0;line-height:1.8;">
-          このあと「申立書の下書きを確認する」を押すと、これまでの内容が申立書の様式に近い形で表示されます。
-          同時に、画面上部のヘッダーに「認定日ごろ」「障害者手帳」「下書き」の3つが増え、以後はいつでもそこから行き来できます。
-          認定日ごろの状況は様式に必要な欄なので、忘れずに入力しておきましょう（障害者手帳は、お持ちでなければ空欄のままで大丈夫です）。
-          最後にExcelファイルとしてダウンロードできます。
+          このあと「申立書の下書きを確認する」を押すと、これまでの内容が申立書の様式に近い形で表示されます。同時に、画面上部のヘッダーに「認定日ごろ」「障害者手帳」「下書き」の3つが増え、以後はいつでもそこから行き来できます。認定日ごろの状況は様式に必要な欄なので、忘れずに入力しておきましょう（障害者手帳は、お持ちでなければ空欄のままで大丈夫です）。最後にExcelファイルとしてダウンロードできます。
         </p>
       </div>
     </div>
@@ -6169,8 +6168,7 @@ function stepCh5Done(opts){
       <button type="button" class="accordion-trigger" data-accordion="acc-about">このWebアプリについて</button>
       <div class="accordion-panel" id="acc-about" hidden>
         <p class="small" style="margin:0;line-height:1.8;">
-          傷病名・発病日・初診日などは、このWebアプリでは入力・出力の対象に含まれていません。
-          様式（申立書）の全項目ではなく、一部のみを扱っています。
+          傷病名・発病日・初診日などは、このWebアプリでは入力・出力の対象に含まれていません。様式（申立書）の全項目ではなく、一部のみを扱っています。
         </p>
         ${NOTICE_PARAGRAPHS.map(t => `<p class="small" style="margin:10px 0 0;line-height:1.8;">${t}</p>`).join('')}
       </div>
@@ -6187,8 +6185,7 @@ function stepCh5Done(opts){
       <button type="button" class="accordion-trigger" data-accordion="acc-help">困ったときは</button>
       <div class="accordion-panel" id="acc-help" hidden>
         <p class="small" style="margin:0;line-height:1.8;">
-          入力した内容は、この端末のブラウザに自動的に保存されています。画面を閉じても、次に開いたときに続きから始められます。
-          内容を間違えてしまっても、あとからいつでも直せます。不安なときは、画面上部のヘッダーから該当の章や項目にいつでも戻れます。
+          入力した内容は、この端末のブラウザに自動的に保存されています。画面を閉じても、次に開いたときに続きから始められます。内容を間違えてしまっても、あとからいつでも直せます。不安なときは、画面上部のヘッダーから該当の章や項目にいつでも戻れます。
         </p>
       </div>
     </div>`;
